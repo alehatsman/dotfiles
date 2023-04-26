@@ -428,4 +428,4 @@ function vi-yank-xclip {
 zle -N vi-yank-xclip
 bindkey -M vicmd 'y' vi-yank-xclip
 
-eval "$(pyenv init -)"
+bindkey '^n' autosuggest-accept
