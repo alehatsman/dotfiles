@@ -26,8 +26,8 @@ set -g @plugin 'tmux-plugins/tmux-continuum'
 set -g @continuum-restore 'on'
 
 {% if os == "darwin" %}
-set-environment -g PATH "/usr/local/bin:/bin:/usr/bin"
-set-option -g default-shell /usr/local/bin/zsh
+set-environment -g PATH "/opt/local/bin:/bin:/usr/bin"
+set-option -g default-shell /bin/zsh
 {% endif %}
 
 # Run tmp
@@ -36,7 +36,7 @@ run '~/.config/tmux/plugins/tpm/tpm'
 #---------------------------------------------
 # Configuration
 #---------------------------------------------
-{% if ansible_distribution == 'Archlinux' %}
+{% if os == 'Archlinux' %}
 set-option -g default-shell $SHELL
 {% endif %}
 
@@ -127,7 +127,7 @@ bind p paste-buffer
 # Vim like navigation
 #---------------------------------------------
 is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
-    | rg -iq -e '^[^TXZ ]+ +(\S+)?g?(view|fzf|n?vim?x?)(diff)?$'"
+    | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?)(diff)?$'"
 
 bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
 bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'

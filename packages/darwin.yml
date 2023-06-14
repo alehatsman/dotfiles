@@ -7,7 +7,11 @@
     else
       echo "xcode tools are alredy installed. Skipping..."
     fi
-  when: os == "darwin"
+
+- name: Make sure rosetta 2 is installed
+  shell: |
+    softwareupdate --install-rosetta --agree-to-licence
+  become: true
 
 - name: Make sure brew is installed
   shell: |
@@ -17,4 +21,20 @@
     else
       echo "brew is already installed. Skipping..."
     fi
-  when: os == "darwin"
+
+- include_vars: ./darwin_packages.yml
+
+- name: Make sure all the taps are present
+  shell: |
+    for tap in {{ taps | join: " " }}
+    do
+      brew tap $tap
+    done
+
+- name: Make sure all the apps are present
+  shell: |
+    brew install {{ apps | join: " "}}
+
+- name: Make sure all the cask apps are present
+  shell: |
+    brew install --cask {{ cask_apps | join: " "}}

@@ -1,0 +1,11 @@
+---
+- name: Make sure ssh key is present
+  shell: |
+    ssh_key="$HOME/.ssh/id_ed25519"
+
+    if [ -f "$ssh_key" ]; then
+      echo "$ssh_key already exists"
+    else
+      ssh-keygen -t ed25519 -C "aleh.atsman@gmail.com" -f ~/.ssh/id_ed25519 -P {{SSH_PASSWORD}}
+    fi
+

@@ -1,0 +1,125 @@
+---
+taps:
+  - homebrew/cask
+  - homebrew/cask-fonts
+  - wata727/tflint
+  - borkdude/brew
+  - wagoodman/dive
+  - AdoptOpenJDK/openjdk
+
+apps:
+  - ansible
+  - aria2
+  - autoenv
+  - autojump
+  - aws-iam-authenticator
+  - awscli
+  - bat
+  - caddy
+  - cmake
+  - exa
+  - fd
+  - fzf
+  - gnu-sed
+  - graphviz
+  - git
+  - git-delta
+  - htop
+  - hub
+  - imagemagick
+  - jq
+  - lastpass-cli
+  - libpq
+  - mosh
+  - nmap
+  - packer
+  - python
+  - ripgrep
+  - rustup
+  - shellcheck
+  - shfmt
+  - terraform
+  - terraform-inventory
+  - tig
+  - tldr
+  - tor
+  - tree
+  - watchman
+  - wget
+  - xsv
+  - yamllint
+  - yq
+
+  # Clojure
+  - clojure
+  - leiningen
+  - boot-clj
+  - clj-kondo
+
+  # Docker
+  - dive
+  - kubernetes-cli
+
+  # Golang
+  - go
+
+  # Node
+  - node
+  - nvm
+  - yarn
+
+  #- neovim
+
+  # Tmux
+  - tmux
+  - reattach-to-user-namespace
+
+  # Zsh
+  - zsh
+
+  - xsv
+
+  - httpie
+  - ninja
+  - hexyl
+  - gh
+  - code-minimap
+  - lua-language-server
+  - xclip
+
+cask_apps:
+  - adobe-acrobat-reader
+  - alacritty
+  - alfred
+  - amazon-workspaces
+  - anki
+  - docker
+  - font-fira-code
+  - fork
+  - google-drive
+  - google-chrome
+  - google-cloud-sdk
+  - kap
+  - pgadmin4
+  - postman
+  - slack
+  - spectacle
+  - spotify
+  - sublime-merge
+  - teamviewer
+  - telegram
+  - tor-browser
+  - transmission
+  - tunnelblick
+  - veracrypt
+  - visual-studio-code
+  - vlc
+  - xmind
+  - zoom
+
+  # Java
+  # - adoptopenjdk8
+  - visualvm
+
+  - font-jetbrains-mono-nerd-font
+  - notion

@@ -233,7 +233,7 @@ live_config_reload: true
 #   - (Linux/macOS) /bin/bash --login
 #   - (Windows) powershell
 shell:
-  program: /usr/local/bin/zsh
+  program: /bin/zsh
   args:
     - --login
 
@@ -247,9 +247,6 @@ shell:
 # Alacritty will fall back to the WinPTY automatically if the ConPTY
 # backend cannot be initialized.
 enable_experimental_conpty_backend: false
-
-# Send ESC (\x1b) before characters when alt is pressed.
-alt_send_esc: true
 
 # Key bindings
 #

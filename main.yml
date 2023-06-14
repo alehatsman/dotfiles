@@ -1,19 +1,14 @@
 ---
+- include: ./git/main.yml
 - include: ./packages/main.yml
 - include: ./java/main.yml
 - include: ./python/main.yml
-
 - include: ./rust/main.yml
-
 - include: ./fzf/main.yml
-
 - include: ./alacritty/main.yml
   when: os == "darwin"
 
-- include: ./git/main.yml
-
 - include: ./clojure/main.yml
-
 - include: ./golang/main.yml
 
 - include: ./macos/main.yml

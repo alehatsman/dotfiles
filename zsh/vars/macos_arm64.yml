@@ -1,0 +1,5 @@
+---
+FZF_BASE: /opt/local/opt/fzf
+GCP_PATH: /opt/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk
+JAVA_HOME: /Library/Java/JavaVirtualMachines/adoptopenjdk-8.jdk/Contents/Home
+ZPLUG_HOME: ~/.zplug

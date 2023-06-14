@@ -18,7 +18,7 @@
 - include_vars: ./vars/ubuntu_vars.yml
   when: os == 'linux'
 
-- include_vars: ./vars/macos_vars.yml
+- include_vars: ./vars/macos_{{arch}}.yml
   when: os == "darwin"
 
 - name: Make sure .zshrc is present
@@ -37,7 +37,7 @@
 
 - name: Make sure oh-my-zsh are installed
   shell: |
-    git clone --depth 1 https://github.com/robbyrussel/ohmyzsh.git ~/.zplug/repos/robbyrussell/oh-my-zsh; exit 0;
+    git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git ~/.zplug/repos/ohmyzsh/ohmyzsh; exit 0;
 
 - name: Make sure zsh is default shell
   shell: |
