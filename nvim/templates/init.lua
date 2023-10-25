@@ -33,7 +33,7 @@ require('packer').startup(function(use)
   use {
     'lukas-reineke/indent-blankline.nvim',
     config = function()
-      require('indent_blankline').setup({})
+      require('ibl').setup({})
     end
   }
 
@@ -189,7 +189,7 @@ vim.o.writebackup = false -- for more info see backup table
 -- vim.go.signcolumn   = 'auto'          -- always show sign column
 vim.o.scrolloff   = 8
 vim.o.showmode    = false -- hide --INSERT--
-vim.o.undodir     = '~/.config/nvim/undodir'
+vim.o.undodir     = '.'
 vim.o.completeopt = 'menu,menuone,noinsert'
 
 -- Color
