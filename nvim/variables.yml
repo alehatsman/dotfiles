@@ -1,12 +1,12 @@
 ---
 config_path: ~/.config/nvim
 
-plug_path: '{{ config_path }}/plugged'
-ftplugin_path: '{{ config_path }}/ftplugin'
-autoload_path: '{{ config_path }}/autoload'
+plug_path: '~/.config/nvim/plugged'
+ftplugin_path: '~/.config/nvim/ftplugin'
+autoload_path: '~/.config/nvim/autoload'
 
-python_venv_path: '{{ config_path }}/python_venv'
-python3_venv_path: '{{ config_path }}/python3_venv'
+python_venv_path: '~/.config/nvim/python_venv'
+python3_venv_path: '~/.config/nvim/python3_venv'
 
 python_libs:
   - neovim
