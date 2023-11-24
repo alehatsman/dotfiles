@@ -194,7 +194,7 @@ vim.o.completeopt = 'menu,menuone,noinsert'
 
 -- Color
 vim.o.termguicolors = true -- use gui 24-bit colors, gui attrs instead of cterm
-vim.go.t_Co = '256'
+-- vim.go.t_Co = '256'
 vim.o.background = 'dark'
 
 -- Identation
@@ -486,12 +486,11 @@ require 'nvim-treesitter.configs'.setup {
   highlight = {
     enable = true,
   },
-  context_commentstring = {
-    enable = true,
-    enable_autocmd = false,
-  }
 }
 
+require('ts_context_commentstring').setup {
+  enable_autocmd = false,
+}
 
 ---
 -- Comment

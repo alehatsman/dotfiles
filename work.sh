@@ -1,1 +1,1 @@
-mooncake run -c ./main.yml -v ./work_variables.yml
+mooncake run -c ./main.yml -v ./work_variables.yml 

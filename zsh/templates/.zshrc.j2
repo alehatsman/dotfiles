@@ -37,6 +37,7 @@ export CARGO_HOME=~/.cargo
 export ZPLUG_HOME={{ ZPLUG_HOME }}
 export RVM_HOME=~/.rvm
 export FZF_BASE=~/.fzf
+export NVIDIA_GIT_BASE=~/Projects/nvidia/git-helpers
 
 export PYENV_ROOT=~/.pyenv
 
@@ -44,7 +45,8 @@ export PATH=$PYENV_ROOT/bin:$PATH
 
 eval "$(pyenv init -)"
 
-export PATH=$(pyenv root)/shims:$HOME/bin:/opt/local/bin:$PATH:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PATH
+export PATH=$(pyenv root)/shims:$HOME/bin:/opt/local/bin:$PATH:$NVIDIA_GIT_BASE/bin:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PATH
+
 
 if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
     alias nvim=nvr -cc split --remote-wait +'set bufhidden=wipe'
@@ -147,6 +149,7 @@ g() {
 }
 compdef g=git
 
+# add tab complete
 alias ga="git add"
 alias gaa="git add --all"
 alias gai="git add --interactive"
@@ -342,6 +345,19 @@ npm_uninstall_globals() {
   npm ls -gp --depth=0 | awk -F/ '/node_modules/ && !/\/npm$/ {print $NF}' | xargs npm -g rm
 }
 
+# Rush monorepo helpers
+
+# rush run
+rr() {
+  command=$(rush tab-complete | fzf)
+  if [ -z "$command" ]; then
+    return 0
+  fi
+
+  echo "rush $command"
+  rush $command
+}
+
 # Docker
 
 alias dps="docker ps"
@@ -429,3 +445,21 @@ zle -N vi-yank-xclip
 bindkey -M vicmd 'y' vi-yank-xclip
 
 bindkey '^n' autosuggest-accept
+
+# rush tab completion
+autoload -Uz +X bashcompinit && bashcompinit
+
+# bash parameter completion for the Rush CLI
+_rush_bash_complete() {
+  local word=${COMP_WORDS[COMP_CWORD]}
+
+  local completions
+  completions="$(rush tab-complete --position "${COMP_POINT}" --word "${COMP_LINE}" 2>/dev/null)"
+  if [ $? -ne 0 ]; then
+    completions=""
+  fi
+
+  COMPREPLY=( $(compgen -W "$completions" -- "$word") )
+}
+
+complete -f -F _rush_bash_complete rush

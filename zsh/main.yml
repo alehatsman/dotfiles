@@ -9,7 +9,7 @@
   shell: |
     brew install zsh
   when: os == "darwin"
-  
+
 - name: Make sure zsh config directory is present
   file:
     path: ~/.config/zsh
