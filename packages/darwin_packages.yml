@@ -90,7 +90,6 @@ apps:
 cask_apps:
   - adobe-acrobat-reader
   - alacritty
-  - alfred
   - amazon-workspaces
   - anki
   - docker
