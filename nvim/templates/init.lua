@@ -147,7 +147,6 @@ require('packer').startup(function(use)
     ft = { "markdown" },
   })
 
-  use "jose-elias-alvarez/null-ls.nvim"
   use "lukas-reineke/lsp-format.nvim"
 
   use({
@@ -157,6 +156,8 @@ require('packer').startup(function(use)
     end,
     ft = { "lua" },
   })
+
+  use('mfussenegger/nvim-lint')
 
   if packer_bootstrap then
     require('packer').sync()
@@ -429,30 +430,16 @@ local function is_prettier_executable()
   return vim.fn.executable("prettier") == 1 or vim.fn.executable("./node_modules/.bin/prettier") == 1
 end
 
-local null_ls = require("null-ls")
-local null_ls_sources = {
-  null_ls.builtins.diagnostics.tsc,
-  null_ls.builtins.formatting.jq,
+require('lint').linters_by_ft = {
+  javascript = { 'eslint' },
+  javascriptreact = { 'eslint' },
+  typescript = { 'eslint' },
+  typescriptreact = { 'eslint' },
+  markdown = { 'markdownlint' },
+  python = { 'flake8' },
+  rust = { 'cargo' },
+  lua = { 'luacheck' },
 }
-
-if is_prettier_executable() then
-  table.insert(null_ls_sources, null_ls.builtins.formatting.prettier.with({
-    extra_filetypes = { "liquid" },
-  }))
-end
-
-local eslint_config = {
-  command = "./node_modules/.bin/eslint",
-}
-
-if has_eslint_config() then
-  table.insert(null_ls_sources, null_ls.builtins.diagnostics.eslint.with(eslint_config))
-  table.insert(null_ls_sources, null_ls.builtins.formatting.eslint.with(eslint_config))
-end
-
-null_ls.setup({
-  sources = null_ls_sources,
-})
 
 -- diagnostics
 vim.call('sign_define', 'DiagnosticSignError', { text = "•", texthl = "DiagnosticSignError" })
