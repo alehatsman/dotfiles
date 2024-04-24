@@ -168,59 +168,59 @@ end)
 ---------------------------------------------
 -- General configuration
 ---------------------------------------------
-vim.o.syntax      = 'on' -- enable sytax highlight
-vim.o.fileformat  = 'unix' -- always use unix <EOL>
-vim.o.langmenu    = 'en_US' -- use en as language menu
-vim.o.hidden      = true -- be able to switch buffers without file save
-vim.o.showcmd     = true -- shows command in the last line
-vim.o.startofline = false -- some command move to the first non-blank line
-vim.wo.number     = true -- line number on
-vim.o.clipboard   = 'unnamedplus' -- allow copy paste system <-> nvim
-vim.o.exrc        = true -- enable project specific .nvimrc files
-vim.o.secure      = true -- disable write/shell commands in those files
-vim.o.splitbelow  = true -- put the new window below the current one
-vim.o.splitright  = true -- put the new window right of the current one
-vim.o.incsearch   = true -- search as you type
-vim.o.cursorline  = true -- highlight current line
-vim.o.shortmess   = vim.o.shortmess .. 'c' -- don't give completion messages
-vim.o.updatetime  = 50
-vim.o.swapfile    = false -- don't create swap files
-vim.o.backup      = false -- don't create backup files
-vim.o.writebackup = false -- for more info see backup table
+vim.o.syntax           = 'on'                   -- enable sytax highlight
+vim.o.fileformat       = 'unix'                 -- always use unix <EOL>
+vim.o.langmenu         = 'en_US'                -- use en as language menu
+vim.o.hidden           = true                   -- be able to switch buffers without file save
+vim.o.showcmd          = true                   -- shows command in the last line
+vim.o.startofline      = false                  -- some command move to the first non-blank line
+vim.wo.number          = true                   -- line number on
+vim.o.clipboard        = 'unnamedplus'          -- allow copy paste system <-> nvim
+vim.o.exrc             = true                   -- enable project specific .nvimrc files
+vim.o.secure           = true                   -- disable write/shell commands in those files
+vim.o.splitbelow       = true                   -- put the new window below the current one
+vim.o.splitright       = true                   -- put the new window right of the current one
+vim.o.incsearch        = true                   -- search as you type
+vim.o.cursorline       = true                   -- highlight current line
+vim.o.shortmess        = vim.o.shortmess .. 'c' -- don't give completion messages
+vim.o.updatetime       = 50
+vim.o.swapfile         = false                  -- don't create swap files
+vim.o.backup           = false                  -- don't create backup files
+vim.o.writebackup      = false                  -- for more info see backup table
 -- vim.go.signcolumn   = 'auto'          -- always show sign column
-vim.o.scrolloff   = 8
-vim.o.showmode    = false -- hide --INSERT--
-vim.o.undodir     = '.'
-vim.o.completeopt = 'menu,menuone,noinsert'
+vim.o.scrolloff        = 8
+vim.o.showmode         = false -- hide --INSERT--
+vim.o.undodir          = '.'
+vim.o.completeopt      = 'menu,menuone,noinsert'
 
 -- Color
-vim.o.termguicolors = true -- use gui 24-bit colors, gui attrs instead of cterm
+vim.o.termguicolors    = true -- use gui 24-bit colors, gui attrs instead of cterm
 -- vim.go.t_Co = '256'
-vim.o.background = 'dark'
+vim.o.background       = 'dark'
 
 -- Identation
-vim.o.autoindent = true -- copy indent from current line when starting a new line
-vim.o.smarttab = true -- <Tab> in front of a line inserts blanks according to 'shiftwidth'
-vim.o.expandtab = true -- spaces instead of tabs
-vim.o.softtabstop = 2 -- the number of spaces to use when expanding tabs
-vim.o.shiftwidth = 2 -- the number of spaces to use when indenting -- or de-indenting -- a line
-vim.o.tabstop = 2 -- the number of spaces that a tab equates to
+vim.o.autoindent       = true -- copy indent from current line when starting a new line
+vim.o.smarttab         = true -- <Tab> in front of a line inserts blanks according to 'shiftwidth'
+vim.o.expandtab        = true -- spaces instead of tabs
+vim.o.softtabstop      = 2    -- the number of spaces to use when expanding tabs
+vim.o.shiftwidth       = 2    -- the number of spaces to use when indenting -- or de-indenting -- a line
+vim.o.tabstop          = 2    -- the number of spaces that a tab equates to
 
 -- Folding
-vim.o.foldmethod = 'expr' -- fold is defined by treesiter expressions
-vim.o.foldexpr = 'nvim_treesitter#foldexpr()'
-vim.o.foldcolumn = '0' -- width of fold column
-vim.o.foldlevelstart = 99 -- don't close folds
-vim.o.colorcolumn = '80' -- visualize max line width
+vim.o.foldmethod       = 'expr' -- fold is defined by treesiter expressions
+vim.o.foldexpr         = 'nvim_treesitter#foldexpr()'
+vim.o.foldcolumn       = '0'    -- width of fold column
+vim.o.foldlevelstart   = 99     -- don't close folds
+vim.o.colorcolumn      = '80'   -- visualize max line width
 
-vim.o.laststatus = 3
+vim.o.laststatus       = 3
 
 vim.g.AutoPairsFlyMode = 1
 
-vim.g.mapleader = ' '
-vim.g.maplocalleader = vim.api.nvim_replace_termcodes('<tab>', true, true, true) -- wtf is this
+vim.g.mapleader        = ' '
+vim.g.maplocalleader   = vim.api.nvim_replace_termcodes('<tab>', true, true, true) -- wtf is this
 
-vim.g.colors_name = 'monokai'
+vim.g.colors_name      = 'monokai'
 vim.cmd [[
   silent! colorscheme monokai
 ]]
@@ -336,18 +336,18 @@ local api = vim.api
 
 vim.lsp.handlers['textDocument/publishDiagnostics'] = vim.lsp.with(
   vim.lsp.diagnostic.on_publish_diagnostics, {
-  underline = false,
-  virtual_text = true, --{ spacing = 4 },
-  signs = true,
-  update_in_insert = false,
-}
+    underline = false,
+    virtual_text = true, --{ spacing = 4 },
+    signs = true,
+    update_in_insert = false,
+  }
 )
 
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
   vim.lsp.handlers.hover, {
-  -- Use a sharp border with `FloatBorder` highlights
-  border = 'none'
-}
+    -- Use a sharp border with `FloatBorder` highlights
+    border = 'none'
+  }
 )
 
 local lsp_signature = require 'lsp_signature'
@@ -503,57 +503,57 @@ local function nvim_tree_on_attach(bufnr)
   -- Default mappings. Feel free to modify or remove as you wish.
   --
   -- BEGIN_DEFAULT_ON_ATTACH
-  vim.keymap.set('n', '<C-]>', api.tree.change_root_to_node,          opts('CD'))
-  vim.keymap.set('n', '<C-e>', api.node.open.replace_tree_buffer,     opts('Open: In Place'))
-  vim.keymap.set('n', '<C-k>', api.node.show_info_popup,              opts('Info'))
-  vim.keymap.set('n', '<C-r>', api.fs.rename_sub,                     opts('Rename: Omit Filename'))
-  vim.keymap.set('n', '<C-t>', api.node.open.tab,                     opts('Open: New Tab'))
-  vim.keymap.set('n', '<C-v>', api.node.open.vertical,                opts('Open: Vertical Split'))
-  vim.keymap.set('n', '<C-x>', api.node.open.horizontal,              opts('Open: Horizontal Split'))
-  vim.keymap.set('n', '<BS>',  api.node.navigate.parent_close,        opts('Close Directory'))
-  vim.keymap.set('n', '<CR>',  api.node.open.edit,                    opts('Open'))
-  vim.keymap.set('n', '<Tab>', api.node.open.preview,                 opts('Open Preview'))
-  vim.keymap.set('n', '>',     api.node.navigate.sibling.next,        opts('Next Sibling'))
-  vim.keymap.set('n', '<',     api.node.navigate.sibling.prev,        opts('Previous Sibling'))
-  vim.keymap.set('n', '.',     api.node.run.cmd,                      opts('Run Command'))
-  vim.keymap.set('n', '-',     api.tree.change_root_to_parent,        opts('Up'))
-  vim.keymap.set('n', 'a',     api.fs.create,                         opts('Create'))
-  vim.keymap.set('n', 'bmv',   api.marks.bulk.move,                   opts('Move Bookmarked'))
-  vim.keymap.set('n', 'B',     api.tree.toggle_no_buffer_filter,      opts('Toggle No Buffer'))
-  vim.keymap.set('n', 'c',     api.fs.copy.node,                      opts('Copy'))
-  vim.keymap.set('n', 'C',     api.tree.toggle_git_clean_filter,      opts('Toggle Git Clean'))
-  vim.keymap.set('n', '[c',    api.node.navigate.git.prev,            opts('Prev Git'))
-  vim.keymap.set('n', ']c',    api.node.navigate.git.next,            opts('Next Git'))
-  vim.keymap.set('n', 'd',     api.fs.remove,                         opts('Delete'))
-  vim.keymap.set('n', 'D',     api.fs.trash,                          opts('Trash'))
-  vim.keymap.set('n', 'E',     api.tree.expand_all,                   opts('Expand All'))
-  vim.keymap.set('n', 'e',     api.fs.rename_basename,                opts('Rename: Basename'))
-  vim.keymap.set('n', ']e',    api.node.navigate.diagnostics.next,    opts('Next Diagnostic'))
-  vim.keymap.set('n', '[e',    api.node.navigate.diagnostics.prev,    opts('Prev Diagnostic'))
-  vim.keymap.set('n', 'F',     api.live_filter.clear,                 opts('Clean Filter'))
-  vim.keymap.set('n', 'f',     api.live_filter.start,                 opts('Filter'))
-  vim.keymap.set('n', 'g?',    api.tree.toggle_help,                  opts('Help'))
-  vim.keymap.set('n', 'gy',    api.fs.copy.absolute_path,             opts('Copy Absolute Path'))
-  vim.keymap.set('n', 'H',     api.tree.toggle_hidden_filter,         opts('Toggle Dotfiles'))
-  vim.keymap.set('n', 'I',     api.tree.toggle_gitignore_filter,      opts('Toggle Git Ignore'))
-  vim.keymap.set('n', 'J',     api.node.navigate.sibling.last,        opts('Last Sibling'))
-  vim.keymap.set('n', 'K',     api.node.navigate.sibling.first,       opts('First Sibling'))
-  vim.keymap.set('n', 'm',     api.marks.toggle,                      opts('Toggle Bookmark'))
-  vim.keymap.set('n', 'o',     api.node.open.edit,                    opts('Open'))
-  vim.keymap.set('n', 'O',     api.node.open.no_window_picker,        opts('Open: No Window Picker'))
-  vim.keymap.set('n', 'p',     api.fs.paste,                          opts('Paste'))
-  vim.keymap.set('n', 'P',     api.node.navigate.parent,              opts('Parent Directory'))
-  vim.keymap.set('n', 'q',     api.tree.close,                        opts('Close'))
-  vim.keymap.set('n', 'r',     api.fs.rename,                         opts('Rename'))
-  vim.keymap.set('n', 'R',     api.tree.reload,                       opts('Refresh'))
-  vim.keymap.set('n', 's',     api.node.run.system,                   opts('Run System'))
-  vim.keymap.set('n', 'S',     api.tree.search_node,                  opts('Search'))
-  vim.keymap.set('n', 'U',     api.tree.toggle_custom_filter,         opts('Toggle Hidden'))
-  vim.keymap.set('n', 'W',     api.tree.collapse_all,                 opts('Collapse'))
-  vim.keymap.set('n', 'x',     api.fs.cut,                            opts('Cut'))
-  vim.keymap.set('n', 'y',     api.fs.copy.filename,                  opts('Copy Name'))
-  vim.keymap.set('n', 'Y',     api.fs.copy.relative_path,             opts('Copy Relative Path'))
-  vim.keymap.set('n', '<2-LeftMouse>',  api.node.open.edit,           opts('Open'))
+  vim.keymap.set('n', '<C-]>', api.tree.change_root_to_node, opts('CD'))
+  vim.keymap.set('n', '<C-e>', api.node.open.replace_tree_buffer, opts('Open: In Place'))
+  vim.keymap.set('n', '<C-k>', api.node.show_info_popup, opts('Info'))
+  vim.keymap.set('n', '<C-r>', api.fs.rename_sub, opts('Rename: Omit Filename'))
+  vim.keymap.set('n', '<C-t>', api.node.open.tab, opts('Open: New Tab'))
+  vim.keymap.set('n', '<C-v>', api.node.open.vertical, opts('Open: Vertical Split'))
+  vim.keymap.set('n', '<C-x>', api.node.open.horizontal, opts('Open: Horizontal Split'))
+  vim.keymap.set('n', '<BS>', api.node.navigate.parent_close, opts('Close Directory'))
+  vim.keymap.set('n', '<CR>', api.node.open.edit, opts('Open'))
+  vim.keymap.set('n', '<Tab>', api.node.open.preview, opts('Open Preview'))
+  vim.keymap.set('n', '>', api.node.navigate.sibling.next, opts('Next Sibling'))
+  vim.keymap.set('n', '<', api.node.navigate.sibling.prev, opts('Previous Sibling'))
+  vim.keymap.set('n', '.', api.node.run.cmd, opts('Run Command'))
+  vim.keymap.set('n', '-', api.tree.change_root_to_parent, opts('Up'))
+  vim.keymap.set('n', 'a', api.fs.create, opts('Create'))
+  vim.keymap.set('n', 'bmv', api.marks.bulk.move, opts('Move Bookmarked'))
+  vim.keymap.set('n', 'B', api.tree.toggle_no_buffer_filter, opts('Toggle No Buffer'))
+  vim.keymap.set('n', 'c', api.fs.copy.node, opts('Copy'))
+  vim.keymap.set('n', 'C', api.tree.toggle_git_clean_filter, opts('Toggle Git Clean'))
+  vim.keymap.set('n', '[c', api.node.navigate.git.prev, opts('Prev Git'))
+  vim.keymap.set('n', ']c', api.node.navigate.git.next, opts('Next Git'))
+  vim.keymap.set('n', 'd', api.fs.remove, opts('Delete'))
+  vim.keymap.set('n', 'D', api.fs.trash, opts('Trash'))
+  vim.keymap.set('n', 'E', api.tree.expand_all, opts('Expand All'))
+  vim.keymap.set('n', 'e', api.fs.rename_basename, opts('Rename: Basename'))
+  vim.keymap.set('n', ']e', api.node.navigate.diagnostics.next, opts('Next Diagnostic'))
+  vim.keymap.set('n', '[e', api.node.navigate.diagnostics.prev, opts('Prev Diagnostic'))
+  vim.keymap.set('n', 'F', api.live_filter.clear, opts('Clean Filter'))
+  vim.keymap.set('n', 'f', api.live_filter.start, opts('Filter'))
+  vim.keymap.set('n', 'g?', api.tree.toggle_help, opts('Help'))
+  vim.keymap.set('n', 'gy', api.fs.copy.absolute_path, opts('Copy Absolute Path'))
+  vim.keymap.set('n', 'H', api.tree.toggle_hidden_filter, opts('Toggle Dotfiles'))
+  vim.keymap.set('n', 'I', api.tree.toggle_gitignore_filter, opts('Toggle Git Ignore'))
+  vim.keymap.set('n', 'J', api.node.navigate.sibling.last, opts('Last Sibling'))
+  vim.keymap.set('n', 'K', api.node.navigate.sibling.first, opts('First Sibling'))
+  vim.keymap.set('n', 'm', api.marks.toggle, opts('Toggle Bookmark'))
+  vim.keymap.set('n', 'o', api.node.open.edit, opts('Open'))
+  vim.keymap.set('n', 'O', api.node.open.no_window_picker, opts('Open: No Window Picker'))
+  vim.keymap.set('n', 'p', api.fs.paste, opts('Paste'))
+  vim.keymap.set('n', 'P', api.node.navigate.parent, opts('Parent Directory'))
+  vim.keymap.set('n', 'q', api.tree.close, opts('Close'))
+  vim.keymap.set('n', 'r', api.fs.rename, opts('Rename'))
+  vim.keymap.set('n', 'R', api.tree.reload, opts('Refresh'))
+  vim.keymap.set('n', 's', api.node.run.system, opts('Run System'))
+  vim.keymap.set('n', 'S', api.tree.search_node, opts('Search'))
+  vim.keymap.set('n', 'U', api.tree.toggle_custom_filter, opts('Toggle Hidden'))
+  vim.keymap.set('n', 'W', api.tree.collapse_all, opts('Collapse'))
+  vim.keymap.set('n', 'x', api.fs.cut, opts('Cut'))
+  vim.keymap.set('n', 'y', api.fs.copy.filename, opts('Copy Name'))
+  vim.keymap.set('n', 'Y', api.fs.copy.relative_path, opts('Copy Relative Path'))
+  vim.keymap.set('n', '<2-LeftMouse>', api.node.open.edit, opts('Open'))
   vim.keymap.set('n', '<2-RightMouse>', api.tree.change_root_to_node, opts('CD'))
   -- END_DEFAULT_ON_ATTACH
 
@@ -562,7 +562,6 @@ local function nvim_tree_on_attach(bufnr)
   --
   -- You will need to insert "your code goes here" for any mappings with a custom action_cb
   vim.keymap.set('n', '<C-o>', api.tree.change_root_to_parent, opts('Up'))
-
 end
 
 require('nvim-tree').setup({
@@ -597,7 +596,7 @@ vim.g.lightline = {
 vim.api.nvim_exec(
   [[
 command! -bang -nargs=* Rg call fzf#vim#grep('rg --column --line-number --no-heading --color=never --smart-case '.shellescape(<q-args>), 1, {'options': '--delimiter : --nth 4..'}, <bang>0)
-]] ,
+]],
   true
 )
 
@@ -656,7 +655,7 @@ vim.keymap.set('n', '<leader>gg', ':LazyGit<CR>')
 vim.api.nvim_exec(
   [[
 autocmd BufRead,BufNewFile *.mdx set filetype=markdown
-]] ,
+]],
   true
 )
 
@@ -789,17 +788,17 @@ for _, language in ipairs({ "typescript", "javascript" }) do
   }
 end
 
-{% if use_win32yank %}
-vim.g.clipboard = {
-  name = "win32yank-wsl",
-  copy = {
-    ["+"] = "win32yank.exe -i --crlf",
-    ["*"] = "win32yank.exe -i --crlf"
-  },
-  paste = {
-    ["+"] = "win32yank.exe -o --lf",
-    ["*"] = "win32yank.exe -o --lf"
-  },
-  cache_enabled = 0
-}
-{% endif %}
+-- {% if use_win32yank %}
+-- vim.g.clipboard = {
+--   name = "win32yank-wsl",
+--   copy = {
+--     ["+"] = "win32yank.exe -i --crlf",
+--     ["*"] = "win32yank.exe -i --crlf"
+--   },
+--   paste = {
+--     ["+"] = "win32yank.exe -o --lf",
+--     ["*"] = "win32yank.exe -o --lf"
+--   },
+--   cache_enabled = 0
+-- }
+-- {% endif %}

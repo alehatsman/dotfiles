@@ -45,7 +45,8 @@ export PATH=$PYENV_ROOT/bin:$PATH
 
 eval "$(pyenv init -)"
 
-export PATH=$(pyenv root)/shims:$HOME/bin:/opt/local/bin:$PATH:$NVIDIA_GIT_BASE/bin:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PATH
+export PATH=$(pyenv root)/shims:$HOME/bin:/opt/local/bin:/opt/homebrew/bin:$PATH:$NVIDIA_GIT_BASE/bin:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PATH
+export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 
 
 if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
@@ -80,6 +81,7 @@ export WINDOWS_TERMINAL_CONFIG_LOCATION="/mnt/c/Users/aleha/AppData/Local/Packag
 # Plugins
 #---------------------------------------------
 export NVM_LAZY_LOAD=false
+export NVM_AUTO_USE=true
 source $ZPLUG_HOME/init.zsh
 
 zplug 'zplug/zplug', hook-build:'zplug --self-manage'
@@ -119,7 +121,6 @@ bindkey '^[[B' history-substring-search-down
 #---------------------------------------------
 
 alias ag="ag --path-to-ignore ~/.ignore"
-alias n="cd ~/Projects/atsman/notes; e"
 alias vimdiff="nvim -d"
 alias r="source ~/.zshrc"
 
@@ -463,3 +464,8 @@ _rush_bash_complete() {
 }
 
 complete -f -F _rush_bash_complete rush
+
+# open notes
+
+NOTES_PATH=~/Library/Mobile\ Documents/iCloud~md~obsidian/Documents/Notes
+alias n="cd $NOTES_PATH; nvim"
