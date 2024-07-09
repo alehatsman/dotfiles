@@ -646,7 +646,7 @@ vim.keymap.set('n', '<leader>sx', ':TSHighlightCapturesUnderCursor<CR>')
 ---------------------------------------------
 vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
 vim.g.copilot_no_tab_map = true
--- vim.g.copilot_node_command = '~/.nvm/versions/node/v17.9.1/bin/node'
+vim.g.copilot_node_command = '~/.nvm/versions/node/v20.15.1/bin/node'
 
 ---------------------------------------------
 -- Minimap
