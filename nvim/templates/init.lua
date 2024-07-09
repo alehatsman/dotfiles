@@ -24,7 +24,6 @@ vim.api.nvim_exec(
   false
 )
 
-
 ---------------------------------------------
 -- Plugins installation
 ---------------------------------------------
@@ -42,11 +41,11 @@ require('packer').startup(function(use)
     config = function()
       require('gitsigns').setup({
         signs = {
-          add          = { hl = 'GitSignsAdd', text = '│', numhl = 'GitSignsAddNr', linehl = 'GitSignsAddLn' },
-          change       = { hl = 'GitSignsChange', text = '│', numhl = 'GitSignsChangeNr', linehl = 'GitSignsChangeLn' },
-          delete       = { hl = 'GitSignsDelete', text = '-', numhl = 'GitSignsDeleteNr', linehl = 'GitSignsDeleteLn' },
-          topdelete    = { hl = 'GitSignsDelete', text = '-', numhl = 'GitSignsDeleteNr', linehl = 'GitSignsDeleteLn' },
-          changedelete = { hl = 'GitSignsChange', text = '~', numhl = 'GitSignsChangeNr', linehl = 'GitSignsChangeLn' },
+          add          = { text = '│' },
+          change       = { text = '│' },
+          delete       = { text = '-' },
+          topdelete    = { text = '-' },
+          changedelete = { text = '~' },
         }
       })
     end
@@ -123,19 +122,18 @@ require('packer').startup(function(use)
   use 'github/copilot.vim'
 
   -- debugging
-  use 'mfussenegger/nvim-dap'
-  use { "mxsdev/nvim-dap-vscode-js" }
-  use 'rcarriga/nvim-dap-ui'
-  use 'theHamsta/nvim-dap-virtual-text'
-  use 'leoluz/nvim-dap-go'
-  use 'mfussenegger/nvim-dap-python'
-  use {
-    "microsoft/vscode-js-debug",
-    opt = true,
-    run = "npm install --legacy-peer-deps && npm run compile"
-  }
+  -- use 'mfussenegger/nvim-dap'
+  -- use { "mxsdev/nvim-dap-vscode-js" }
+  -- use 'rcarriga/nvim-dap-ui'
+  -- use 'theHamsta/nvim-dap-virtual-text'
+  -- use 'leoluz/nvim-dap-go'
+  -- use 'mfussenegger/nvim-dap-python'
+  -- use {
+  --   "microsoft/vscode-js-debug",
+  --   opt = true,
+  --   run = "npm install --legacy-peer-deps && npm run compile"
+  -- }
 
-  use 'wfxr/minimap.vim'
   use 'wbthomason/packer.nvim'
 
   use({
@@ -332,8 +330,6 @@ local capabilities = require('cmp_nvim_lsp').default_capabilities()
 ---------------------------------------------
 local lspconfig = require 'lspconfig'
 
-local api = vim.api
-
 vim.lsp.handlers['textDocument/publishDiagnostics'] = vim.lsp.with(
   vim.lsp.diagnostic.on_publish_diagnostics, {
     underline = false,
@@ -372,7 +368,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
 local lsp_format = require("lsp-format")
 lsp_format.setup {}
 
-function on_attach(client, bufnr)
+local function on_attach(client, bufnr)
   --require'completion'.on_attach(client, bufnr)
   --api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
   lsp_signature.on_attach(client, bufnr)
@@ -421,15 +417,6 @@ lspconfig.pylsp.setup({
 ---------------------------------------------
 -- Linters / Fixers / Formatters
 ---------------------------------------------
-local function has_eslint_config()
-  local eslintrc = vim.fn.glob(".eslintrc*")
-  return eslintrc ~= ""
-end
-
-local function is_prettier_executable()
-  return vim.fn.executable("prettier") == 1 or vim.fn.executable("./node_modules/.bin/prettier") == 1
-end
-
 require('lint').linters_by_ft = {
   javascript = { 'eslint' },
   javascriptreact = { 'eslint' },
@@ -464,7 +451,7 @@ vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
 ---------------------------------------------
 -- Treesitter
 ---------------------------------------------
-require 'nvim-treesitter.configs'.setup {
+require('nvim-treesitter.configs').setup({
   ensure_installed = "all",
   ignore_install = { "markdown" },
   ident = {
@@ -473,11 +460,11 @@ require 'nvim-treesitter.configs'.setup {
   highlight = {
     enable = true,
   },
-}
+})
 
-require('ts_context_commentstring').setup {
+require('ts_context_commentstring').setup({
   enable_autocmd = false,
-}
+})
 
 ---
 -- Comment
@@ -640,17 +627,10 @@ for i = 1, 9 do
   vim.keymap.set('n', '<leader>' .. i, i .. 'gt')
 end
 
--- Git mappings
-vim.keymap.set('n', '<leader>gs', ':Git<CR>')
-vim.keymap.set('n', '<leader>gc', ':Git commit<CR>')
-vim.keymap.set('n', '<leader>gp', ':Git push<CR>')
 vim.keymap.set('n', '<leader>gb', ':Git blame<CR>')
-vim.keymap.set('n', '<leader>gpr', ':Git pull -r<CR>')
 vim.keymap.set('n', '<leader>gl', ':Gclog %<CR>')
 vim.keymap.set('n', '<leader>gd', ':Gvdiffsplit<CR>')
 vim.keymap.set('n', '<leader>gm', ':Gvdiffsplit!<CR>')
-
-vim.keymap.set('n', '<leader>gg', ':LazyGit<CR>')
 
 vim.api.nvim_exec(
   [[
@@ -666,7 +646,7 @@ vim.keymap.set('n', '<leader>sx', ':TSHighlightCapturesUnderCursor<CR>')
 ---------------------------------------------
 vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
 vim.g.copilot_no_tab_map = true
-vim.g.copilot_node_command = '~/.nvm/versions/node/v17.9.1/bin/node'
+-- vim.g.copilot_node_command = '~/.nvm/versions/node/v17.9.1/bin/node'
 
 ---------------------------------------------
 -- Minimap
@@ -678,115 +658,122 @@ vim.g.minimap_git_colors = 1
 vim.g.minimap_block_filetypes = { 'fugitive', 'nerdtree', 'tagbar', 'fzf', '' }
 vim.keymap.set('n', '<leader>mm', ':MinimapToggle<CR>')
 
+-- Lint
+local lint = require('lint')
+local function try_lint()
+  lint.try_lint()
+end
+vim.keymap.set('n', '<leader>ll', try_lint)
+
 ---------------------------------------------
 -- DAP, DEBUG
 ---------------------------------------------
 
-require("nvim-dap-virtual-text").setup {
-  commented = true,
-}
-
-local dap, dapui = require('dap'), require('dapui')
-local dap = require('dap')
-
-vim.keymap.set('n', '<leader>dc', dap.continue)
---vim.keymap.set('n', '<F29>', dap.run_last)
-vim.keymap.set('n', '<leader>db', dap.toggle_breakpoint)
-vim.keymap.set('n', '<leader>dj', dap.step_over)
-vim.keymap.set('n', '<leader>di', dap.step_into)
-vim.keymap.set('n', '<leader>do', dap.step_out)
-
-
-dapui.setup({
-  layouts = {
-    {
-      elements = {
-        'stacks',
-        { id = 'scopes', size = 0.75 },
-      },
-      size = 40, -- 40 columns
-      position = 'left',
-    },
-    {
-      elements = {
-        'repl',
-        'console',
-      },
-      size = 0.25, -- 25% of total lines
-      position = 'bottom',
-    },
-  },
-  controls = {
-    icons = {
-      pause = "",
-      play = "",
-      step_into = "",
-      step_over = "",
-      step_out = "",
-      step_back = "",
-      run_last = "↻",
-      terminate = "□",
-    },
-  },
-})
-dap.listeners.after.event_initialized['dapui_config'] = dapui.open
-dap.listeners.before.event_exited['dapui_config'] = dapui.close
-
-vim.keymap.set('n', '<Leader>dq', function()
-  dap.disconnect()
-  dap.close()
-  dapui.close({})
-
-  for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
-    local name = vim.api.nvim_buf_get_name(buffer)
-    if name:match('.*%[dap%-repl%]') then
-      vim.api.nvim_buf_delete(buffer, { force = true })
-    end
-  end
-end)
-
-require("dap-vscode-js").setup({
-  --node_path = "node", -- Path of node executable. Defaults to $NODE_PATH, and then "node"
-  --debugger_path = "/Users/alehatsman/.local/share/nvim/site/pack/packer/opt/vscode-js-debug", -- Path to vscode-js-debug installation.
-  --debugger_cmd = { "js-debug-adapter" }, -- Command to use to launch the debug server. Takes precedence over `node_path` and `debugger_path`.
-  adapters = { 'pwa-node', 'pwa-chrome', 'pwa-msedge', 'node-terminal', 'pwa-extensionHost' }, -- which adapters to register in nvim-dap
-})
-
-require('dap-go').setup()
-
-for _, language in ipairs({ "typescript", "javascript" }) do
-  require("dap").configurations[language] = {
-    {
-      type = "pwa-node",
-      request = "launch",
-      name = "Launch file",
-      program = "${file}",
-      cwd = "${workspaceFolder}",
-    },
-    {
-      type = "pwa-node",
-      request = "attach",
-      name = "Attach",
-      processId = require 'dap.utils'.pick_process,
-      cwd = "${workspaceFolder}",
-    },
-    {
-      type = "pwa-node",
-      request = "launch",
-      name = "Debug Jest Tests",
-      -- trace = true, -- include debugger info
-      runtimeExecutable = "node",
-      runtimeArgs = {
-        "./node_modules/.bin/jest",
-        "--runInBand",
-      },
-      rootPath = "${workspaceFolder}",
-      cwd = "${workspaceFolder}",
-      console = "integratedTerminal",
-      internalConsoleOptions = "neverOpen",
-    }
-  }
-end
+-- require("nvim-dap-virtual-text").setup {
+--   commented = true,
+-- }
+--
+-- local dap, dapui = require('dap'), require('dapui')
+-- local dap = require('dap')
+--
+-- vim.keymap.set('n', '<leader>dc', dap.continue)
+-- --vim.keymap.set('n', '<F29>', dap.run_last)
+-- vim.keymap.set('n', '<leader>db', dap.toggle_breakpoint)
+-- vim.keymap.set('n', '<leader>dj', dap.step_over)
+-- vim.keymap.set('n', '<leader>di', dap.step_into)
+-- vim.keymap.set('n', '<leader>do', dap.step_out)
+--
+--
+-- dapui.setup({
+--   layouts = {
+--     {
+--       elements = {
+--         'stacks',
+--         { id = 'scopes', size = 0.75 },
+--       },
+--       size = 40, -- 40 columns
+--       position = 'left',
+--     },
+--     {
+--       elements = {
+--         'repl',
+--         'console',
+--       },
+--       size = 0.25, -- 25% of total lines
+--       position = 'bottom',
+--     },
+--   },
+--   controls = {
+--     icons = {
+--       pause = "",
+--       play = "",
+--       step_into = "",
+--       step_over = "",
+--       step_out = "",
+--       step_back = "",
+--       run_last = "↻",
+--       terminate = "□",
+--     },
+--   },
+-- })
+-- dap.listeners.after.event_initialized['dapui_config'] = dapui.open
+-- dap.listeners.before.event_exited['dapui_config'] = dapui.close
+--
+-- vim.keymap.set('n', '<Leader>dq', function()
+--   dap.disconnect()
+--   dap.close()
+--   dapui.close({})
+--
+--   for _, buffer in ipairs(vim.api.nvim_list_bufs()) do
+--     local name = vim.api.nvim_buf_get_name(buffer)
+--     if name:match('.*%[dap%-repl%]') then
+--       vim.api.nvim_buf_delete(buffer, { force = true })
+--     end
+--   end
+-- end)
+--
+-- require("dap-vscode-js").setup({
+--   --node_path = "node", -- Path of node executable. Defaults to $NODE_PATH, and then "node"
+--   --debugger_path = "/Users/alehatsman/.local/share/nvim/site/pack/packer/opt/vscode-js-debug", -- Path to vscode-js-debug installation.
+--   --debugger_cmd = { "js-debug-adapter" }, -- Command to use to launch the debug server. Takes precedence over `node_path` and `debugger_path`.
+--   adapters = { 'pwa-node', 'pwa-chrome', 'pwa-msedge', 'node-terminal', 'pwa-extensionHost' }, -- which adapters to register in nvim-dap
+-- })
+--
+-- require('dap-go').setup()
+--
+-- for _, language in ipairs({ "typescript", "javascript" }) do
+--   require("dap").configurations[language] = {
+--     {
+--       type = "pwa-node",
+--       request = "launch",
+--       name = "Launch file",
+--       program = "${file}",
+--       cwd = "${workspaceFolder}",
+--     },
+--     {
+--       type = "pwa-node",
+--       request = "attach",
+--       name = "Attach",
+--       processId = require 'dap.utils'.pick_process,
+--       cwd = "${workspaceFolder}",
+--     },
+--     {
+--       type = "pwa-node",
+--       request = "launch",
+--       name = "Debug Jest Tests",
+--       -- trace = true, -- include debugger info
+--       runtimeExecutable = "node",
+--       runtimeArgs = {
+--         "./node_modules/.bin/jest",
+--         "--runInBand",
+--       },
+--       rootPath = "${workspaceFolder}",
+--       cwd = "${workspaceFolder}",
+--       console = "integratedTerminal",
+--       internalConsoleOptions = "neverOpen",
+--     }
+--   }
+-- end
 
 -- {% if use_win32yank %}
 -- vim.g.clipboard = {
