@@ -441,10 +441,9 @@ vim.call('sign_define', 'DiagnosticSignHint', { text = "•", texthl = "Diagnost
 vim.keymap.set('n', '<c-]>', '<cmd>lua vim.lsp.buf.definition()<CR>')
 vim.keymap.set('n', '<c-k>', '<cmd>lua vim.lsp.buf.signature_help()<CR>')
 vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
-vim.keymap.set('n', '<leader>ds', '<cmd>:Diagnostics<CR>')
 vim.keymap.set('n', '<c-space>', '<cmd>:CodeActions<CR>')
 vim.keymap.set('n', '<leader>rn', '<cmd>lua vim.lsp.buf.rename()<CR>')
-vim.keymap.set('n', '<leader>q', '<cmd>lua vim.lsp.diagnostic.set_loclist()<CR>')
+vim.keymap.set('n', '<leader>dd', '<cmd>lua vim.diagnostic.setqflist()<CR>')
 vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
 
 
@@ -593,7 +592,7 @@ vim.keymap.set('n', '<c-h>', ':Help<cr>')
 
 
 require('lspfuzzy').setup()
---require('fzf_lsp').setup()
+require('fzf_lsp').setup()
 
 require 'colorizer'.setup()
 
