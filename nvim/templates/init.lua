@@ -81,6 +81,7 @@ require('packer').startup(function(use)
   use 'vim-scripts/LargeFile'
 
   use 'alehatsman/vim-monokai'
+  use 'sindrets/diffview.nvim'
   --use 'cocopon/colorswatch.vim'
   --use 'tjdevries/colorbuddy.nvim'
 
@@ -643,7 +644,7 @@ vim.keymap.set('n', '<leader>sx', ':TSHighlightCapturesUnderCursor<CR>')
 ---------------------------------------------
 -- Copilot
 ---------------------------------------------
-vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
+-- vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
 vim.g.copilot_no_tab_map = true
 vim.g.copilot_node_command = '~/.nvm/versions/node/v20.15.1/bin/node'
 
@@ -788,3 +789,7 @@ vim.keymap.set('n', '<leader>ll', try_lint)
 --   cache_enabled = 0
 -- }
 -- {% endif %}
+
+require('diffview').setup({
+  use_icons = true,
+})
