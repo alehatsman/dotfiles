@@ -380,7 +380,7 @@ local setup_config = { on_attach = on_attach, capabilities = capabilities }
 
 lspconfig.terraformls.setup(setup_config)
 lspconfig.gopls.setup(setup_config)
-lspconfig.tsserver.setup(setup_config)
+lspconfig.ts_ls.setup(setup_config)
 lspconfig.clojure_lsp.setup(setup_config)
 lspconfig.rust_analyzer.setup(setup_config)
 lspconfig.lua_ls.setup {
@@ -644,7 +644,7 @@ vim.keymap.set('n', '<leader>sx', ':TSHighlightCapturesUnderCursor<CR>')
 ---------------------------------------------
 -- Copilot
 ---------------------------------------------
--- vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
+vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
 vim.g.copilot_no_tab_map = true
 vim.g.copilot_node_command = '~/.nvm/versions/node/v20.15.1/bin/node'
 
