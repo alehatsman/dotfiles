@@ -5,8 +5,8 @@
 
 - vars:
     cargo_packages:
-      - exa
       - bat
+      - lsd
       - git-delta
       - xsv
       - code-minimap
