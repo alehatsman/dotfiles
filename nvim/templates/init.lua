@@ -630,6 +630,7 @@ end
 
 vim.keymap.set('n', '<leader>gb', ':Git blame<CR>')
 vim.keymap.set('n', '<leader>gd', ':DiffviewOpen<CR>')
+vim.keymap.set('n', '<leader>gl', ':DiffviewFileHistory<CR>')
 
 vim.api.nvim_exec(
   [[
