@@ -151,6 +151,7 @@ g() {
 compdef g=git
 
 # add tab complete
+# GIT
 alias ga="git add"
 alias gaa="git add --all"
 alias gai="git add --interactive"
@@ -317,8 +318,8 @@ nr() {
   local npm_client
   npm_client=$(_get_npm_client)
   if [ -z "$npm_client" ]; then
-    echo "no package-lock.json or yarn.lock"
-    return 0
+    echo "no package-lock.json or yarn.lock - using npm"
+    npm_client='npm'
   fi
 
   local npm_script
