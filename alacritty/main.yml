@@ -6,5 +6,5 @@
 
 - name: Make sure alacritty config file is present
   template:
-    src: ./alacritty.yml.j2
-    dest: ~/.config/alacritty/alacritty.yml
+    src: ./alacritty.toml
+    dest: ~/.config/alacritty/alacritty.toml
