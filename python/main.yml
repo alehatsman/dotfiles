@@ -11,3 +11,4 @@
 - name: Make sure pyenv is installed
   shell: |
     [ ! -d ~/.pyenv ] && git clone --depth 1 https://github.com/pyenv/pyenv.git ~/.pyenv && cd ~/.pyenv && src/configure && make -C src; exit 0;
+    [ ! -d "$(pyenv root)/plugins/pyenv-virtualenv" ] && git clone https://github.com/pyenv/pyenv-virtualenv.git "$(pyenv root)/plugins/pyenv-virtualenv";

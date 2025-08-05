@@ -44,6 +44,7 @@ export PYENV_ROOT=~/.pyenv
 export PATH=$PYENV_ROOT/bin:$PATH
 
 eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
 
 export PATH=$(pyenv root)/shims:$HOME/bin:/opt/local/bin:/opt/homebrew/bin:$PATH:$NVIDIA_GIT_BASE/bin:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PATH
 export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
@@ -74,8 +75,6 @@ source ~/.fzf/shell/completion.zsh
 if [[ $(uname) != 'Darwin' ]]; then
   export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
 fi
-
-export WINDOWS_TERMINAL_CONFIG_LOCATION="/mnt/c/Users/aleha/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json"
 
 #---------------------------------------------
 # Plugins

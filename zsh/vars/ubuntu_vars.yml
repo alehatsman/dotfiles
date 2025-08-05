@@ -3,3 +3,4 @@ FZF_BASE: /usr/bin/fzf
 GCP_PATH: ''
 JAVA_HOME: ''
 ZPLUG_HOME: ~/.zplug
+OS_USERNAME: aleh
