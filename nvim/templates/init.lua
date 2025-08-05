@@ -454,7 +454,7 @@ vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
 ---------------------------------------------
 require('nvim-treesitter.configs').setup({
   ensure_installed = "all",
-  ignore_install = { "markdown" },
+  ignore_install = { "markdown", "ipkg" },
   ident = {
     enable = true,
   },
@@ -676,3 +676,28 @@ local function try_lint()
   lint.try_lint()
 end
 vim.keymap.set('n', '<leader>ll', try_lint)
+
+-- clipboard for wsl
+local function is_wsl()
+  local f = io.popen("uname -r")
+  if not f then return false end
+  local result = f:read("*all")
+  f:close()
+  return result:match("WSL") or result:match("Microsoft")
+end
+
+if is_wsl() then
+  vim.opt.clipboard = "unnamedplus"
+  vim.g.clipboard = {
+    name = 'wl-clipboard',
+    copy = {
+      ['+'] = 'wl-copy',
+      ['*'] = 'wl-copy',
+    },
+    paste = {
+      ['+'] = 'wl-paste',
+      ['*'] = 'wl-paste',
+    },
+    cache_enabled = false,
+  }
+end

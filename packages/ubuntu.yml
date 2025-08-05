@@ -28,6 +28,11 @@
   become: true
   when: false
 
+- name: Add neovim repos
+  shell: |
+    add-apt-repository ppa:neovim-ppa/unstable
+    apt-update
+
 - name: Make sure apps are installed
   shell: |
     apt-get install -y {{  apps | join: " " }}

@@ -6,7 +6,7 @@ apps:
   - rlwrap
   - make
   - cmake
-  - ctags
+    #- ctags
   - dos2unix
   - git
   - graphviz
@@ -15,7 +15,7 @@ apps:
   - jq
   - mosh
   - nmap
-  - python
+    #- python
   - sshfs
   - tldr
   - tmux
@@ -38,7 +38,7 @@ apps:
   - zsh
 
   # Docker
-  - docker
+  #- docker
 
   - lua5.1
   - golang-go
@@ -50,3 +50,5 @@ apps:
   - ruby-full
   # - lazygit
   - postgresql-client
+
+  - wl-clipboard 
