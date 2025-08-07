@@ -1,0 +1,584 @@
+{
+  "__VERSION__": "229",
+  "Main": {
+    "Controls": [
+      {
+        "Calibration": [],
+        "Enable": false,
+        "ForceApply": false,
+        "Identifier": "/lpc/nct6798d/control/0",
+        "IsHidden": true,
+        "ManualControl": false,
+        "ManualControlValue": 50,
+        "MinimumPercent": 0,
+        "Name": "Chassis Fan",
+        "NickName": "Chassis Fan",
+        "PairedFanSensor": null,
+        "SelectedCommandStepDown": 8,
+        "SelectedCommandStepUp": 8,
+        "SelectedFanCurve": null,
+        "SelectedOffset": 0,
+        "SelectedStart": 0,
+        "SelectedStop": 0
+      },
+      {
+        "Calibration": [
+          [
+            0,
+            0
+          ],
+          [
+            10,
+            175
+          ],
+          [
+            20,
+            354
+          ],
+          [
+            30,
+            539
+          ],
+          [
+            40,
+            704
+          ],
+          [
+            50,
+            859
+          ],
+          [
+            70,
+            1140
+          ],
+          [
+            80,
+            1291
+          ],
+          [
+            90,
+            1424
+          ],
+          [
+            100,
+            1561
+          ]
+        ],
+        "Enable": true,
+        "ForceApply": false,
+        "Identifier": "/lpc/nct6798d/control/1",
+        "IsHidden": false,
+        "ManualControl": false,
+        "ManualControlValue": 50,
+        "MinimumPercent": 0,
+        "Name": "CPU Fan",
+        "NickName": "CPU Fan",
+        "PairedFanSensor": {
+          "Identifier": "/lpc/nct6798d/fan/1",
+          "IsHidden": false,
+          "Name": "CPU Fan",
+          "NickName": "CPU Fan"
+        },
+        "SelectedCommandStepDown": 8,
+        "SelectedCommandStepUp": 8,
+        "SelectedFanCurve": {
+          "CommandMode": 0,
+          "HysteresisConfig": {
+            "HysteresisValueDown": 2,
+            "HysteresisValueUp": 2,
+            "IgnoreHysteresisAtLimits": true,
+            "ResponseTimeDown": 1,
+            "ResponseTimeUp": 1
+          },
+          "IsHidden": false,
+          "MaximumCommand": 100,
+          "MaximumTemperature": 75,
+          "MinimumTemperature": 20,
+          "Name": "CPU Graph",
+          "Points": [
+            "40,20",
+            "55,40",
+            "65,65",
+            "75,100",
+            "80,100"
+          ],
+          "SelectedTempSource": {
+            "Identifier": "/amdcpu/0/temperature/2",
+            "IsHidden": false,
+            "Name": "Core (Tctl/Tdie)",
+            "NickName": "CPU"
+          }
+        },
+        "SelectedOffset": 0,
+        "SelectedStart": 18,
+        "SelectedStop": 6
+      },
+      {
+        "Calibration": [
+          [
+            10,
+            0
+          ],
+          [
+            20,
+            327
+          ],
+          [
+            30,
+            505
+          ],
+          [
+            40,
+            671
+          ],
+          [
+            50,
+            825
+          ],
+          [
+            70,
+            1088
+          ],
+          [
+            80,
+            1211
+          ],
+          [
+            90,
+            1336
+          ],
+          [
+            100,
+            1463
+          ]
+        ],
+        "Enable": true,
+        "ForceApply": false,
+        "Identifier": "/lpc/nct6798d/control/4",
+        "IsHidden": false,
+        "ManualControl": false,
+        "ManualControlValue": 50,
+        "MinimumPercent": 0,
+        "Name": "AIO Pump",
+        "NickName": "Case (AIO Pump)",
+        "PairedFanSensor": {
+          "Identifier": "/lpc/nct6798d/fan/4",
+          "IsHidden": false,
+          "Name": "AIO Pump",
+          "NickName": "Case (AIO Pump)"
+        },
+        "SelectedCommandStepDown": 8,
+        "SelectedCommandStepUp": 8,
+        "SelectedFanCurve": {
+          "CommandMode": 0,
+          "IsHidden": false,
+          "Name": "MAX(CPU + GPU)",
+          "SelectedFanCurves": [
+            {
+              "CommandMode": 0,
+              "HysteresisConfig": {
+                "HysteresisValueDown": 2,
+                "HysteresisValueUp": 2,
+                "IgnoreHysteresisAtLimits": true,
+                "ResponseTimeDown": 1,
+                "ResponseTimeUp": 1
+              },
+              "IsHidden": false,
+              "MaximumCommand": 100,
+              "MaximumTemperature": 75,
+              "MinimumTemperature": 20,
+              "Name": "CPU Graph",
+              "Points": [
+                "40,20",
+                "55,40",
+                "65,65",
+                "75,100",
+                "80,100"
+              ],
+              "SelectedTempSource": {
+                "Identifier": "/amdcpu/0/temperature/2",
+                "IsHidden": false,
+                "Name": "Core (Tctl/Tdie)",
+                "NickName": "CPU"
+              }
+            },
+            {
+              "CommandMode": 0,
+              "HysteresisConfig": {
+                "HysteresisValueDown": 2,
+                "HysteresisValueUp": 2,
+                "IgnoreHysteresisAtLimits": true,
+                "ResponseTimeDown": 1,
+                "ResponseTimeUp": 1
+              },
+              "IsHidden": false,
+              "MaximumCommand": 100,
+              "MaximumTemperature": 80,
+              "MinimumTemperature": 20,
+              "Name": "Gpu Graph",
+              "Points": [
+                "40,30",
+                "55,45",
+                "65,60",
+                "75,80",
+                "80,100"
+              ],
+              "SelectedTempSource": {
+                "Identifier": "NVApiWrapper/0-GB202-A/sensor/0",
+                "IsHidden": false,
+                "Name": "GPU",
+                "NickName": "GPU"
+              }
+            }
+          ],
+          "SelectedMixFunction": 0
+        },
+        "SelectedOffset": 0,
+        "SelectedStart": 19,
+        "SelectedStop": 16
+      },
+      {
+        "Calibration": [
+          [
+            30,
+            1087
+          ],
+          [
+            40,
+            1332
+          ],
+          [
+            50,
+            1603
+          ],
+          [
+            60,
+            1857
+          ],
+          [
+            70,
+            2118
+          ],
+          [
+            80,
+            2377
+          ],
+          [
+            90,
+            2636
+          ],
+          [
+            100,
+            2870
+          ]
+        ],
+        "Enable": true,
+        "ForceApply": false,
+        "Identifier": "NVApiWrapper/0-GB202-A/control/0",
+        "IsHidden": false,
+        "ManualControl": false,
+        "ManualControlValue": 50,
+        "MinimumPercent": 0,
+        "Name": "Control 1 - NVIDIA GeForce RTX 5090",
+        "NickName": "RTX 5090",
+        "PairedFanSensor": {
+          "Identifier": "NVApiWrapper/0-GB202-A/fan/0",
+          "IsHidden": false,
+          "Name": "Fan 1 - NVIDIA GeForce RTX 5090",
+          "NickName": "RTX 5090"
+        },
+        "SelectedCommandStepDown": 8,
+        "SelectedCommandStepUp": 8,
+        "SelectedFanCurve": {
+          "CommandMode": 0,
+          "HysteresisConfig": {
+            "HysteresisValueDown": 2,
+            "HysteresisValueUp": 2,
+            "IgnoreHysteresisAtLimits": true,
+            "ResponseTimeDown": 1,
+            "ResponseTimeUp": 1
+          },
+          "IsHidden": false,
+          "MaximumCommand": 100,
+          "MaximumTemperature": 80,
+          "MinimumTemperature": 20,
+          "Name": "Gpu Graph",
+          "Points": [
+            "40,30",
+            "55,45",
+            "65,60",
+            "75,80",
+            "80,100"
+          ],
+          "SelectedTempSource": {
+            "Identifier": "NVApiWrapper/0-GB202-A/sensor/0",
+            "IsHidden": false,
+            "Name": "GPU",
+            "NickName": "GPU"
+          }
+        },
+        "SelectedOffset": 0,
+        "SelectedStart": 0,
+        "SelectedStop": 0
+      },
+      {
+        "Calibration": [],
+        "Enable": false,
+        "ForceApply": false,
+        "Identifier": "NVApiWrapper/0-GB202-A/control/1",
+        "IsHidden": true,
+        "ManualControl": false,
+        "ManualControlValue": 50,
+        "MinimumPercent": 0,
+        "Name": "Control 2 - NVIDIA GeForce RTX 5090",
+        "NickName": "Control 2 - NVIDIA GeForce RTX 5090",
+        "PairedFanSensor": null,
+        "SelectedCommandStepDown": 8,
+        "SelectedCommandStepUp": 8,
+        "SelectedFanCurve": null,
+        "SelectedOffset": 0,
+        "SelectedStart": 0,
+        "SelectedStop": 0
+      }
+    ],
+    "CustomSensors": [],
+    "Fahrenheit": false,
+    "FanCurves": [
+      {
+        "CommandMode": 0,
+        "HysteresisConfig": {
+          "HysteresisValueDown": 2,
+          "HysteresisValueUp": 2,
+          "IgnoreHysteresisAtLimits": true,
+          "ResponseTimeDown": 1,
+          "ResponseTimeUp": 1
+        },
+        "IsHidden": false,
+        "MaximumCommand": 100,
+        "MaximumTemperature": 75,
+        "MinimumTemperature": 20,
+        "Name": "CPU Graph",
+        "Points": [
+          "40,20",
+          "55,40",
+          "65,65",
+          "75,100",
+          "80,100"
+        ],
+        "SelectedTempSource": {
+          "Identifier": "/amdcpu/0/temperature/2",
+          "IsHidden": false,
+          "Name": "Core (Tctl/Tdie)",
+          "NickName": "CPU"
+        }
+      },
+      {
+        "CommandMode": 0,
+        "HysteresisConfig": {
+          "HysteresisValueDown": 2,
+          "HysteresisValueUp": 2,
+          "IgnoreHysteresisAtLimits": true,
+          "ResponseTimeDown": 1,
+          "ResponseTimeUp": 1
+        },
+        "IsHidden": false,
+        "MaximumCommand": 100,
+        "MaximumTemperature": 80,
+        "MinimumTemperature": 20,
+        "Name": "Gpu Graph",
+        "Points": [
+          "40,30",
+          "55,45",
+          "65,60",
+          "75,80",
+          "80,100"
+        ],
+        "SelectedTempSource": {
+          "Identifier": "NVApiWrapper/0-GB202-A/sensor/0",
+          "IsHidden": false,
+          "Name": "GPU",
+          "NickName": "GPU"
+        }
+      },
+      {
+        "CommandMode": 0,
+        "IsHidden": false,
+        "Name": "MAX(CPU + GPU)",
+        "SelectedFanCurves": [
+          {
+            "CommandMode": 0,
+            "HysteresisConfig": {
+              "HysteresisValueDown": 2,
+              "HysteresisValueUp": 2,
+              "IgnoreHysteresisAtLimits": true,
+              "ResponseTimeDown": 1,
+              "ResponseTimeUp": 1
+            },
+            "IsHidden": false,
+            "MaximumCommand": 100,
+            "MaximumTemperature": 75,
+            "MinimumTemperature": 20,
+            "Name": "CPU Graph",
+            "Points": [
+              "40,20",
+              "55,40",
+              "65,65",
+              "75,100",
+              "80,100"
+            ],
+            "SelectedTempSource": {
+              "Identifier": "/amdcpu/0/temperature/2",
+              "IsHidden": false,
+              "Name": "Core (Tctl/Tdie)",
+              "NickName": "CPU"
+            }
+          },
+          {
+            "CommandMode": 0,
+            "HysteresisConfig": {
+              "HysteresisValueDown": 2,
+              "HysteresisValueUp": 2,
+              "IgnoreHysteresisAtLimits": true,
+              "ResponseTimeDown": 1,
+              "ResponseTimeUp": 1
+            },
+            "IsHidden": false,
+            "MaximumCommand": 100,
+            "MaximumTemperature": 80,
+            "MinimumTemperature": 20,
+            "Name": "Gpu Graph",
+            "Points": [
+              "40,30",
+              "55,45",
+              "65,60",
+              "75,80",
+              "80,100"
+            ],
+            "SelectedTempSource": {
+              "Identifier": "NVApiWrapper/0-GB202-A/sensor/0",
+              "IsHidden": false,
+              "Name": "GPU",
+              "NickName": "GPU"
+            }
+          }
+        ],
+        "SelectedMixFunction": 0
+      }
+    ],
+    "FanSensors": [
+      {
+        "Identifier": "/lpc/nct6798d/fan/0",
+        "IsHidden": false,
+        "Name": "Chassis Fan",
+        "NickName": "Chassis Fan"
+      },
+      {
+        "Identifier": "/lpc/nct6798d/fan/1",
+        "IsHidden": false,
+        "Name": "CPU Fan",
+        "NickName": "CPU Fan"
+      },
+      {
+        "Identifier": "/lpc/nct6798d/fan/4",
+        "IsHidden": false,
+        "Name": "AIO Pump",
+        "NickName": "Case (AIO Pump)"
+      },
+      {
+        "Identifier": "/lpc/ec/fan/0",
+        "IsHidden": false,
+        "Name": "VRM Heat Sink Fan",
+        "NickName": "VRM Heat Sink Fan"
+      },
+      {
+        "Identifier": "/lpc/ec/fan/1",
+        "IsHidden": false,
+        "Name": "Chipset Fan",
+        "NickName": "Chipset Fan"
+      },
+      {
+        "Identifier": "NVApiWrapper/0-GB202-A/fan/0",
+        "IsHidden": false,
+        "Name": "Fan 1 - NVIDIA GeForce RTX 5090",
+        "NickName": "RTX 5090"
+      },
+      {
+        "Identifier": "NVApiWrapper/0-GB202-A/fan/1",
+        "IsHidden": false,
+        "Name": "Fan 2 - NVIDIA GeForce RTX 5090",
+        "NickName": "Fan 2 - NVIDIA GeForce RTX 5090"
+      }
+    ],
+    "HideCalibration": true,
+    "HideFanSpeedCards": true,
+    "HorizontalUIOrientation": false,
+    "PrimaryColor": "#FF607D8B",
+    "SecondaryColor": "#FFC6FF00",
+    "SelectedTheme": "",
+    "ShowHiddenCards": false,
+    "SyncThemeWithWindows": true,
+    "SyncTrayIconColorWithWindows": true,
+    "TemperatureSensors": [
+      {
+        "Identifier": "/amdcpu/0/temperature/2",
+        "IsHidden": false,
+        "Name": "Core (Tctl/Tdie)",
+        "NickName": "CPU"
+      }
+    ],
+    "TrayIconColor": null,
+    "TrayIcons": [
+      {
+        "Color": "#FFF26522",
+        "SensorId": {
+          "Identifier": "/amdcpu/0/temperature/2",
+          "IsHidden": false,
+          "Name": "Core (Tctl/Tdie)",
+          "NickName": "CPU"
+        }
+      },
+      {
+        "Color": "#FF76B900",
+        "SensorId": {
+          "Identifier": "NVApiWrapper/0-GB202-A/sensor/0",
+          "IsHidden": false,
+          "Name": "GPU",
+          "NickName": "GPU"
+        }
+      },
+      {
+        "Color": "#FF1428A0",
+        "SensorId": {
+          "Identifier": "/nvme/1/temperature/0",
+          "IsHidden": false,
+          "Name": "Temperature",
+          "NickName": "Temperature"
+        }
+      }
+    ]
+  },
+  "Sensors": {
+    "AdlxWrapperSettings": {
+      "Enabled": true
+    },
+    "DisabledPlugins": [],
+    "DisableStorageSensors": false,
+    "LibreHardwareMonitorSettings": {
+      "Controller": false,
+      "CPU": true,
+      "EmbeddedEC": true,
+      "GPU": true,
+      "InpOut": false,
+      "Memory": false,
+      "Motherboard": true,
+      "PSU": false,
+      "Storage": true,
+      "ZeroRPMOverride": false
+    },
+    "NvAPIWrapperSettings": {
+      "Enabled": true,
+      "ZeroRPMOverride": false
+    },
+    "SensorCount": 30
+  }
+}
