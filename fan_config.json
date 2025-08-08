@@ -4,12 +4,12 @@
     "Controls": [
       {
         "Calibration": [],
-        "Enable": false,
+        "Enable": true,
         "ForceApply": false,
         "Identifier": "/lpc/nct6798d/control/0",
         "IsHidden": true,
-        "ManualControl": false,
-        "ManualControlValue": 50,
+        "ManualControl": true,
+        "ManualControlValue": 0,
         "MinimumPercent": 0,
         "Name": "Chassis Fan",
         "NickName": "Chassis Fan",
@@ -29,15 +29,15 @@
           ],
           [
             10,
-            175
+            179
           ],
           [
             20,
-            354
+            357
           ],
           [
             30,
-            539
+            538
           ],
           [
             40,
@@ -45,23 +45,27 @@
           ],
           [
             50,
-            859
+            875
+          ],
+          [
+            60,
+            1013
           ],
           [
             70,
-            1140
+            1145
           ],
           [
             80,
-            1291
+            1271
           ],
           [
             90,
-            1424
+            1392
           ],
           [
             100,
-            1561
+            1500
           ]
         ],
         "Enable": true,
@@ -101,12 +105,12 @@
               "MinimumTemperature": 30,
               "Name": "CPU Temp",
               "Points": [
-                "30,18",
-                "40,28",
-                "50,41",
-                "60,55",
-                "70,72",
-                "80,90",
+                "30,15",
+                "40,20",
+                "50,30",
+                "60,45",
+                "70,65",
+                "78,82.98844444444444",
                 "85,100"
               ],
               "SelectedTempSource": {
@@ -122,7 +126,7 @@
                 "HysteresisValueDown": 4,
                 "HysteresisValueUp": 2,
                 "IgnoreHysteresisAtLimits": true,
-                "ResponseTimeDown": 20,
+                "ResponseTimeDown": 30,
                 "ResponseTimeUp": 2
               },
               "IsHidden": false,
@@ -191,7 +195,7 @@
           ],
           [
             100,
-            1463
+            1500
           ]
         ],
         "Enable": true,
@@ -231,12 +235,12 @@
               "MinimumTemperature": 30,
               "Name": "CPU Temp",
               "Points": [
-                "30,18",
-                "40,28",
-                "50,41",
-                "60,55",
-                "70,72",
-                "80,90",
+                "30,15",
+                "40,20",
+                "50,30",
+                "60,45",
+                "70,65",
+                "78,82.98844444444444",
                 "85,100"
               ],
               "SelectedTempSource": {
@@ -252,7 +256,7 @@
                 "HysteresisValueDown": 4,
                 "HysteresisValueUp": 2,
                 "IgnoreHysteresisAtLimits": true,
-                "ResponseTimeDown": 20,
+                "ResponseTimeDown": 30,
                 "ResponseTimeUp": 2
               },
               "IsHidden": false,
@@ -321,7 +325,7 @@
           ],
           [
             100,
-            2870
+            2900
           ]
         ],
         "Enable": true,
@@ -352,7 +356,7 @@
                 "HysteresisValueDown": 4,
                 "HysteresisValueUp": 2,
                 "IgnoreHysteresisAtLimits": true,
-                "ResponseTimeDown": 20,
+                "ResponseTimeDown": 30,
                 "ResponseTimeUp": 2
               },
               "IsHidden": false,
@@ -381,24 +385,21 @@
             {
               "CommandMode": 0,
               "HysteresisConfig": {
-                "HysteresisValueDown": 2,
-                "HysteresisValueUp": 2,
+                "HysteresisValueDown": 4,
+                "HysteresisValueUp": 4,
                 "IgnoreHysteresisAtLimits": true,
-                "ResponseTimeDown": 1,
+                "ResponseTimeDown": 20,
                 "ResponseTimeUp": 1
               },
               "IsHidden": false,
-              "MaximumCommand": 100,
-              "MaximumTemperature": 85,
-              "MinimumTemperature": 30,
-              "Name": "CPU 60+",
+              "MaximumCommand": 80,
+              "MaximumTemperature": 90,
+              "MinimumTemperature": 59,
+              "Name": "GPU 1 CPU 60+",
               "Points": [
-                "58,0",
-                "59,30",
-                "60,55",
-                "70,72",
-                "80,90",
-                "85,100"
+                "59,0",
+                "60.1,30",
+                "90,80"
               ],
               "SelectedTempSource": {
                 "Identifier": "/amdcpu/0/temperature/2",
@@ -450,7 +451,7 @@
           ],
           [
             100,
-            2865
+            2900
           ]
         ],
         "Enable": true,
@@ -476,7 +477,7 @@
             "HysteresisValueDown": 4,
             "HysteresisValueUp": 2,
             "IgnoreHysteresisAtLimits": true,
-            "ResponseTimeDown": 20,
+            "ResponseTimeDown": 30,
             "ResponseTimeUp": 2
           },
           "IsHidden": false,
@@ -525,12 +526,12 @@
         "MinimumTemperature": 30,
         "Name": "CPU Temp",
         "Points": [
-          "30,18",
-          "40,28",
-          "50,41",
-          "60,55",
-          "70,72",
-          "80,90",
+          "30,15",
+          "40,20",
+          "50,30",
+          "60,45",
+          "70,65",
+          "78,82.98844444444444",
           "85,100"
         ],
         "SelectedTempSource": {
@@ -546,7 +547,7 @@
           "HysteresisValueDown": 4,
           "HysteresisValueUp": 2,
           "IgnoreHysteresisAtLimits": true,
-          "ResponseTimeDown": 20,
+          "ResponseTimeDown": 30,
           "ResponseTimeUp": 2
         },
         "IsHidden": false,
@@ -592,12 +593,12 @@
             "MinimumTemperature": 30,
             "Name": "CPU Temp",
             "Points": [
-              "30,18",
-              "40,28",
-              "50,41",
-              "60,55",
-              "70,72",
-              "80,90",
+              "30,15",
+              "40,20",
+              "50,30",
+              "60,45",
+              "70,65",
+              "78,82.98844444444444",
               "85,100"
             ],
             "SelectedTempSource": {
@@ -613,7 +614,7 @@
               "HysteresisValueDown": 4,
               "HysteresisValueUp": 2,
               "IgnoreHysteresisAtLimits": true,
-              "ResponseTimeDown": 20,
+              "ResponseTimeDown": 30,
               "ResponseTimeUp": 2
             },
             "IsHidden": false,
@@ -653,7 +654,7 @@
               "HysteresisValueDown": 4,
               "HysteresisValueUp": 2,
               "IgnoreHysteresisAtLimits": true,
-              "ResponseTimeDown": 20,
+              "ResponseTimeDown": 30,
               "ResponseTimeUp": 2
             },
             "IsHidden": false,
@@ -682,24 +683,21 @@
           {
             "CommandMode": 0,
             "HysteresisConfig": {
-              "HysteresisValueDown": 2,
-              "HysteresisValueUp": 2,
+              "HysteresisValueDown": 4,
+              "HysteresisValueUp": 4,
               "IgnoreHysteresisAtLimits": true,
-              "ResponseTimeDown": 1,
+              "ResponseTimeDown": 20,
               "ResponseTimeUp": 1
             },
             "IsHidden": false,
-            "MaximumCommand": 100,
-            "MaximumTemperature": 85,
-            "MinimumTemperature": 30,
-            "Name": "CPU 60+",
+            "MaximumCommand": 80,
+            "MaximumTemperature": 90,
+            "MinimumTemperature": 59,
+            "Name": "GPU 1 CPU 60+",
             "Points": [
-              "58,0",
-              "59,30",
-              "60,55",
-              "70,72",
-              "80,90",
-              "85,100"
+              "59,0",
+              "60.1,30",
+              "90,80"
             ],
             "SelectedTempSource": {
               "Identifier": "/amdcpu/0/temperature/2",
@@ -714,24 +712,21 @@
       {
         "CommandMode": 0,
         "HysteresisConfig": {
-          "HysteresisValueDown": 2,
-          "HysteresisValueUp": 2,
+          "HysteresisValueDown": 4,
+          "HysteresisValueUp": 4,
           "IgnoreHysteresisAtLimits": true,
-          "ResponseTimeDown": 1,
+          "ResponseTimeDown": 20,
           "ResponseTimeUp": 1
         },
         "IsHidden": false,
-        "MaximumCommand": 100,
-        "MaximumTemperature": 85,
-        "MinimumTemperature": 30,
-        "Name": "CPU 60+",
+        "MaximumCommand": 80,
+        "MaximumTemperature": 90,
+        "MinimumTemperature": 59,
+        "Name": "GPU 1 CPU 60+",
         "Points": [
-          "58,0",
-          "59,30",
-          "60,55",
-          "70,72",
-          "80,90",
-          "85,100"
+          "59,0",
+          "60.1,30",
+          "90,80"
         ],
         "SelectedTempSource": {
           "Identifier": "/amdcpu/0/temperature/2",
@@ -785,7 +780,7 @@
         "NickName": "Fan 2 - NVIDIA GeForce RTX 5090"
       }
     ],
-    "HideCalibration": false,
+    "HideCalibration": true,
     "HideFanSpeedCards": true,
     "HorizontalUIOrientation": true,
     "PrimaryColor": "#FF607D8B",
@@ -858,6 +853,4 @@
     "SensorCount": 30
   }
 }
-
-
 
