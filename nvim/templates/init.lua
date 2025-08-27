@@ -695,8 +695,8 @@ if is_wsl() then
       ['*'] = 'wl-copy',
     },
     paste = {
-      ['+'] = 'wl-paste --no-newline',
-      ['*'] = 'wl-paste --no-newline',
+      ['+'] = 'wl-paste --no-newline | tr -d "\r"',
+      ['*'] = 'wl-paste --no-newline | tr -d "\r"',
     },
     cache_enabled = false,
   }
