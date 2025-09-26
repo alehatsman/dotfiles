@@ -472,3 +472,9 @@ complete -f -F _rush_bash_complete rush
 
 NOTES_PATH="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes"
 alias n="cd \"$NOTES_PATH\" && nvim ."
+
+sensors() {
+  watch -n2 "echo -n 'CPU: '; sensors | awk '/Tctl:/ {printf \"%s \", \$2}'; \
+           echo -n 'GPU: '; sensors | awk '/nouveau-pci-0900/{f=1} f && /temp1:/ {printf \"%s \", \$2; exit}'; \
+           echo -n 'NVMe: '; sensors | awk '/Composite:/ {print \$2; exit}'"
+}
