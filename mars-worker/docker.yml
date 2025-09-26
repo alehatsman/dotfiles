@@ -1,0 +1,73 @@
+- name: Make sure to install docker
+  shell: |
+    #!/usr/bin/env bash
+    # install-docker.sh - idempotent Docker install for Ubuntu 24.04
+    set -e
+
+    # helper to print messages
+    loge(){ echo "[INFO] $*"; }
+
+    # 1️⃣ Install prerequisites if missing
+    PKGS=(ca-certificates curl gnupg lsb-release)
+    for pkg in "${PKGS[@]}"; do
+      if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+        loge "Installing prerequisite: $pkg"
+        sudo apt update
+        sudo apt install -y "$pkg"
+      else
+        loge "Prerequisite $pkg already installed"
+      fi
+    done
+
+    # 2️⃣ Add Docker GPG key if missing
+    if [ ! -f /etc/apt/keyrings/docker.gpg ]; then
+      loge "Adding Docker GPG key..."
+      sudo mkdir -p /etc/apt/keyrings
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    else
+      loge "Docker GPG key already exists"
+    fi
+
+    # 3️⃣ Add Docker repository if missing
+    REPO_FILE="/etc/apt/sources.list.d/docker.list"
+    REPO_LINE="deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    if ! grep -Fxq "$REPO_LINE" "$REPO_FILE" 2>/dev/null; then
+      loge "Adding Docker repository..."
+      echo "$REPO_LINE" | sudo tee "$REPO_FILE" >/dev/null
+    else
+      loge "Docker repository already exists"
+    fi
+
+    # 4️⃣ Update package cache
+    sudo apt update
+
+    # 5️⃣ Install Docker packages if missing
+    DOCKER_PKGS=(docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin)
+    for pkg in "${DOCKER_PKGS[@]}"; do
+      if ! dpkg -s "$pkg" >/dev/null 2>&1; then
+        loge "Installing $pkg..."
+        sudo apt install -y "$pkg"
+      else
+        loge "$pkg already installed"
+      fi
+    done
+
+    # 6️⃣ Ensure Docker service is running
+    if ! systemctl is-active --quiet docker; then
+      loge "Starting Docker service..."
+      sudo systemctl enable --now docker
+    else
+      loge "Docker service already running"
+    fi
+
+    # 7️⃣ Add current user to docker group if not already
+    if ! groups "$USER" | grep -qw docker; then
+      loge "Adding $USER to docker group..."
+      sudo usermod -aG docker "$USER"
+      loge "You need to log out and back in (or run 'newgrp docker') to use Docker without sudo"
+    else
+      loge "$USER is already in docker group"
+    fi
+
+    loge "Docker installation completed!"
+    docker --version
