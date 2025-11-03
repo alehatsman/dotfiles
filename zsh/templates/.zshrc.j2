@@ -353,7 +353,7 @@ npm_uninstall_globals() {
 
 # rush run
 rr() {
-  command=$(rush tab-complete | fzf)
+  command=$(fzf < <(rush tab-complete))
   if [ -z "$command" ]; then
     return 0
   fi
