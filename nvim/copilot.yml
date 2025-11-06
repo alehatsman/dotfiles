@@ -1,4 +1,4 @@
 - name: Install nodejs for copilot
   shell: |
-    nvm install 20.15.1
+    nvm install 22.21.0
   when: false
