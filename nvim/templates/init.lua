@@ -81,25 +81,10 @@ require('packer').startup(function(use)
   use 'vim-scripts/LargeFile'
 
   use 'alehatsman/vim-monokai'
-  --use 'cocopon/colorswatch.vim'
-  --use 'tjdevries/colorbuddy.nvim'
-
-  use {
-    'simrat39/rust-tools.nvim',
-    ft = { 'rust' },
-    config = function()
-      require('rust-tools').setup({
-        hover_actions = {
-          border = 'none',
-        }
-      })
-    end
-  }
 
   use { 'fatih/vim-go', ft = { 'go' } }
   use { 'Olical/conjure', branch = 'develop', ft = { 'clj', 'cljs', 'clojure' } }
 
-  use 'neovim/nvim-lspconfig'
   use 'tjdevries/lsp_extensions.nvim'
 
   use 'hrsh7th/cmp-nvim-lsp'
@@ -121,19 +106,6 @@ require('packer').startup(function(use)
 
   use 'github/copilot.vim'
 
-  -- debugging
-  -- use 'mfussenegger/nvim-dap'
-  -- use { "mxsdev/nvim-dap-vscode-js" }
-  -- use 'rcarriga/nvim-dap-ui'
-  -- use 'theHamsta/nvim-dap-virtual-text'
-  -- use 'leoluz/nvim-dap-go'
-  -- use 'mfussenegger/nvim-dap-python'
-  -- use {
-  --   "microsoft/vscode-js-debug",
-  --   opt = true,
-  --   run = "npm install --legacy-peer-deps && npm run compile"
-  -- }
-
   use 'wbthomason/packer.nvim'
 
   use({
@@ -146,14 +118,6 @@ require('packer').startup(function(use)
   })
 
   use "lukas-reineke/lsp-format.nvim"
-
-  use({
-    "folke/neodev.nvim",
-    config = function()
-      require("neodev").setup()
-    end,
-    ft = { "lua" },
-  })
 
   use('mfussenegger/nvim-lint')
 
@@ -330,90 +294,69 @@ local capabilities = require('cmp_nvim_lsp').default_capabilities()
 ---------------------------------------------
 -- Language Server Protocol
 ---------------------------------------------
-local lspconfig = require 'lspconfig'
 
-vim.lsp.handlers['textDocument/publishDiagnostics'] = vim.lsp.with(
-  vim.lsp.diagnostic.on_publish_diagnostics, {
-    underline = false,
-    virtual_text = true, --{ spacing = 4 },
-    signs = true,
-    update_in_insert = false,
-  }
-)
+-- capabilities ---------------------------------------------------------------
+local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
-  vim.lsp.handlers.hover, {
-    -- Use a sharp border with `FloatBorder` highlights
-    border = 'none'
-  }
-)
+-- diagnostics/hover ---------------------------------------------------------
+vim.diagnostic.config({
+  underline = false,
+  virtual_text = true,
+  signs = true,
+  update_in_insert = false,
+  float = { border = 'none' },
+})
 
+vim.lsp.handlers['textDocument/hover'] =
+  vim.lsp.with(vim.lsp.handlers.hover, { border = 'none' })
+
+-- lsp_signature --------------------------------------------------------------
 local lsp_signature = require 'lsp_signature'
 lsp_signature.setup({
   hint_prefix = '',
   hint_enable = false,
-  handler_opts = {
-    border = 'none'
-  },
+  handler_opts = { border = 'none' },
   hi_parameter = "Visual",
   trigger_on_newline = false,
-  toggle_key = '<M-x>'
+  toggle_key = '<M-x>',
 })
 
-vim.api.nvim_create_autocmd({ "BufWritePre" }, {
-  pattern = { "*" },
+-- format on save -------------------------------------------------------------
+vim.api.nvim_create_autocmd("BufWritePre", {
+  pattern = "*",
   callback = function()
     vim.lsp.buf.format({ async = true })
   end
 })
 
+-- lsp-format -----------------------------------------------------------------
 local lsp_format = require("lsp-format")
 lsp_format.setup {}
 
-local function on_attach(client, bufnr)
-  --require'completion'.on_attach(client, bufnr)
-  --api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
-  lsp_signature.on_attach(client, bufnr)
-  lsp_format.on_attach(client, bufnr)
-end
+vim.lsp.enable('rust_analyzer')
 
-local setup_config = { on_attach = on_attach, capabilities = capabilities }
+-- Rust
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "rust",
+  callback = function()
+    vim.lsp.start({
+      name = "rust-analyzer",
+      cmd = { "rust-analyzer" },
+      root_dir = vim.fs.root(0, { "Cargo.toml" }),
+    })
+  end,
+})
 
-lspconfig.terraformls.setup(setup_config)
-lspconfig.gopls.setup(setup_config)
-lspconfig.ts_ls.setup(setup_config)
-lspconfig.clojure_lsp.setup(setup_config)
-lspconfig.rust_analyzer.setup(setup_config)
-lspconfig.lua_ls.setup {
-  settings = {
-    Lua = {
-      runtime = {
-        -- Tell the language server which version of Lua you're using (most likely LuaJIT in the case of Neovim)
-        version = 'LuaJIT',
-      },
-      diagnostics = {
-        -- Get the language server to recognize the `vim` global
-        globals = { 'vim' },
-      },
-      workspace = {
-        -- Make the server aware of Neovim runtime files
-        library = vim.api.nvim_get_runtime_file("", true),
-        checkThirdParty = false,
-      },
-      -- Do not send telemetry data containing a randomized but unique identifier
-      telemetry = {
-        enable = false,
-      },
-    },
-  },
-  on_attach = on_attach,
-  capabilities = capabilities,
-}
-
-lspconfig.pylsp.setup({
-  cmd = { "./.venv/bin/pylsp" },
-  on_attach = on_attach,
-  capabilities = capabilities,
+-- Typescript / Javascript
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
+  callback = function()
+    vim.lsp.start({
+      name = "tsserver",
+      cmd = { "typescript-language-server", "--stdio" },
+      root_dir = vim.fs.root(0, { "package.json", "tsconfig.json" }),
+    })
+  end,
 })
 
 ---------------------------------------------
@@ -658,7 +601,7 @@ vim.keymap.set('n', '<leader>sx', ':TSHighlightCapturesUnderCursor<CR>')
 ---------------------------------------------
 vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
 vim.g.copilot_no_tab_map = true
-vim.g.copilot_node_command = '~/.nvm/versions/node/v20.15.1/bin/node'
+vim.g.copilot_node_command = '~/.nvm/versions/node/v22.21.0/bin/node'
 
 ---------------------------------------------
 -- Minimap
