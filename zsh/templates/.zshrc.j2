@@ -25,9 +25,6 @@ setopt share_history # share history between zsh sessions
 #---------------------------------------------
 export GPG_TTY=$(tty)
 export LANG=en_US.UTF-8
-export LANGUAGE=
-export LANGUAGE=en_US.UTF-8 
-export LC_ALL=en_US.UTF-8
 export PIPENV_VENV_IN_PROJECT=1
 
 export PIPENV_VENV_IN_PROJECT=true
@@ -97,6 +94,13 @@ zplug "zsh-users/zsh-history-substring-search"
 
 zplug "lukechilds/zsh-nvm"
 zplug "Aloxaf/fzf-tab"
+
+if ! zplug check; then
+    printf "Install? [y/N]: "
+    if read -q; then
+        echo; zplug install
+    fi
+fi
 
 if ! zplug check; then
     printf "Install? [y/N]: "
@@ -386,50 +390,105 @@ alias serve='browser-sync start -s -f . --no-notify --host $LOCAL_IP --port 9000
 alias uuid='uuidgen'
 alias cargo_installed='cargo install --list'
 
+# #---------------------------------------------
+# # Color scheme
+# #---------------------------------------------
+# setopt PROMPT_SUBST
+#
+# export COLOR_SCHEME='molokai'
+#
+# # Molokai
+# if [ $COLOR_SCHEME = "molokai" ]
+# then
+#   RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
+#   PROMPT="%(?:%F{green}:%F{red})"
+#   PROMPT+='${RUNO_ARROW_ICON}'
+#   PROMPT+="%F{red}%B%c "
+#   PROMPT+='%f%b'
+#   export FZF_DEFAULT_OPTS='
+#     --reverse
+#     --color fg:#F8F8F2,bg:#272822,hl:67,fg+:252,bg+:235,hl+:81
+#     --color info:144,prompt:161,spinner:135,pointer:135,marker:118
+#   '
+#   export FZF_PREVIEW_COMMAND='bat --theme Monokai Extended Origin {}'
+# elif [ $COLOR_SCHEME = "runo" ]
+# then
+#   RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
+#   PROMPT="%(?:%F{green}:%F{red})"
+#   PROMPT+='${RUNO_ARROW_ICON}'
+#   PROMPT+="%F{blue}%B%c "
+#   PROMPT+='%f%b'
+#   export FZF_DEFAULT_OPTS='
+#     --color=fg:#313232,bg:#f8f9f9,hl:#FFBC5D
+#     --color=fg+:#313232,bg+:#eeefef,hl+:#FFBC5D
+#     --color=info:#313232,border:#313232,prompt:#313232
+#     --color=pointer:#313232,marker:#313232,spinner:#313232
+#     --color=header:#FFFABC
+#   '
+# elif [ $COLOR_SCHEME = "github-light" ]
+# then
+#   RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
+#   PROMPT="%(?:%F{green}:%F{red})"
+#   PROMPT+='${RUNO_ARROW_ICON}'
+#   PROMPT+="%F{red}%B%c "
+#   PROMPT+='%f%b'
+# export FZF_DEFAULT_OPTS='--color=fg:#24292f,bg:#ffffff,hl:#0366d6 --color=fg+:#24292f,bg+:#ffffff,hl+:#0366d6 --color=info:#24292f,prompt:#d73a49,pointer:#24292f --color=marker:#28a745,spinner:#5a32a3,header:#24292f'
+# fi
+
 #---------------------------------------------
-# Color scheme
+# Color scheme (robust, shellcheck-safe)
 #---------------------------------------------
 setopt PROMPT_SUBST
 
-export COLOR_SCHEME='molokai'
+: "${COLOR_SCHEME:=molokai}"
+: "${RUNO_ARROW_ICON:=➜ }"
 
-# Molokai
-if [ $COLOR_SCHEME = "molokai" ]
-then
-  RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
-  PROMPT="%(?:%F{green}:%F{red})"
-  PROMPT+='${RUNO_ARROW_ICON}'
-  PROMPT+="%F{red}%B%c "
-  PROMPT+='%f%b'
-  export FZF_DEFAULT_OPTS='
-    --reverse
-    --color fg:#F8F8F2,bg:#272822,hl:67,fg+:252,bg+:235,hl+:81
-    --color info:144,prompt:161,spinner:135,pointer:135,marker:118
-  '
-  export FZF_PREVIEW_COMMAND='bat --theme Monokai Extended Origin {}'
-elif [ $COLOR_SCHEME = "runo" ]
-then
-  RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
-  PROMPT="%(?:%F{green}:%F{red})"
-  PROMPT+='${RUNO_ARROW_ICON}'
-  PROMPT+="%F{blue}%B%c "
-  PROMPT+='%f%b'
-  export FZF_DEFAULT_OPTS='
-    --color=fg:#313232,bg:#f8f9f9,hl:#FFBC5D
-    --color=fg+:#313232,bg+:#eeefef,hl+:#FFBC5D
-    --color=info:#313232,border:#313232,prompt:#313232
-    --color=pointer:#313232,marker:#313232,spinner:#313232
-    --color=header:#FFFABC
-  '
-elif [ $COLOR_SCHEME = "github-light" ]
-then
-  RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
-  PROMPT="%(?:%F{green}:%F{red})"
-  PROMPT+='${RUNO_ARROW_ICON}'
-  PROMPT+="%F{red}%B%c "
-  PROMPT+='%f%b'
-export FZF_DEFAULT_OPTS='--color=fg:#24292f,bg:#ffffff,hl:#0366d6 --color=fg+:#24292f,bg+:#ffffff,hl+:#0366d6 --color=info:#24292f,prompt:#d73a49,pointer:#24292f --color=marker:#28a745,spinner:#5a32a3,header:#24292f'
-fi
+# Minimal git branch on the right, if vcs_info is available
+autoload -Uz vcs_info 2>/dev/null && precmd() { vcs_info }
+zstyle ':vcs_info:git:*' formats '%F{yellow} %b%f'
+RPROMPT='${vcs_info_msg_0_}'
+
+apply_theme() {
+  local scheme="${1}"
+  case "${scheme}" in
+    molokai)
+      # Prompt: green when last cmd OK, red when failed; path; reset
+      PROMPT='%(?.%F{green}.%F{red})'"${RUNO_ARROW_ICON}"'%F{red}%B%~%b%f '
+      # fzf (Monokai)
+      export FZF_DEFAULT_OPTS=$'--reverse \
+        --color=fg:#F8F8F2,bg:#272822,hl:#66D9EF \
+        --color=fg+:#E8E8E3,bg+:#2D2E27,hl+:#66D9EF \
+        --color=info:#A6E22D,prompt:#F92672,spinner:#AE81FF,pointer:#AE81FF,marker:#A6E22D,border:#3f4145,header:#75715E'
+      export FZF_PREVIEW_COMMAND='bat --theme Monokai\ Extended\ Origin --style=plain --color=always {}'
+      export BAT_THEME='Monokai Extended Origin'
+      ;;
+    runo)
+      PROMPT='%(?.%F{green}.%F{red})'"${RUNO_ARROW_ICON}"'%F{blue}%B%~%b%f '
+      export FZF_DEFAULT_OPTS=$'--reverse \
+        --color=fg:#313232,bg:#f8f9f9,hl:#FFBC5D \
+        --color=fg+:#313232,bg+:#eeefef,hl+:#FFBC5D \
+        --color=info:#313232,border:#313232,prompt:#313232,pointer:#313232,marker:#313232,spinner:#313232,header:#FFFABC'
+      unset FZF_PREVIEW_COMMAND
+      unset BAT_THEME
+      ;;
+    github-light)
+      PROMPT='%(?.%F{green}.%F{red})'"${RUNO_ARROW_ICON}"'%F{red}%B%~%b%f '
+      export FZF_DEFAULT_OPTS=$'--reverse \
+        --color=fg:#24292f,bg:#ffffff,hl:#0366d6 \
+        --color=fg+:#24292f,bg+:#f6f8fa,hl+:#0366d6 \
+        --color=info:#24292f,border:#d0d7de,prompt:#d73a49,pointer:#24292f,marker:#28a745,spinner:#5a32a3,header:#24292f'
+      export FZF_PREVIEW_COMMAND='bat --theme GitHub --style=plain --color=always {}'
+      export BAT_THEME='GitHub'
+      ;;
+    *)
+      PROMPT='%(?.%F{green}.%F{red})'"${RUNO_ARROW_ICON}"'%F{cyan}%B%~%b%f '
+      unset FZF_PREVIEW_COMMAND
+      unset BAT_THEME
+      ;;
+  esac
+}
+
+apply_theme "${COLOR_SCHEME}"
 
 if [[ $(uname) != 'Darwin' ]]; then
   alias pbcopy='xclip -selection clipboard'
@@ -472,9 +531,3 @@ complete -f -F _rush_bash_complete rush
 
 NOTES_PATH="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes"
 alias n="cd \"$NOTES_PATH\" && nvim ."
-
-sensors() {
-  watch -n2 "echo -n 'CPU: '; sensors | awk '/Tctl:/ {printf \"%s \", \$2}'; \
-           echo -n 'GPU: '; sensors | awk '/nouveau-pci-0900/{f=1} f && /temp1:/ {printf \"%s \", \$2; exit}'; \
-           echo -n 'NVMe: '; sensors | awk '/Composite:/ {print \$2; exit}'"
-}
