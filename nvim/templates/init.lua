@@ -572,7 +572,7 @@ vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
   callback = function() lint.try_lint() end,
 })
 
--- clipboard for wsl
+-- WSL clipboard with Wayland
 local function is_wsl()
   local f = io.popen("uname -r")
   if not f then return false end
@@ -581,18 +581,18 @@ local function is_wsl()
   return result:match("WSL") or result:match("Microsoft")
 end
 
-if is_wsl() then
-  vim.opt.clipboard = "unnamedplus"
+if is_wsl() and os.getenv("WAYLAND_DISPLAY") then
+  vim.opt.clipboard = { "unnamed", "unnamedplus" }
   vim.g.clipboard = {
-    name = 'wl-clipboard',
+    name = "wl-clipboard",
     copy = {
-      ['+'] = 'wl-copy',
-      ['*'] = 'wl-copy',
+      ["+"] = { "wl-copy", "-t", "text/plain" },
+      ["*"] = { "wl-copy", "-p", "-t", "text/plain" },
     },
     paste = {
-      ['+'] = 'wl-paste --no-newline | tr -d "\r"',
-      ['*'] = 'wl-paste --no-newline | tr -d "\r"',
+      ["+"] = { "sh", "-c", "wl-paste -n | tr -d '\\r'" },
+      ["*"] = { "sh", "-c", "wl-paste -n -p | tr -d '\\r'" },
     },
-    cache_enabled = false,
+    cache_enabled = 0,
   }
 end
