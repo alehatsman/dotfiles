@@ -566,10 +566,28 @@ vim.keymap.set('n', '<leader>mm', ':MinimapToggle<CR>')
 
 -- Lint
 local lint = require('lint')
-local function try_lint() lint.try_lint() end
-vim.keymap.set('n', '<leader>ll', try_lint)
+
+local function safe_lint()
+  local linter = lint.linters_by_ft[vim.bo.filetype]
+  if not linter then
+    return
+  end
+
+  -- linter is a list; check each cmd
+  for _, name in ipairs(linter) do
+    local cmd = lint.linters[name].cmd
+    if vim.fn.executable(cmd) == 0 then
+      return  -- skip silently
+    end
+  end
+
+  lint.try_lint()
+end
+
+vim.keymap.set('n', '<leader>ll', safe_lint)
+
 vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
-  callback = function() lint.try_lint() end,
+  callback = safe_lint,
 })
 
 -- WSL clipboard with Wayland
