@@ -187,6 +187,8 @@ require('packer').startup(function(use)
 
   use 'sindrets/diffview.nvim'
 
+  use "ojroques/nvim-osc52"
+
   if packer_bootstrap then
     require('packer').sync()
   end
@@ -590,27 +592,61 @@ vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
   callback = safe_lint,
 })
 
--- WSL clipboard with Wayland
-local function is_wsl()
-  local f = io.popen("uname -r")
-  if not f then return false end
-  local result = f:read("*all")
-  f:close()
-  return result:match("WSL") or result:match("Microsoft")
-end
+-- Clipboard setup for WSL and SSH with osc52
+local has = vim.fn.has
+local is_wsl = (vim.fn.has("wsl") == 1)
+local is_ssh = (vim.env.SSH_TTY ~= nil) or (vim.env.SSH_CONNECTION ~= nil)
+local in_tmux = (vim.env.TMUX ~= nil)
+local force_osc52 = (vim.env.NVIM_USE_OSC52 == "1")
 
-if is_wsl() and os.getenv("WAYLAND_DISPLAY") then
-  vim.opt.clipboard = { "unnamed", "unnamedplus" }
+local local_wsl  = is_wsl and not is_ssh   -- WSL directly
+local remote_ssh = is_ssh and not is_wsl   -- remote Linux over SSH
+
+if local_wsl and os.getenv("WAYLAND_DISPLAY") then
+  -- vim.opt.clipboard = { 
+  --   "unnamed", 
+  --   "unnamedplus" 
+  -- }
+  vim.opt.clipboard = "unnamedplus"
   vim.g.clipboard = {
     name = "wl-clipboard",
     copy = {
       ["+"] = { "wl-copy", "-t", "text/plain" },
-      ["*"] = { "wl-copy", "-p", "-t", "text/plain" },
+      -- ["*"] = { "wl-copy", "-p", "-t", "text/plain" },
     },
     paste = {
       ["+"] = { "sh", "-c", "wl-paste -n | tr -d '\\r'" },
-      ["*"] = { "sh", "-c", "wl-paste -n -p | tr -d '\\r'" },
+      -- ["*"] = { "sh", "-c", "wl-paste -n -p | tr -d '\\r'" },
     },
     cache_enabled = 0,
   }
+end
+
+if remote_ssh then
+  vim.opt.clipboard = ""  -- disable default clipboard
+  vim.g.clipboard = nil
+
+  local ok, osc52 = pcall(require, "osc52")
+  if ok then
+    osc52.setup({
+      tmux = in_tmux,
+      max_length = 0,
+      silent = false,
+    })
+
+    local function copy_on_yank()
+      if vim.v.event.operator ~= "y" then
+        return
+      end
+      local reg = vim.v.event.regname
+      if reg == nil or reg == "" then
+        reg = '"'  -- unnamed register
+      end
+      osc52.copy_register(reg)
+    end
+
+    vim.api.nvim_create_autocmd("TextYankPost", {
+      callback = copy_on_yank,
+    })
+  end
 end
