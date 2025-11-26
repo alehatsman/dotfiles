@@ -49,21 +49,8 @@ eval "$(pyenv virtualenv-init -)"
 export PATH=$(pyenv root)/shims:$HOME/bin:/opt/local/bin:/opt/homebrew/bin:$PATH:$NVIDIA_GIT_BASE/bin:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$GOPATH/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin:$PATH
 export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 
-
-if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
-    alias nvim=nvr -cc split --remote-wait +'set bufhidden=wipe'
-fi
-
-if [ -n "$NVIM_LISTEN_ADDRESS" ]; then
-    export VISUAL="nvr -cc split --remote-wait +'set bufhidden=wipe'"
-    export EDITOR="nvr -cc split --remote-wait +'set bufhidden=wipe'"
-elif [[ -n $SSH_CONNECTION ]]; then
-  export EDITOR="vim"
-  export EDITOR="vim"
-else
-  export VISUAL="nvim"
-  export EDITOR="nvim"
-fi
+export VISUAL="nvim"
+export EDITOR="nvim"
 
 export SSH_KEY_PATH=~/.ssh/rsa_id
 
