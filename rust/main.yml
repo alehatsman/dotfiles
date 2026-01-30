@@ -1,7 +1,11 @@
 ---
 - name: Make sure rust tools are installed
   shell: |
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y;
+    if ! command -v rustup &> /dev/null; then
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y;
+    else
+      echo "rustup is already installed, skipping installation";
+    fi
 
 - vars:
     cargo_packages:
@@ -14,4 +18,11 @@
 - name: Make sure rust cargo packages are installed
   shell: |
     source ~/.cargo/env;
-    cargo install {{ cargo_packages | join: " " }};
+    for package in {{ cargo_packages | join: " " }}; do
+      if ! cargo install --list | grep -q "^${package} "; then
+        echo "Installing ${package}...";
+        cargo install "${package}";
+      else
+        echo "${package} is already installed, skipping";
+      fi
+    done

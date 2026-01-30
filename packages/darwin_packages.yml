@@ -1,14 +1,13 @@
 ---
 taps:
-  - homebrew/cask
-  - homebrew/cask-fonts
   - wata727/tflint
   - borkdude/brew
   - wagoodman/dive
   - AdoptOpenJDK/openjdk
 
 apps:
-  - ansible
+  # - ansible
+  # - alacritty
   - aria2
   - autoenv
   - autojump
@@ -40,7 +39,7 @@ apps:
   - terraform-inventory
   - tig
   - tldr
-  - tor
+  # - tor
   - tree
   - watchman
   - wget
@@ -87,12 +86,12 @@ apps:
 
 cask_apps:
   - adobe-acrobat-reader
-  - alacritty
+  # - alacritty
   - amazon-workspaces
   - anki
   - docker
   - font-fira-code
-  - fork
+  # - fork
   - google-drive
   - google-chrome
   - google-cloud-sdk
@@ -101,11 +100,10 @@ cask_apps:
   - postman
   - slack
   - spectacle
-  - spotify
-  - sublime-merge
-  - teamviewer
+  # - spotify
+  # - teamviewer
   - telegram
-  - tor-browser
+  # - tor-browser
   - transmission
   - tunnelblick
   - veracrypt
@@ -116,6 +114,5 @@ cask_apps:
 
   # Java
   # - adoptopenjdk8
-  - visualvm
-
+  # - visualvm
   - font-jetbrains-mono-nerd-font

@@ -411,7 +411,7 @@ require('lint').linters_by_ft = {
   typescriptreact = { 'eslint' },
   markdown = { 'markdownlint' },
   python = { 'flake8' },
-  rust = { 'cargo' },
+  rust = { 'clippy' },
   lua = { 'luacheck' },
 }
 

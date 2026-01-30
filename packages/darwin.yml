@@ -10,7 +10,7 @@
 
 - name: Make sure rosetta 2 is installed
   shell: |
-    softwareupdate --install-rosetta --agree-to-licence
+    softwareupdate --install-rosetta --agree-to-license
   become: true
 
 - name: Make sure brew is installed
@@ -26,15 +26,13 @@
 
 - name: Make sure all the taps are present
   shell: |
-    for tap in {{ taps | join: " " }}
-    do
-      brew tap $tap
-    done
+    brew tap $tap
+  with_items: "{{ taps }}"
 
 - name: Make sure all the apps are present
   shell: |
-    brew install {{ apps | join: " "}}
+    brew install {{ apps | join: ' ' }}
 
 - name: Make sure all the cask apps are present
   shell: |
-    brew install --cask {{ cask_apps | join: " "}}
+    brew install --cask {{ cask_apps | join: ' ' }}
