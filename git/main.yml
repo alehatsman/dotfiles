@@ -1,11 +1,12 @@
 ---
 - name: Make sure git is installed (ubuntu)
-  shell: |
-    apt-get install -y git
+  shell: apt-get install -y git
   become: true
   when: os == 'linux'
+  tags: [git, install]
 
 - name: Make sure .gitconfig file is present
   template:
     src: ./.gitconfig.j2
     dest: ~/.gitconfig
+  tags: [git, config]

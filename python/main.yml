@@ -7,8 +7,20 @@
       libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
   become: true
   when: os == "linux"
+  tags: [python, install, deps]
 
-- name: Make sure pyenv is installed
-  shell: |
-    [ ! -d ~/.pyenv ] && git clone --depth 1 https://github.com/pyenv/pyenv.git ~/.pyenv && cd ~/.pyenv && src/configure && make -C src; exit 0;
-    [ ! -d "$(pyenv root)/plugins/pyenv-virtualenv" ] && git clone https://github.com/pyenv/pyenv-virtualenv.git "$(pyenv root)/plugins/pyenv-virtualenv";
+- name: Clone pyenv repository
+  shell: git clone --depth 1 https://github.com/pyenv/pyenv.git ~/.pyenv && cd ~/.pyenv && src/configure && make -C src
+  when: os == "linux" or os == "darwin"
+  tags: [python, pyenv]
+  register: pyenv_clone
+  failed_when: false
+  changed_when: result.rc == 0
+
+- name: Clone pyenv-virtualenv plugin
+  shell: git clone https://github.com/pyenv/pyenv-virtualenv.git "$(pyenv root)/plugins/pyenv-virtualenv"
+  when: os == "linux" or os == "darwin"
+  tags: [python, pyenv]
+  register: pyenv_virtualenv_clone
+  failed_when: false
+  changed_when: result.rc == 0

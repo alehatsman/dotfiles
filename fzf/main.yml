@@ -1,4 +1,14 @@
 ---
-- name: Make sure fzf is installed
+- name: Clone fzf repository
+  shell: git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+  register: fzf_clone
+  failed_when: false
+  changed_when: result.rc == 0
+  tags: [fzf, install]
+
+- name: Install fzf
   shell: |
-    [ ! -d ~/.fzf ] && git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf && ~/.fzf/install; exit 0;
+    if [ -d ~/.fzf ] && [ ! -f ~/.fzf/bin/fzf ]; then
+      ~/.fzf/install --all --no-update-rc
+    fi
+  tags: [fzf, install]

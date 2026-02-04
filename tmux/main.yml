@@ -1,29 +1,39 @@
 ---
-- name: Make sure tmux is installed (ubuntu)
-  shell: |
-    apt-get install -y tmux
+- name: Install tmux (ubuntu)
+  shell: apt-get install -y tmux
   become: true
   when: os == 'linux'
+  tags: [tmux, install]
 
-- name: Make sure tmux is installed (darwin)
-  shell: |
-    brew install tmux
+- name: Install tmux (macos)
+  shell: brew install tmux
   when: os == 'darwin'
+  register: brew_tmux
+  failed_when: false
+  changed_when: result.rc == 0
+  tags: [tmux, install]
 
-- name: Make sure tmux config folder is present
+- name: Create tmux config directory
   file:
     path: ~/.config/tmux
     state: directory
+  tags: [tmux, config]
 
-- name: Make sure tmux plugins folder is present
+- name: Create tmux plugins directory
   file:
     path: ~/.config/tmux/plugins
+    state: directory
+  tags: [tmux, config]
 
-- name: Make sure tmp is present
-  shell: |
-    [ ! -d ~/.config/tmux/tmp ] && git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/tmp; exit 0;
+- name: Clone tmux plugin manager (tpm)
+  shell: git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/tmp
+  register: tpm_clone
+  failed_when: false
+  changed_when: result.rc == 0
+  tags: [tmux, plugins]
 
-- name: Make sure .tmux.conf is present
+- name: Deploy .tmux.conf
   template:
     src: ./.tmux.conf.j2
     dest: ~/.tmux.conf
+  tags: [tmux, config]

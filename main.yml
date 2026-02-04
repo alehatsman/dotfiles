@@ -1,21 +1,49 @@
 ---
-- include: ./git/main.yml
-- include: ./packages/main.yml
-- include: ./java/main.yml
-- include: ./python/main.yml
-- include: ./rust/main.yml
-- include: ./fzf/main.yml
-- include: ./alacritty/main.yml
-  when: os == "darwin"
+version: "1.0"
 
-- include: ./clojure/main.yml
-- include: ./golang/main.yml
+steps:
+  # Version control
+  - include: ./git/main.yml
+    tags: [core, git]
 
-- include: ./macos/main.yml
-  when: os == "darwin"
+  # Programming languages
+  - include: ./java/main.yml
+    tags: [dev, java]
 
-- include: ./node/main.yml
+  - include: ./python/main.yml
+    tags: [dev, python]
 
-- include: ./zsh/main.yml
-- include: ./tmux/main.yml
-- include: ./nvim/main.yml
+  - include: ./rust/main.yml
+    tags: [dev, rust]
+
+  - include: ./clojure/main.yml
+    tags: [dev, clojure]
+
+  - include: ./golang/main.yml
+    tags: [dev, golang]
+
+  - include: ./node/main.yml
+    tags: [dev, node]
+
+  # Terminal tools
+  - include: ./fzf/main.yml
+    tags: [tools, fzf]
+
+  - include: ./zsh/main.yml
+    tags: [core, shell]
+
+  - include: ./tmux/main.yml
+    tags: [tools, tmux]
+
+  # Editors
+  - include: ./nvim/main.yml
+    tags: [editor, nvim]
+
+  # macOS specific
+  - include: ./alacritty/main.yml
+    when: os == "darwin"
+    tags: [macos, terminal]
+
+  - include: ./macos/main.yml
+    when: os == "darwin"
+    tags: [macos]

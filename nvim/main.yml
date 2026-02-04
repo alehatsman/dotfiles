@@ -5,35 +5,44 @@
   file:
     path: "{{ config_path }}/autoload"
     state: directory
+  tags: [nvim, setup]
 
 - include: ./packer.yml
+  tags: [nvim, packer]
 
 - name: Make sure undo dir is present
   file:
     path: "{{ config_path }}/undodir"
     state: directory
+  tags: [nvim, setup]
 
 - name: Create directory after
   file:
     path: "{{ config_path }}/after"
     state: directory
+  tags: [nvim, setup]
 
 - name: Create directory ftplugin
   file:
     path: "{{ config_path }}/ftplugin"
     state: directory
+  tags: [nvim, setup]
 
-- name: Make sure all the files are present
+- name: Deploy config file {{ item.Name }}
   template:
-    src: "{{item.Src}}"
-    dest: "{{config_path}}{{item.Path}}"
+    src: "{{ item.Src }}"
+    dest: "{{ config_path }}/{{ item.Name }}"
   with_filetree: "./templates"
-  when: item.State == 'file'
+  when: item.State == "file"
+  tags: [nvim, config]
 
 - include: ./win32yank.yml
   when: use_win32yank
+  tags: [nvim, win32yank]
 
 - name: Make sure plugins are installed
   shell: nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+  tags: [nvim, plugins]
 
 - include: ./copilot.yml
+  tags: [nvim, copilot]

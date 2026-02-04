@@ -1,10 +1,12 @@
 ---
-- name: Make sure alacritty config directory is present
+- name: Create alacritty config directory
   file:
     path: ~/.config/alacritty
     state: directory
+  tags: [alacritty, config]
 
-- name: Make sure alacritty config file is present
+- name: Deploy alacritty config
   template:
     src: ./alacritty.toml
     dest: ~/.config/alacritty/alacritty.toml
+  tags: [alacritty, config]
