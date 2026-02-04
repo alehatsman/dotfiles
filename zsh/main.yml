@@ -1,19 +1,23 @@
 ---
-- name: Make sure zsh is installed (ubuntu)
-  shell: |
-    apt-get install -y zsh
+- name: Install zsh (ubuntu)
+  shell: apt-get install -y zsh
   become: true
   when: os == "linux"
+  tags: [zsh, install]
 
-- name: Make sure zsh is installed (macos)
-  shell: |
-    brew install zsh
+- name: Install zsh (macos)
+  shell: brew install zsh
   when: os == "darwin"
+  register: brew_zsh
+  failed_when: false
+  changed_when: result.rc == 0
+  tags: [zsh, install]
 
 - name: Make sure zsh config directory is present
   file:
     path: ~/.config/zsh
     state: directory
+  tags: [zsh, config]
 
 - include_vars: ./vars/ubuntu_vars.yml
   when: os == 'linux'
@@ -21,25 +25,38 @@
 - include_vars: ./vars/macos_{{arch}}.yml
   when: os == "darwin"
 
-- name: Make sure .zshrc is present
+- name: Deploy .zshrc
   template:
     src: ./templates/.zshrc.j2
     dest: ~/.zshrc
+  tags: [zsh, config]
 
-- name: Make sure .ignore is present
+- name: Deploy .ignore
   template:
     src: ./templates/.ignore.j2
     dest: ~/.ignore
+  tags: [zsh, config]
 
-- name: Make sure zplug is installed
-  shell: |
-    [ ! -d ~/.zplug ] && git clone --depth 1 https://github.com/zplug/zplug.git ~/.zplug; exit 0;
+- name: Clone zplug
+  shell: git clone --depth 1 https://github.com/zplug/zplug.git ~/.zplug
+  register: zplug_clone
+  failed_when: false
+  changed_when: result.rc == 0
+  tags: [zsh, plugins]
 
-- name: Make sure oh-my-zsh are installed
-  shell: |
-    [ ! -d ~/.zplug/repos/ohmyzsh/ohmyzsh ] && git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git ~/.zplug/repos/ohmyzsh/ohmyzsh; exit 0;
+- name: Clone oh-my-zsh
+  shell: git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git ~/.zplug/repos/ohmyzsh/ohmyzsh
+  register: ohmyzsh_clone
+  failed_when: false
+  changed_when: result.rc == 0
+  tags: [zsh, plugins]
 
-- name: Make sure zsh is default shell
+- name: Set zsh as default shell
   shell: |
-    chsh -s $(which zsh) {{ OS_USERNAME }}
+    if ! echo "$SHELL" | grep -q zsh; then
+      chsh -s $(which zsh) {{ username }}
+    fi
   become: true
+  register: chsh_result
+  changed_when: "has(result.stdout, 'changed') or result.rc == 0"
+  tags: [zsh, shell]

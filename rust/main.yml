@@ -1,28 +1,44 @@
 ---
-- name: Make sure rust tools are installed
+- name: Install rustup
   shell: |
     if ! command -v rustup &> /dev/null; then
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y;
-    else
-      echo "rustup is already installed, skipping installation";
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     fi
+  register: rustup_install
 
-- vars:
-    cargo_packages:
-      - bat
-      - lsd
-      - git-delta
-      - xsv
-      - code-minimap
+  tags: [rust, install]
 
-- name: Make sure rust cargo packages are installed
-  shell: |
-    source ~/.cargo/env;
-    for package in {{ cargo_packages | join: " " }}; do
-      if ! cargo install --list | grep -q "^${package} "; then
-        echo "Installing ${package}...";
-        cargo install "${package}";
-      else
-        echo "${package} is already installed, skipping";
-      fi
-    done
+- name: Install bat
+  shell: source ~/.cargo/env && cargo install bat
+  register: bat_install
+  failed_when: false
+
+  tags: [rust, packages]
+
+- name: Install lsd
+  shell: source ~/.cargo/env && cargo install lsd
+  register: lsd_install
+  failed_when: false
+
+  tags: [rust, packages]
+
+- name: Install git-delta
+  shell: source ~/.cargo/env && cargo install git-delta
+  register: delta_install
+  failed_when: false
+
+  tags: [rust, packages]
+
+- name: Install xsv
+  shell: source ~/.cargo/env && cargo install xsv
+  register: xsv_install
+  failed_when: false
+
+  tags: [rust, packages]
+
+- name: Install code-minimap
+  shell: source ~/.cargo/env && cargo install code-minimap
+  register: minimap_install
+  failed_when: false
+
+  tags: [rust, packages]
