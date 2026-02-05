@@ -3,10 +3,33 @@
   shell: apt-get install -y git
   become: true
   when: os == 'linux'
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
   tags: [git, install]
 
-- name: Make sure .gitconfig file is present
+- name: Backup existing .gitconfig
+  shell: |
+    if [ -f ~/.gitconfig ]; then
+      mkdir -p ~/.dotfiles-backup
+      cp ~/.gitconfig ~/.dotfiles-backup/.gitconfig.$(date +%Y%m%d_%H%M%S)
+    fi
+  tags: [git, backup]
+
+- name: Deploy .gitconfig
   template:
     src: ./.gitconfig.j2
     dest: ~/.gitconfig
   tags: [git, config]
+
+- name: Verify git installation
+  assert:
+    command:
+      cmd: which git
+  tags: [git, verify]
+
+- name: Verify git config
+  shell: git config --get user.name
+  register: git_user_check
+  changed_when: false
+  tags: [git, verify]

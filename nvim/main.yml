@@ -28,6 +28,14 @@
     state: directory
   tags: [nvim, setup]
 
+- name: Backup existing nvim config
+  shell: |
+    if [ -f "{{ config_path }}/init.lua" ]; then
+      mkdir -p ~/.dotfiles-backup
+      cp -r "{{ config_path }}" ~/.dotfiles-backup/nvim.$(date +%Y%m%d_%H%M%S)
+    fi
+  tags: [nvim, backup]
+
 - name: Deploy config file {{ item.Name }}
   template:
     src: "{{ item.Src }}"
@@ -42,7 +50,28 @@
 
 - name: Make sure plugins are installed
   shell: nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+  timeout: 15m
+  retries: 2
+  retry_delay: 10s
   tags: [nvim, plugins]
 
 - include: ./copilot.yml
   tags: [nvim, copilot]
+
+- name: Verify nvim installation
+  assert:
+    command:
+      cmd: which nvim
+  tags: [nvim, verify]
+
+- name: Verify nvim config
+  assert:
+    command:
+      cmd: test -f ~/.config/nvim/init.lua
+  tags: [nvim, verify]
+
+- name: Verify packer installation
+  assert:
+    command:
+      cmd: test -d ~/.local/share/nvim/site/pack/packer/start/packer.nvim
+  tags: [nvim, verify]

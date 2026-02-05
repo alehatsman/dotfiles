@@ -401,6 +401,22 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
+-- Golang
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "go",
+  callback = function()
+    vim.lsp.start({
+      name = "gopls",
+      cmd = { "gopls" },
+      root_dir = vim.fs.root(0, { "go.mod" }),
+      capabilities = capabilities,
+      on_attach = function(client, bufnr)
+        require('lsp-format').on_attach(client, bufnr)
+      end,
+    })
+  end,
+})
+
 ---------------------------------------------
 -- Linters / Fixers / Formatters
 ---------------------------------------------
@@ -413,6 +429,7 @@ require('lint').linters_by_ft = {
   python = { 'flake8' },
   rust = { 'clippy' },
   lua = { 'luacheck' },
+  golang = { 'golangci_lint' },
 }
 
 -- diagnostics signs

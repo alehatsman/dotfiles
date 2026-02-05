@@ -1,9 +1,9 @@
 ---
 - name: Clone fzf repository
-  shell: git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
-  register: fzf_clone
-  failed_when: false
-  changed_when: result.rc == 0
+  shell: |
+    if [ ! -d ~/.fzf ]; then
+      git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    fi
   tags: [fzf, install]
 
 - name: Install fzf
