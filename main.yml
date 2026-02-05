@@ -6,24 +6,53 @@ steps:
   - include: ./git/main.yml
     tags: [core, git]
 
-  # Programming languages
-  - include: ./java/main.yml
-    tags: [dev, java]
-
-  - include: ./python/main.yml
+  # Programming languages - Using Presets
+  - name: Install Python via pyenv
+    preset: python
+    with:
+      version: "3.12.1"
+      install_virtualenv: true
     tags: [dev, python]
 
-  - include: ./rust/main.yml
+  - name: Install Rust toolchain
+    preset: rust
+    with:
+      toolchain: stable
+      profile: default
     tags: [dev, rust]
+
+  - name: Install Node.js via nvm
+    preset: nodejs
+    with:
+      version: lts
+      global_packages:
+        - webpack
+        - eslint
+        - prettier
+    tags: [dev, node]
+
+  # Modern Unix tools
+  - name: Install modern Unix tools
+    preset: modern-unix
+    with:
+      tools:
+        - bat        # cat with syntax highlighting
+        - exa        # ls replacement
+        - zoxide     # smart cd
+        - dust       # du replacement
+        - duf        # df replacement
+        - bottom     # top/htop replacement
+    tags: [tools, modern-unix]
+
+  # Other languages
+  - include: ./java/main.yml
+    tags: [dev, java]
 
   - include: ./clojure/main.yml
     tags: [dev, clojure]
 
   - include: ./golang/main.yml
     tags: [dev, golang]
-
-  - include: ./node/main.yml
-    tags: [dev, node]
 
   # Terminal tools
   - include: ./fzf/main.yml
