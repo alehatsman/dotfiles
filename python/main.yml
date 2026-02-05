@@ -10,17 +10,20 @@
   tags: [python, install, deps]
 
 - name: Clone pyenv repository
-  shell: git clone --depth 1 https://github.com/pyenv/pyenv.git ~/.pyenv && cd ~/.pyenv && src/configure && make -C src
+  shell: |
+    if [ ! -d ~/.pyenv ]; then
+      git clone --depth 1 https://github.com/pyenv/pyenv.git ~/.pyenv && \
+      cd ~/.pyenv && \
+      src/configure && \
+      make -C src
+    fi
   when: os == "linux" or os == "darwin"
   tags: [python, pyenv]
-  register: pyenv_clone
-  failed_when: false
-  changed_when: result.rc == 0
 
 - name: Clone pyenv-virtualenv plugin
-  shell: git clone https://github.com/pyenv/pyenv-virtualenv.git "$(pyenv root)/plugins/pyenv-virtualenv"
+  shell: |
+    if [ ! -d ~/.pyenv/plugins/pyenv-virtualenv ]; then
+      git clone https://github.com/pyenv/pyenv-virtualenv.git "$(pyenv root)/plugins/pyenv-virtualenv"
+    fi
   when: os == "linux" or os == "darwin"
   tags: [python, pyenv]
-  register: pyenv_virtualenv_clone
-  failed_when: false
-  changed_when: result.rc == 0

@@ -3,14 +3,17 @@
   shell: apt-get install -y zsh
   become: true
   when: os == "linux"
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
   tags: [zsh, install]
 
 - name: Install zsh (macos)
-  shell: brew install zsh
+  shell: brew install zsh 2>&1 | grep -v "already installed" || true
   when: os == "darwin"
-  register: brew_zsh
-  failed_when: false
-  changed_when: result.rc == 0
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
   tags: [zsh, install]
 
 - name: Make sure zsh config directory is present
@@ -25,6 +28,22 @@
 - include_vars: ./vars/macos_{{arch}}.yml
   when: os == "darwin"
 
+- name: Backup existing .zshrc
+  shell: |
+    if [ -f ~/.zshrc ]; then
+      mkdir -p ~/.dotfiles-backup
+      cp ~/.zshrc ~/.dotfiles-backup/.zshrc.$(date +%Y%m%d_%H%M%S)
+    fi
+  tags: [zsh, backup]
+
+- name: Backup existing .ignore
+  shell: |
+    if [ -f ~/.ignore ]; then
+      mkdir -p ~/.dotfiles-backup
+      cp ~/.ignore ~/.dotfiles-backup/.ignore.$(date +%Y%m%d_%H%M%S)
+    fi
+  tags: [zsh, backup]
+
 - name: Deploy .zshrc
   template:
     src: ./templates/.zshrc.j2
@@ -38,17 +57,23 @@
   tags: [zsh, config]
 
 - name: Clone zplug
-  shell: git clone --depth 1 https://github.com/zplug/zplug.git ~/.zplug
-  register: zplug_clone
-  failed_when: false
-  changed_when: result.rc == 0
+  shell: |
+    if [ ! -d ~/.zplug ]; then
+      git clone --depth 1 https://github.com/zplug/zplug.git ~/.zplug
+    fi
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
   tags: [zsh, plugins]
 
 - name: Clone oh-my-zsh
-  shell: git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git ~/.zplug/repos/ohmyzsh/ohmyzsh
-  register: ohmyzsh_clone
-  failed_when: false
-  changed_when: result.rc == 0
+  shell: |
+    if [ ! -d ~/.zplug/repos/ohmyzsh/ohmyzsh ]; then
+      git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git ~/.zplug/repos/ohmyzsh/ohmyzsh
+    fi
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
   tags: [zsh, plugins]
 
 - name: Set zsh as default shell
@@ -57,6 +82,22 @@
       chsh -s $(which zsh) {{ username }}
     fi
   become: true
-  register: chsh_result
-  changed_when: "has(result.stdout, 'changed') or result.rc == 0"
   tags: [zsh, shell]
+
+- name: Verify zsh installation
+  assert:
+    command:
+      cmd: which zsh
+  tags: [zsh, verify]
+
+- name: Verify zsh config
+  assert:
+    command:
+      cmd: test -f ~/.zshrc
+  tags: [zsh, verify]
+
+- name: Verify zplug installation
+  assert:
+    command:
+      cmd: test -d ~/.zplug
+  tags: [zsh, verify]

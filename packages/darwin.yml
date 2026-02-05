@@ -5,34 +5,60 @@
       echo "xcode tools are not installed."
       xcode-select --install
     else
-      echo "xcode tools are alredy installed. Skipping..."
+      echo "xcode tools are already installed. Skipping..."
     fi
+  register: xcode_result
+  changed_when: "'not installed' in xcode_result.stdout"
+  timeout: 10m
 
 - name: Make sure rosetta 2 is installed
   shell: |
     softwareupdate --install-rosetta --agree-to-license
   become: true
+  register: rosetta_result
+  failed_when: rosetta_result.rc not in [0, 1]
+  changed_when: rosetta_result.rc == 0
+  timeout: 10m
 
 - name: Make sure brew is installed
   shell: |
     if ! type "brew" > /dev/null; then
       echo "brew is not installed."
-      /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     else
       echo "brew is already installed. Skipping..."
     fi
+  register: brew_result
+  changed_when: "'not installed' in brew_result.stdout"
+  timeout: 10m
+  retries: 3
+  retry_delay: 10s
 
 - include_vars: ./darwin_packages.yml
 
 - name: Make sure all the taps are present
   shell: |
-    brew tap $tap
+    brew tap {{ item }}
   with_items: "{{ taps }}"
+  register: tap_result
+  failed_when: tap_result.rc not in [0, 1]
+  changed_when: "'already tapped' not in tap_result.stderr"
+  timeout: 5m
 
 - name: Make sure all the apps are present
   shell: |
     brew install {{ apps | join: ' ' }}
+  register: apps_result
+  failed_when: apps_result.rc not in [0, 1]
+  timeout: 30m
+  retries: 2
+  retry_delay: 10s
 
 - name: Make sure all the cask apps are present
   shell: |
     brew install --cask {{ cask_apps | join: ' ' }}
+  register: cask_result
+  failed_when: cask_result.rc not in [0, 1]
+  timeout: 30m
+  retries: 2
+  retry_delay: 10s

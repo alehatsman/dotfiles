@@ -5,6 +5,9 @@
     apt-get update;
     apt-get upgrade -y;
   become: true
+  timeout: 15m
+  retries: 3
+  retry_delay: 10s
 
 - name: Define basic packages
   vars:
@@ -12,7 +15,7 @@
       - gnupg
       - software-properties-common
       - curl
-      - ca-certificates 
+      - ca-certificates
       - apt-transport-https
 
 - include_vars: ./ubuntu_packages.yml
@@ -21,19 +24,30 @@
   shell: |
     apt-get install -y {{  basic_packages | join: " " }}
   become: true
+  timeout: 10m
+  retries: 3
+  retry_delay: 10s
 
 - name: Make sure keyserver is updated
   shell: |
     apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com
   become: true
   when: false
+  timeout: 5m
 
 - name: Add neovim repos
   shell: |
-    add-apt-repository ppa:neovim-ppa/unstable
-    apt-update
+    add-apt-repository ppa:neovim-ppa/unstable -y
+    apt-get update
+  become: true
+  timeout: 5m
+  retries: 2
+  retry_delay: 5s
 
 - name: Make sure apps are installed
   shell: |
     apt-get install -y {{  apps | join: " " }}
   become: true
+  timeout: 20m
+  retries: 3
+  retry_delay: 10s

@@ -3,14 +3,17 @@
   shell: apt-get install -y tmux
   become: true
   when: os == 'linux'
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
   tags: [tmux, install]
 
 - name: Install tmux (macos)
-  shell: brew install tmux
+  shell: brew install tmux 2>&1 | grep -v "already installed" || true
   when: os == 'darwin'
-  register: brew_tmux
-  failed_when: false
-  changed_when: result.rc == 0
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
   tags: [tmux, install]
 
 - name: Create tmux config directory
@@ -26,14 +29,43 @@
   tags: [tmux, config]
 
 - name: Clone tmux plugin manager (tpm)
-  shell: git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/tmp
-  register: tpm_clone
-  failed_when: false
-  changed_when: result.rc == 0
+  shell: |
+    if [ ! -d ~/.config/tmux/plugins/tpm ]; then
+      git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
+    fi
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
   tags: [tmux, plugins]
+
+- name: Backup existing .tmux.conf
+  shell: |
+    if [ -f ~/.tmux.conf ]; then
+      mkdir -p ~/.dotfiles-backup
+      cp ~/.tmux.conf ~/.dotfiles-backup/.tmux.conf.$(date +%Y%m%d_%H%M%S)
+    fi
+  tags: [tmux, backup]
 
 - name: Deploy .tmux.conf
   template:
     src: ./.tmux.conf.j2
     dest: ~/.tmux.conf
   tags: [tmux, config]
+
+- name: Verify tmux installation
+  assert:
+    command:
+      cmd: which tmux
+  tags: [tmux, verify]
+
+- name: Verify tmux config
+  assert:
+    command:
+      cmd: test -f ~/.tmux.conf
+  tags: [tmux, verify]
+
+- name: Verify tpm installation
+  assert:
+    command:
+      cmd: test -d ~/.config/tmux/plugins/tpm
+  tags: [tmux, verify]
