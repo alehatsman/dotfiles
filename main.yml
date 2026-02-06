@@ -45,15 +45,19 @@ steps:
   #       - bottom     # top/htop replacement
   #   tags: [tools, modern-unix]
 
+  - name: Install Go toolchain
+    preset: go
+    with:
+      version: "latest"
+      gopath: "{{ GOPATH }}"
+    tags: [dev, golang]
+
   # Other languages
   - include: ./java/main.yml
     tags: [dev, java]
 
   - include: ./clojure/main.yml
     tags: [dev, clojure]
-
-  - include: ./golang/main.yml
-    tags: [dev, golang]
 
   # Terminal tools
   - include: ./fzf/main.yml
