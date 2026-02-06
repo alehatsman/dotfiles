@@ -21,15 +21,16 @@ steps:
       profile: default
     tags: [dev, rust]
 
-  - name: Install Node.js via nvm
-    preset: nodejs
-    with:
-      version: lts
-      global_packages:
-        - webpack
-        - eslint
-        - prettier
-    tags: [dev, node]
+  # Node.js already installed manually (v22.22.0)
+  # - name: Install Node.js via nvm
+  #   preset: nodejs
+  #   with:
+  #     version: "22"
+  #     global_packages:
+  #       - webpack
+  #       - eslint
+  #       - prettier
+  #   tags: [dev, node]
 
   # Modern Unix tools
   # TODO: modern-unix preset has issues with templated state parameter
