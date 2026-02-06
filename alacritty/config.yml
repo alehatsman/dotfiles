@@ -1,4 +1,6 @@
 ---
+# Alacritty configuration deployment (installation handled by preset)
+
 - name: Create alacritty config directory
   file:
     path: ~/.config/alacritty

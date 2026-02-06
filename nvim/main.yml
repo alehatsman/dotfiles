@@ -28,6 +28,18 @@
     state: directory
   tags: [nvim, setup]
 
+- name: Create directory lua
+  file:
+    path: "{{ config_path }}/lua"
+    state: directory
+  tags: [nvim, setup]
+
+- name: Create directory lua/claude_nvim
+  file:
+    path: "{{ config_path }}/lua/claude_nvim"
+    state: directory
+  tags: [nvim, setup]
+
 - name: Backup existing nvim config
   shell: |
     if [ -f "{{ config_path }}/init.lua" ]; then
@@ -36,10 +48,10 @@
     fi
   tags: [nvim, backup]
 
-- name: Deploy config file {{ item.Name }}
+- name: Deploy config file {{ item.Path }}
   template:
     src: "{{ item.Src }}"
-    dest: "{{ config_path }}/{{ item.Name }}"
+    dest: "{{ config_path }}/{{ item.Path }}"
   with_filetree: "./templates"
   when: item.State == "file"
   tags: [nvim, config]
