@@ -1,0 +1,36 @@
+---
+# Tmux installation (using custom config, not preset due to template issue)
+
+- name: Install tmux (ubuntu)
+  shell: apt-get install -y tmux
+  become: true
+  when: os == 'linux'
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
+  tags: [tmux, install]
+
+- name: Install tmux (macos)
+  shell: brew install tmux 2>&1 | grep -v "already installed" || true
+  when: os == 'darwin'
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
+  tags: [tmux, install]
+
+- name: Clone tmux plugin manager (tpm)
+  shell: |
+    if [ ! -d ~/.config/tmux/plugins/tpm ]; then
+      mkdir -p ~/.config/tmux/plugins
+      git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
+    fi
+  timeout: 5m
+  retries: 3
+  retry_delay: 5s
+  tags: [tmux, plugins]
+
+- name: Verify tmux installation
+  assert:
+    command:
+      cmd: which tmux
+  tags: [tmux, verify]

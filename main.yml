@@ -54,30 +54,50 @@ steps:
     tags: [dev, golang]
 
   # Other languages
-  - include: ./java/main.yml
+  - name: Install Java JDK
+    preset: java
+    with:
+      version: "21"
+      set_java_home: true
     tags: [dev, java]
 
-  - include: ./clojure/main.yml
+  - name: Install Clojure
+    preset: clojure
     tags: [dev, clojure]
 
+  - name: Deploy Clojure configs
+    include: ./clojure/config.yml
+    tags: [dev, clojure, config]
+
   # Terminal tools
-  - include: ./fzf/main.yml
+  - name: Install fzf fuzzy finder
+    preset: fzf
+    with:
+      install_shell_extensions: true
+      install_vim_plugin: false
     tags: [tools, fzf]
 
   - include: ./zsh/main.yml
     tags: [core, shell]
 
-  - include: ./tmux/main.yml
+  # Tmux - using custom installation due to preset template issue
+  - include: ./tmux/install.yml
     tags: [tools, tmux]
+
+  - name: Deploy tmux config
+    include: ./tmux/config.yml
+    tags: [tools, tmux, config]
 
   # Editors
   - include: ./nvim/main.yml
     tags: [editor, nvim]
 
   # macOS specific
-  - include: ./alacritty/main.yml
+  # Note: Install Alacritty via Homebrew cask: brew install --cask alacritty
+  - name: Deploy Alacritty config
+    include: ./alacritty/config.yml
     when: os == "darwin"
-    tags: [macos, terminal]
+    tags: [macos, terminal, config]
 
   - include: ./macos/main.yml
     when: os == "darwin"
