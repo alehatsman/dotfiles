@@ -10,7 +10,7 @@ steps:
   - name: Install Python via pyenv
     preset: python
     with:
-      version: "3.12.1"
+      version: "3.12.12"
       install_virtualenv: true
     tags: [dev, python]
 
@@ -32,17 +32,18 @@ steps:
     tags: [dev, node]
 
   # Modern Unix tools
-  - name: Install modern Unix tools
-    preset: modern-unix
-    with:
-      tools:
-        - bat        # cat with syntax highlighting
-        - exa        # ls replacement
-        - zoxide     # smart cd
-        - dust       # du replacement
-        - duf        # df replacement
-        - bottom     # top/htop replacement
-    tags: [tools, modern-unix]
+  # TODO: modern-unix preset has issues with templated state parameter
+  # - name: Install modern Unix tools
+  #   preset: modern-unix
+  #   with:
+  #     tools:
+  #       - bat        # cat with syntax highlighting
+  #       - exa        # ls replacement
+  #       - zoxide     # smart cd
+  #       - dust       # du replacement
+  #       - duf        # df replacement
+  #       - bottom     # top/htop replacement
+  #   tags: [tools, modern-unix]
 
   # Other languages
   - include: ./java/main.yml
