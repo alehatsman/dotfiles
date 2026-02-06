@@ -1,0 +1,12 @@
+---
+- name: Create alacritty config directory
+  file:
+    path: ~/.config/alacritty
+    state: directory
+  tags: [alacritty, config]
+
+- name: Deploy alacritty config
+  template:
+    src: ./alacritty.toml
+    dest: ~/.config/alacritty/alacritty.toml
+  tags: [alacritty, config]
