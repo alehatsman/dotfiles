@@ -18,7 +18,9 @@ M.sessions = {}
 --   alive = boolean,
 --   log_path = string,
 --   stdout_buf = string (accumulated partial data),
---   stdin = function (wraps vim.fn.chansend)
+--   stdin = function (wraps vim.fn.chansend),
+--   history = array of {type = "user"|"assistant", content = string},
+--   name = string or nil (user-assigned name)
 -- }
 
 -- Spawn a new Claude Code session
@@ -48,6 +50,11 @@ function M.spawn_session(opts)
 
   util.log_to_file(log_path, "Spawning session: " .. table.concat(cmd, " "))
 
+  -- Preserve history and name if resurrecting existing session
+  local existing = M.sessions[session_id]
+  local history = (existing and existing.history) or {}
+  local name = (existing and existing.name) or nil
+
   local session = {
     session_id = session_id,
     model = model,
@@ -57,6 +64,8 @@ function M.spawn_session(opts)
     alive = false,
     log_path = log_path,
     stdout_buf = "",
+    history = history,
+    name = name,
   }
 
   -- Start job
@@ -172,6 +181,11 @@ function M.handle_message(session_id, msg)
     end
   end
 
+  -- Record assistant response in history
+  if content then
+    table.insert(session.history, { type = "assistant", content = content })
+  end
+
   -- If we have a chat buffer and content, append it
   if content and session.bufnr and vim.api.nvim_buf_is_valid(session.bufnr) then
     vim.schedule(function()
@@ -202,9 +216,81 @@ function M.send_message(session_id, content)
     return
   end
 
+  -- Record in history
+  table.insert(session.history, { type = "user", content = content })
+
   local line = util.encode_message("user", content)
   util.log_to_file(session.log_path, "TX: " .. vim.trim(line))
   session.stdin(line)
+end
+
+-- Resurrect a dead session by replaying history
+function M.resurrect_session(session_id)
+  local old_session = M.sessions[session_id]
+  if not old_session then
+    vim.notify("Session not found: " .. session_id, vim.log.levels.ERROR)
+    return nil
+  end
+
+  if old_session.alive then
+    vim.notify("Session is already alive", vim.log.levels.WARN)
+    return old_session
+  end
+
+  -- Save history before respawning
+  local saved_history = vim.deepcopy(old_session.history)
+
+  -- Respawn with same session_id (will start with empty history that we'll replay)
+  local new_session = M.spawn_session({
+    session_id = session_id,
+    model = old_session.model,
+    cwd = old_session.cwd,
+  })
+
+  if not new_session then
+    return nil
+  end
+
+  -- Clear history so we can replay without duplicates
+  new_session.history = {}
+
+  -- Wait for initialization
+  vim.wait(3000)
+
+  -- Verify session is alive before replaying
+  if not new_session.alive or not new_session.stdin then
+    vim.notify("Failed to resurrect session - not alive", vim.log.levels.ERROR)
+    return nil
+  end
+
+  -- Replay history (only user messages - responses will come from Claude)
+  if #saved_history > 0 then
+    vim.notify("Resurrecting session with " .. #saved_history .. " messages...", vim.log.levels.INFO)
+
+    for _, msg in ipairs(saved_history) do
+      if msg.type == "user" then
+        -- Use send_message to properly record in history
+        M.send_message(session_id, msg.content)
+        -- Wait for response
+        vim.wait(2000)
+      end
+    end
+  end
+
+  return new_session
+end
+
+-- Rename/name a session
+function M.rename_session(session_id, name)
+  local session = M.sessions[session_id]
+  if not session then
+    vim.notify("Session not found: " .. session_id, vim.log.levels.ERROR)
+    return false
+  end
+
+  session.name = name
+  vim.notify("Session renamed to: " .. name, vim.log.levels.INFO)
+  return true
 end
 
 -- Get list of active sessions
@@ -216,6 +302,7 @@ function M.list_sessions()
       model = sess.model,
       cwd = sess.cwd,
       alive = sess.alive,
+      name = sess.name,
     })
   end
   return list

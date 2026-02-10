@@ -18,8 +18,17 @@ function M.open_chat(session_id)
 
   -- Create buffer if doesn't exist
   if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
-    bufnr = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_name(bufnr, "claude://" .. session_id)
+    -- Check if buffer with this name already exists
+    local existing_bufnr = vim.fn.bufnr("claude://" .. session_id)
+    local is_new_buffer = (existing_bufnr == -1)
+
+    if is_new_buffer then
+      bufnr = vim.api.nvim_create_buf(false, true)
+      vim.api.nvim_buf_set_name(bufnr, "claude://" .. session_id)
+    else
+      bufnr = existing_bufnr
+    end
+
     vim.api.nvim_buf_set_option(bufnr, "buftype", "nofile")
     vim.api.nvim_buf_set_option(bufnr, "bufhidden", "hide")
     vim.api.nvim_buf_set_option(bufnr, "swapfile", false)
@@ -27,8 +36,12 @@ function M.open_chat(session_id)
 
     session.bufnr = bufnr
 
-    -- Set initial content - clean and minimal
-    M.append_to_chat(bufnr, ">> ")
+    -- Set initial content only for new buffers
+    if is_new_buffer then
+      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+      vim.api.nvim_buf_set_lines(bufnr, 0, 1, false, {">> "})
+      vim.api.nvim_buf_set_option(bufnr, "modifiable", true)
+    end
 
     -- Set buffer-local keymaps
     M.setup_chat_keymaps(bufnr, session_id)
@@ -36,10 +49,15 @@ function M.open_chat(session_id)
 
   -- Open in right vertical split
   vim.cmd("vsplit")
-  vim.api.nvim_win_set_buf(0, bufnr)
+  local win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(win, bufnr)
+
+  -- Position cursor at end of >> prompt (after the space)
+  vim.api.nvim_win_set_cursor(win, {1, 3})
 
   -- Set statusline to show session info
-  vim.wo.statusline = string.format("  Claude [%s] ready ", session.model)
+  local status = session.alive and "ready" or "DEAD - send message to revive"
+  vim.wo.statusline = string.format("  Claude [%s] %s ", session.model, status)
 end
 
 -- Append text to chat buffer (non-blocking)
@@ -129,8 +147,53 @@ function M.send_current_line(bufnr, session_id)
     return
   end
 
-  -- Send message
-  proc.send_message(session_id, message)
+  local session = proc.sessions[session_id]
+  if not session then
+    vim.notify("Session not found", vim.log.levels.ERROR)
+    return
+  end
+
+  -- If session is dead, create NEW session with buffer context
+  if not session.alive then
+    vim.notify("Session is dead. Creating new session with buffer context...", vim.log.levels.INFO)
+
+    -- Get all buffer content as context
+    local all_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+    local buffer_content = table.concat(all_lines, "\n")
+
+    -- Spawn completely NEW session (new UUID required by Claude CLI)
+    local new_session = proc.spawn_session({
+      model = session.model,
+      cwd = session.cwd,
+    })
+
+    if not new_session or not new_session.alive then
+      vim.notify("Failed to spawn new session", vim.log.levels.ERROR)
+      return
+    end
+
+    -- Transfer buffer to new session
+    new_session.bufnr = bufnr
+    proc.sessions[new_session.session_id] = new_session
+    proc.sessions[session_id] = nil  -- Remove old dead session
+
+    -- Update buffer name to new session ID
+    vim.api.nvim_buf_set_name(bufnr, "claude://" .. new_session.session_id)
+
+    -- Update local references
+    session = new_session
+    session_id = new_session.session_id
+
+    -- Update statusline
+    vim.wo.statusline = string.format("  Claude [%s] ready ", session.model)
+
+    -- Send buffer content as context, then the new message
+    local context_message = "Here's our conversation history:\n\n" .. buffer_content .. "\n\nNow: " .. message
+    proc.send_message(session_id, context_message)
+  else
+    -- Normal send
+    proc.send_message(session_id, message)
+  end
 
   -- Show thinking indicator
   M.append_to_chat(bufnr, "\n\n_Claude is thinking..._\n")
@@ -144,7 +207,8 @@ function M.show_session_picker()
   local entries = { "New session…" }
   for _, sess in ipairs(sessions) do
     local status = sess.alive and "✓" or "✗"
-    local entry = string.format("%s [%s] %s - %s", status, sess.model, sess.session_id:sub(1, 8), sess.cwd)
+    local name_part = sess.name and (" '" .. sess.name .. "'") or ""
+    local entry = string.format("%s [%s]%s %s - %s", status, sess.model, name_part, sess.session_id:sub(1, 8), sess.cwd)
     table.insert(entries, entry)
   end
 
