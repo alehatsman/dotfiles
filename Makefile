@@ -37,3 +37,10 @@ test-ubuntu: ## Test in Ubuntu Docker
 		curl -sSL https://raw.githubusercontent.com/alehatsman/mooncake/main/install.sh | bash && \
 		export PATH=\$$PATH:/root/.local/bin && \
 		mooncake run -c main.yml -v personal_variables.yml --dry-run"
+
+install-tag: ## Install with specific tag
+	@if [ -f .sudo ]; then \
+		mooncake run -c main.yml -v personal_variables.yml -s $$(cat .sudo) --insecure-sudo-pass --tags $(TAG); \
+	else \
+		mooncake run -c main.yml -v personal_variables.yml --tags $(TAG); \
+	fi

@@ -1,0 +1,23 @@
+---
+- name: "Check if claude is installed"
+  shell: "which claude"
+  register: claude_check
+  ignore_errors: true
+  tags: [claude]
+
+- name: "Install claude if not present"
+  when: claude_check.rc != 0
+  shell: "curl -sSL https://claude.ai/install.sh | sh"
+  tags: [claude]
+
+- name: "Make sure claude config directory exists"
+  file:
+    path: "~/.claude"
+    state: directory
+  tags: [claude]
+
+- name: "Deploy claude config"
+  template:
+    src: "./config.yml"
+    dest: "~/.claude/config.yml"
+  tags: [claude]

@@ -1,7 +1,8 @@
 ---
-version: "1.0"
-
 steps:
+  - include: ./claude/main.yml
+    tags: [core, claude]
+
   # Version control
   - include: ./git/main.yml
     tags: [core, git]
