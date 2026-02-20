@@ -1,44 +1,39 @@
 ---------------------------------------------
--- Install packer
+-- Bootstrap lazy.nvim
 ---------------------------------------------
-local ensure_packer = function()
-  local fn = vim.fn
-  local install_path = fn.stdpath('data') .. '/site/pack/packer/start/packer.nvim'
-  if fn.empty(fn.glob(install_path)) > 0 then
-    fn.system({ 'git', 'clone', '--depth', '1', 'https://github.com/wbthomason/packer.nvim', install_path })
-    vim.cmd [[packadd packer.nvim]]
-    return true
-  end
-  return false
+local lazypath = vim.fn.stdpath('data') .. '/lazy/lazy.nvim'
+if not vim.uv.fs_stat(lazypath) then
+  vim.fn.system({
+    'git', 'clone', '--filter=blob:none',
+    'https://github.com/folke/lazy.nvim.git',
+    '--branch=stable',
+    lazypath,
+  })
 end
-
-local packer_bootstrap = ensure_packer()
-
-vim.api.nvim_exec(
-  [[
-    augroup Packer
-      autocmd!
-      autocmd BufWritePost init.lua PackerCompile
-    augroup end
-  ]],
-  false
-)
+vim.opt.rtp:prepend(lazypath)
 
 ---------------------------------------------
--- Plugins installation
+-- Plugins
 ---------------------------------------------
-require('packer').startup(function(use)
-  use 'wbthomason/packer.nvim'
-  use 'nvim-lua/plenary.nvim'
+require('lazy').setup({
+  {
+    'alehatsman/vim-monokai',
+    lazy = false,
+    priority = 1000,
+    config = function()
+      vim.cmd.colorscheme('monokai')
+    end,
+  },
+  'nvim-lua/plenary.nvim',
 
-  use {
+  {
     'lukas-reineke/indent-blankline.nvim',
     config = function()
       require('ibl').setup({})
-    end
-  }
+    end,
+  },
 
-  use {
+  {
     'lewis6991/gitsigns.nvim',
     event = 'BufReadPre',
     config = function()
@@ -60,38 +55,34 @@ require('packer').startup(function(use)
           vim.keymap.set('n', '<leader>hp', gs.preview_hunk, opts)
         end,
       })
-    end
-  }
+    end,
+  },
 
-  use 'itchyny/lightline.vim'
+  'itchyny/lightline.vim',
+  'christoomey/vim-tmux-navigator',
+  'jeffkreeftmeijer/vim-numbertoggle',
 
-  use 'christoomey/vim-tmux-navigator'
-  use 'jeffkreeftmeijer/vim-numbertoggle'
-
-  use { 'junegunn/fzf', run = function() vim.fn['fzf#install']() end }
-  use 'junegunn/fzf.vim'
-  use {
+  { 'junegunn/fzf', build = function() vim.fn['fzf#install']() end },
+  'junegunn/fzf.vim',
+  {
     'ojroques/nvim-lspfuzzy',
-    requires = {
-      { 'junegunn/fzf' },
-      { 'junegunn/fzf.vim' },
-    }
-  }
-  use { 'gfanto/fzf-lsp.nvim',
+    dependencies = { 'junegunn/fzf', 'junegunn/fzf.vim' },
+  },
+  {
+    'gfanto/fzf-lsp.nvim',
     config = function()
       require('fzf_lsp').setup()
-    end
-  }
+    end,
+  },
 
-  use 'mbbill/undotree'
-  use 'norcalli/nvim-colorizer.lua'
+  'mbbill/undotree',
+  'norcalli/nvim-colorizer.lua',
+  'numToStr/Comment.nvim',
+  'JoosepAlviste/nvim-ts-context-commentstring',
 
-  use 'numToStr/Comment.nvim'
-  use 'JoosepAlviste/nvim-ts-context-commentstring'
-
-  use {
+  {
     'nvim-tree/nvim-tree.lua',
-    requires = { 'nvim-tree/nvim-web-devicons' },
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
     config = function()
       vim.g.loaded_netrw = 1
       vim.g.loaded_netrwPlugin = 1
@@ -100,22 +91,22 @@ require('packer').startup(function(use)
         local function map(lhs, rhs, desc)
           vim.keymap.set('n', lhs, rhs, { buffer = bufnr, noremap = true, silent = true, nowait = true, desc = 'nvim-tree: '..desc })
         end
-        map('<CR>',  api.node.open.edit,           'Open')
-        map('o',     api.node.open.edit,           'Open')
-        map('v',     api.node.open.vertical,       'Open: Vertical Split')
-        map('s',     api.node.open.horizontal,     'Open: Horizontal Split')
+        map('<CR>',  api.node.open.edit,             'Open')
+        map('o',     api.node.open.edit,             'Open')
+        map('v',     api.node.open.vertical,         'Open: Vertical Split')
+        map('s',     api.node.open.horizontal,       'Open: Horizontal Split')
         map('-',     api.tree.change_root_to_parent, 'Up')
-        map('a',     api.fs.create,                'Create')
-        map('r',     api.fs.rename,                'Rename')
-        map('d',     api.fs.remove,                'Delete')
-        map('y',     api.fs.copy.filename,         'Copy Name')
-        map('Y',     api.fs.copy.relative_path,    'Copy Relative Path')
-        map('gy',    api.fs.copy.absolute_path,    'Copy Absolute Path')
-        map('R',     api.tree.reload,              'Refresh')
-        map('q',     api.tree.close,               'Close')
+        map('a',     api.fs.create,                  'Create')
+        map('r',     api.fs.rename,                  'Rename')
+        map('d',     api.fs.remove,                  'Delete')
+        map('y',     api.fs.copy.filename,           'Copy Name')
+        map('Y',     api.fs.copy.relative_path,      'Copy Relative Path')
+        map('gy',    api.fs.copy.absolute_path,      'Copy Absolute Path')
+        map('R',     api.tree.reload,                'Refresh')
+        map('q',     api.tree.close,                 'Close')
         -- avoid conflicts with <C-]> and <C-k>
-        map('<M-]>', api.tree.change_root_to_node, 'CD')
-        map('gK',    api.node.show_info_popup,     'Info')
+        map('<M-]>', api.tree.change_root_to_node,   'CD')
+        map('gK',    api.node.show_info_popup,       'Info')
       end
       require('nvim-tree').setup({
         on_attach = nvim_tree_on_attach,
@@ -123,10 +114,10 @@ require('packer').startup(function(use)
         view = { adaptive_size = true, side = 'left', width = 30 },
         renderer = { indent_markers = { enable = true } },
       })
-    end
-  }
+    end,
+  },
 
-  use {
+  {
     'windwp/nvim-autopairs',
     event = 'InsertEnter',
     config = function()
@@ -137,72 +128,69 @@ require('packer').startup(function(use)
         local cmp_ap = require('nvim-autopairs.completion.cmp')
         cmp.event:on('confirm_done', cmp_ap.on_confirm_done({ map_char = { tex = '' } }))
       end
-    end
-  }
-
-  use 'kdheepak/lazygit.nvim'
-  use 'tpope/vim-fugitive'
-
-  use 'tpope/vim-surround'
-  use 'vim-scripts/LargeFile'
-
-  use 'alehatsman/vim-monokai'
-
-  use { 'fatih/vim-go', ft = { 'go' } }
-  use { 'Olical/conjure', branch = 'develop', ft = { 'clj', 'cljs', 'clojure' } }
-
-  use 'tjdevries/lsp_extensions.nvim'
-
-  use 'hrsh7th/cmp-nvim-lsp'
-  use 'hrsh7th/cmp-buffer'
-  use 'hrsh7th/nvim-cmp'
-  use 'hrsh7th/cmp-vsnip'
-  use 'hrsh7th/vim-vsnip'
-  use "rafamadriz/friendly-snippets"
-
-  use 'ray-x/lsp_signature.nvim'
-
-  use { 'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' }
-  use 'nvim-treesitter/playground'
-  use 'nvim-treesitter/nvim-treesitter-textobjects'
-  use 'nvim-treesitter/nvim-treesitter-refactor'
-  use 'nvim-treesitter/nvim-treesitter-context'
-
-  use 'zeertzjq/nvim-paste-fix'
-
-  use 'github/copilot.vim'
-
-  use({
-    "iamcco/markdown-preview.nvim",
-    run = "cd app && npm install",
-    setup = function()
-      vim.g.mkdp_filetypes = { "markdown" }
     end,
-    ft = { "markdown" },
-  })
+  },
 
-  use "lukas-reineke/lsp-format.nvim"
+  'kdheepak/lazygit.nvim',
+  'tpope/vim-fugitive',
+  'tpope/vim-surround',
+  'vim-scripts/LargeFile',
 
-  use('mfussenegger/nvim-lint')
+  { 'fatih/vim-go', ft = { 'go' } },
+  { 'Olical/conjure', branch = 'develop', ft = { 'clj', 'cljs', 'clojure' } },
 
-  use 'sindrets/diffview.nvim'
+  'tjdevries/lsp_extensions.nvim',
+  'hrsh7th/cmp-nvim-lsp',
+  'hrsh7th/cmp-buffer',
+  'hrsh7th/nvim-cmp',
+  'hrsh7th/cmp-vsnip',
+  'hrsh7th/vim-vsnip',
+  'rafamadriz/friendly-snippets',
+  'ray-x/lsp_signature.nvim',
 
-  use "ojroques/nvim-osc52"
+  'nvim-treesitter/nvim-treesitter',
+  'nvim-treesitter/playground',
+  'nvim-treesitter/nvim-treesitter-textobjects',
+  'nvim-treesitter/nvim-treesitter-refactor',
+  'nvim-treesitter/nvim-treesitter-context',
 
-  use {
+  'zeertzjq/nvim-paste-fix',
+  'github/copilot.vim',
+
+  {
+    'iamcco/markdown-preview.nvim',
+    build = 'cd app && npm install',
+    init = function()
+      vim.g.mkdp_filetypes = { 'markdown' }
+    end,
+    ft = { 'markdown' },
+  },
+
+  'lukas-reineke/lsp-format.nvim',
+  'mfussenegger/nvim-lint',
+  'sindrets/diffview.nvim',
+  'ojroques/nvim-osc52',
+
+  {
     'ibhagwan/fzf-lua',
-    requires = { 'nvim-tree/nvim-web-devicons' },
-  }
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+  },
 
-  if packer_bootstrap then
-    require('packer').sync()
-  end
-end)
-
--- avoid executing the rest on first bootstrap
-if packer_bootstrap then
-  return
-end
+  {
+    'folke/which-key.nvim',
+    config = function()
+      require('which-key').setup({
+        preset = 'modern',
+        delay = 400,
+        icons = {
+          breadcrumb = '»',
+          separator = '→',
+          group = '+',
+        },
+      })
+    end,
+  },
+})
 
 ---------------------------------------------
 -- General configuration
@@ -235,7 +223,7 @@ vim.o.laststatus       = 3
 vim.o.termguicolors    = true
 vim.o.background       = 'dark'
 vim.g.colors_name      = 'monokai'
-vim.cmd [[ silent! colorscheme monokai ]]
+
 
 -- Indentation
 vim.o.autoindent       = true
@@ -247,7 +235,7 @@ vim.o.tabstop          = 2
 
 -- Folding
 vim.o.foldmethod       = 'expr'
-vim.o.foldexpr         = 'nvim_treesitter#foldexpr()'
+vim.o.foldexpr         = 'v:lua.vim.treesitter.foldexpr()'
 vim.o.foldcolumn       = '0'
 vim.o.foldlevelstart   = 99
 vim.o.colorcolumn      = '80'
@@ -348,8 +336,7 @@ vim.diagnostic.config({
   float = { border = 'none' },
 })
 
-vim.lsp.handlers['textDocument/hover'] =
-  vim.lsp.with(vim.lsp.handlers.hover, { border = 'none' })
+-- hover border is 'none' by default in 0.11+
 
 -- lsp_signature
 local lsp_signature = require 'lsp_signature'
@@ -503,12 +490,9 @@ end
 vim.g.fzf_layout = { window = { width = 0.9, height = 0.6 } }
 vim.g.fzf_preview_window = { 'right:60%', 'ctrl-/' }
 
-vim.api.nvim_exec(
-  [[
-command! -bang -nargs=* Rg call fzf#vim#grep('rg --column --line-number --no-heading --color=never --smart-case '.shellescape(<q-args>), 1, {'options': '--delimiter : --nth 4..'}, <bang>0)
-]],
-  true
-)
+vim.cmd([[
+  command! -bang -nargs=* Rg call fzf#vim#grep('rg --column --line-number --no-heading --color=never --smart-case '.shellescape(<q-args>), 1, {'options': '--delimiter : --nth 4..'}, <bang>0)
+]])
 
 vim.keymap.set('n', '<c-p>', ':Files<cr>')
 vim.keymap.set('n', '<c-f>', ':Rg<cr>')
@@ -559,14 +543,12 @@ end
 vim.keymap.set('n', '<leader>gd', diffview_toggle)
 vim.keymap.set('n', '<leader>gl', ':DiffviewFileHistory<CR>')
 
-vim.api.nvim_exec(
-  [[
-autocmd BufRead,BufNewFile *.mdx set filetype=markdown
-]],
-  true
-)
+vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
+  pattern = '*.mdx',
+  command = 'set filetype=markdown',
+})
 
-vim.keymap.set('n', '<leader>sx', ':TSHighlightCapturesUnderCursor<CR>')
+vim.keymap.set('n', '<leader>sx', '<cmd>Inspect<CR>')
 
 ---------------------------------------------
 -- Copilot
@@ -600,7 +582,8 @@ local function safe_lint()
   -- linter is a list; check each cmd
   for _, name in ipairs(linter) do
     local cmd = lint.linters[name].cmd
-    if vim.fn.executable(cmd) == 0 then
+    if type(cmd) == 'function' then cmd = cmd() end
+    if type(cmd) ~= 'string' or vim.fn.executable(cmd) == 0 then
       return  -- skip silently
     end
   end
@@ -613,6 +596,95 @@ vim.keymap.set('n', '<leader>ll', safe_lint)
 vim.api.nvim_create_autocmd({ 'BufWritePost', 'InsertLeave' }, {
   callback = safe_lint,
 })
+
+---------------------------------------------
+-- Which-Key Keybinding Documentation
+---------------------------------------------
+local ok, wk = pcall(require, 'which-key')
+if not ok then return end
+
+-- Register all leader-based keybindings with descriptions
+wk.add({
+  -- File/Find operations
+  { "<leader>f", group = "File/Find" },
+  { "<leader>fe", desc = "Explorer toggle" },
+  { "<leader>ff", desc = "Find current file" },
+  { "<leader>f", desc = "Format buffer" },
+
+  -- Git operations
+  { "<leader>g", group = "Git" },
+  { "<leader>gb", desc = "Blame" },
+  { "<leader>gd", desc = "Diff view toggle" },
+  { "<leader>gl", desc = "File history" },
+
+  -- Git hunks (from gitsigns)
+  { "<leader>h", group = "Hunk" },
+  { "<leader>hs", desc = "Stage hunk" },
+  { "<leader>hr", desc = "Reset hunk" },
+  { "<leader>hp", desc = "Preview hunk" },
+  { "]h", desc = "Next hunk" },
+  { "[h", desc = "Previous hunk" },
+
+  -- LSP operations
+  { "<leader>r", group = "Refactor" },
+  { "<leader>rn", desc = "Rename symbol" },
+  { "<leader>d", group = "Diagnostics" },
+  { "<leader>dd", desc = "Diagnostics quickfix" },
+
+  -- Tabs
+  { "<leader>t", group = "Tabs" },
+  { "<leader>tt", desc = "New tab" },
+  { "<leader>tp", desc = "Previous tab" },
+  { "<leader>tn", desc = "Next tab" },
+  { "<leader>to", desc = "Only this tab" },
+  { "<leader>tc", desc = "Close tab" },
+  { "<leader>tl", desc = "Move tab right" },
+  { "<leader>th", desc = "Move tab left" },
+  { "<leader>0", desc = "Last tab" },
+  { "<leader>1", desc = "Tab 1" },
+  { "<leader>2", desc = "Tab 2" },
+  { "<leader>3", desc = "Tab 3" },
+  { "<leader>4", desc = "Tab 4" },
+  { "<leader>5", desc = "Tab 5" },
+  { "<leader>6", desc = "Tab 6" },
+  { "<leader>7", desc = "Tab 7" },
+  { "<leader>8", desc = "Tab 8" },
+  { "<leader>9", desc = "Tab 9" },
+
+  -- Miscellaneous
+  { "<leader>s", group = "Syntax/Search" },
+  { "<leader>sx", desc = "Treesitter highlight" },
+  { "<leader>l", group = "Lint" },
+  { "<leader>ll", desc = "Run linter" },
+  { "<leader>m", group = "Minimap" },
+  { "<leader>mm", desc = "Toggle minimap" },
+  { "<leader>hh", desc = "Help" },
+})
+
+-- Document non-leader keybindings
+wk.add({
+  -- LSP
+  { "<c-]>", desc = "Go to definition" },
+  { "<c-k>", desc = "Signature help" },
+  { "K", desc = "Hover documentation" },
+  { "<c-space>", desc = "Code actions" },
+
+  -- FZF
+  { "<c-p>", desc = "Find files" },
+  { "<c-f>", desc = "Grep/Search" },
+
+  -- Window navigation
+  { "<c-h>", desc = "Window left" },
+  { "<c-j>", desc = "Window down" },
+  { "<c-l>", desc = "Window right" },
+  { "<c-w>o", desc = "Only this window" },
+
+  -- Window resizing
+  { "<A-h>", desc = "Resize wider" },
+  { "<A-j>", desc = "Resize taller" },
+  { "<A-k>", desc = "Resize shorter" },
+  { "<A-l>", desc = "Resize narrower" },
+}, { mode = "n" })
 
 -- Clipboard setup for WSL and SSH with osc52
 local has = vim.fn.has

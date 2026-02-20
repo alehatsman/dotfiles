@@ -40,7 +40,7 @@ test-ubuntu: ## Test in Ubuntu Docker
 
 install-tag: ## Install with specific tag
 	@if [ -f .sudo ]; then \
-		mooncake run -c main.yml -v personal_variables.yml -s $$(cat .sudo) --insecure-sudo-pass --tags $(TAG); \
+		mooncake run -c main.yml -v personal_variables.yml -s $$(cat .sudo) --insecure-sudo-pass --tags $(TAG) --raw; \
 	else \
-		mooncake run -c main.yml -v personal_variables.yml --tags $(TAG); \
+		mooncake run -c main.yml -v personal_variables.yml --tags $(TAG) --log-level debug --raw; \
 	fi
