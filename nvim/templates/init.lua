@@ -12,6 +12,11 @@ if not vim.uv.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+-- Store treesitter parsers outside lazy's plugin directory so they survive
+-- lazy's git integrity checks and don't get re-downloaded every startup.
+local treesitter_parser_dir = vim.fn.stdpath('data') .. '/treesitter'
+vim.fn.mkdir(treesitter_parser_dir, 'p')
+
 ---------------------------------------------
 -- Plugins
 ---------------------------------------------
@@ -189,6 +194,12 @@ require('lazy').setup({
         },
       })
     end,
+  },
+}, {
+  performance = {
+    rtp = {
+      paths = { treesitter_parser_dir },
+    },
   },
 })
 
@@ -443,6 +454,7 @@ vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
 -- Treesitter
 ---------------------------------------------
 require('nvim-treesitter.configs').setup({
+  parser_install_dir = treesitter_parser_dir,
   ensure_installed = {
     'lua','vim','vimdoc','bash','json','yaml','markdown','markdown_inline',
     'rust','typescript','tsx','javascript','go','python','regex','toml','html','css','query'
