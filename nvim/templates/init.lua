@@ -448,7 +448,7 @@ vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
 vim.keymap.set('n', '<c-space>', '<cmd>:CodeActions<CR>')
 vim.keymap.set('n', '<leader>rn', '<cmd>lua vim.lsp.buf.rename()<CR>')
 vim.keymap.set('n', '<leader>dd', '<cmd>lua vim.diagnostic.setqflist()<CR>')
-vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
+-- vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
 
 ---------------------------------------------
 -- Treesitter
@@ -618,10 +618,10 @@ if not ok then return end
 -- Register all leader-based keybindings with descriptions
 wk.add({
   -- File/Find operations
-  { "<leader>f", group = "File/Find" },
+  -- { "<leader>f", group = "File/Find" },
   { "<leader>fe", desc = "Explorer toggle" },
   { "<leader>ff", desc = "Find current file" },
-  { "<leader>f", desc = "Format buffer" },
+  -- { "<leader>f", desc = "Format buffer" },
 
   -- Git operations
   { "<leader>g", group = "Git" },
@@ -652,16 +652,6 @@ wk.add({
   { "<leader>tc", desc = "Close tab" },
   { "<leader>tl", desc = "Move tab right" },
   { "<leader>th", desc = "Move tab left" },
-  { "<leader>0", desc = "Last tab" },
-  { "<leader>1", desc = "Tab 1" },
-  { "<leader>2", desc = "Tab 2" },
-  { "<leader>3", desc = "Tab 3" },
-  { "<leader>4", desc = "Tab 4" },
-  { "<leader>5", desc = "Tab 5" },
-  { "<leader>6", desc = "Tab 6" },
-  { "<leader>7", desc = "Tab 7" },
-  { "<leader>8", desc = "Tab 8" },
-  { "<leader>9", desc = "Tab 9" },
 
   -- Miscellaneous
   { "<leader>s", group = "Syntax/Search" },

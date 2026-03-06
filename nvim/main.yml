@@ -1,15 +1,6 @@
 ---
 - include_vars: ./variables.yml
 
-- name: Make sure autoload directory exists
-  file:
-    path: "{{ config_path }}/autoload"
-    state: directory
-  tags: [nvim, setup]
-
-- include: ./packer.yml
-  tags: [nvim, packer]
-
 - name: Make sure undo dir is present
   file:
     path: "{{ config_path }}/undodir"
@@ -61,7 +52,7 @@
   tags: [nvim, win32yank]
 
 - name: Make sure plugins are installed
-  shell: nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'
+  shell: nvim --headless "+Lazy! sync" +qa
   timeout: 15m
   retries: 2
   retry_delay: 10s
@@ -82,8 +73,8 @@
       cmd: test -f ~/.config/nvim/init.lua
   tags: [nvim, verify]
 
-- name: Verify packer installation
+- name: Verify lazy.nvim installation
   assert:
     command:
-      cmd: test -d ~/.local/share/nvim/site/pack/packer/start/packer.nvim
+      cmd: test -d ~/.local/share/nvim/lazy/lazy.nvim
   tags: [nvim, verify]
