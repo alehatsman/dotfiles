@@ -206,7 +206,6 @@ require('lazy').setup({
 ---------------------------------------------
 -- General configuration
 ---------------------------------------------
-vim.o.syntax           = 'on'
 vim.o.fileformat       = 'unix'
 vim.o.langmenu         = 'en_US'
 vim.o.hidden           = true
@@ -434,6 +433,9 @@ require('lint').linters_by_ft = {
   lua = { 'luacheck' },
   golang = { 'golangci_lint' },
 }
+
+-- Fix legacy typescript syntax fallback (const/let/var linked to Identifier instead of Keyword)
+vim.api.nvim_set_hl(0, 'typescriptVariable', { link = 'Keyword' })
 
 -- diagnostics signs
 vim.call('sign_define', 'DiagnosticSignError', { text = "•", texthl = "DiagnosticSignError" })
