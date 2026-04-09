@@ -21,3 +21,24 @@
     src: "./config.yml"
     dest: "~/.claude/config.yml"
   tags: [claude]
+
+- name: "Deploy claude settings"
+  copy:
+    src: "./settings.json"
+    dest: "~/.claude/settings.json"
+  tags: [claude]
+
+- name: "Install gopls LSP plugin"
+  shell: "claude plugins install gopls-lsp@claude-plugins-official --scope user"
+  ignore_errors: true
+  tags: [claude]
+
+- name: "Install lua LSP plugin"
+  shell: "claude plugins install lua-lsp@claude-plugins-official --scope user"
+  ignore_errors: true
+  tags: [claude]
+
+- name: "Install typescript LSP plugin"
+  shell: "claude plugins install typescript-lsp@claude-plugins-official --scope user"
+  ignore_errors: true
+  tags: [claude]
