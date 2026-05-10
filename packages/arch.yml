@@ -1,0 +1,60 @@
+---
+- name: Update pacman mirrors and system
+  shell: |
+    pacman -Syu --noconfirm
+  become: true
+  timeout: 15m
+  retries: 3
+  retry_delay: 10s
+
+- name: Make sure base-devel is installed
+  shell: |
+    pacman -S --noconfirm --needed base-devel git
+  become: true
+  timeout: 5m
+
+- name: Make sure yay (AUR helper) is installed
+  shell: |
+    if ! command -v yay > /dev/null; then
+      tmpdir=$(mktemp -d)
+      git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
+      cd "$tmpdir/yay" && makepkg -si --noconfirm
+      rm -rf "$tmpdir"
+    else
+      echo "yay is already installed. Skipping..."
+    fi
+  register: yay_result
+  changed_when: "'already installed' not in yay_result.stdout"
+  timeout: 10m
+
+- include_vars: ./arch_packages.yml
+
+- name: Make sure pacman packages are installed
+  shell: |
+    pacman -S --noconfirm --needed {{ pacman_packages | join: " " }}
+  become: true
+  timeout: 20m
+  retries: 3
+  retry_delay: 10s
+
+- name: Make sure AUR packages are installed
+  shell: |
+    yay -S --noconfirm --needed {{ aur_packages | join: " " }}
+  timeout: 15m
+  retries: 2
+  retry_delay: 10s
+
+- name: Enable and start thermald
+  shell: |
+    systemctl enable --now thermald
+  become: true
+
+- name: Enable and start TLP for battery management
+  shell: |
+    systemctl enable --now tlp
+  become: true
+
+- name: Enable and start bluetooth
+  shell: |
+    systemctl enable --now bluetooth
+  become: true

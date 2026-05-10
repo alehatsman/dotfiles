@@ -1,6 +1,9 @@
 ---
 - include: ./ubuntu.yml
-  when: os == "linux"
+  when: os == "linux" and distribution in ["ubuntu", "debian"]
+
+- include: ./arch.yml
+  when: os == "linux" and distribution == "arch"
 
 - include: ./darwin.yml
   when: os == "darwin"

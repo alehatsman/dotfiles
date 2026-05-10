@@ -1,0 +1,80 @@
+---
+pacman_packages:
+  # System / hardware (ThinkPad X1 Aura Edition)
+  - base-devel
+  - intel-ucode
+  - thermald
+  - tlp
+  - tlp-rdw
+  - bluez
+  - bluez-utils
+  - pipewire
+  - pipewire-pulse
+  - pipewire-alsa
+  - wireplumber
+  - xdg-utils
+
+  # Core tools
+  - gnupg
+  - curl
+  - wget
+  - git
+  - make
+  - cmake
+  - unzip
+  - dos2unix
+  - ca-certificates
+
+  # Shell
+  - zsh
+  - autojump
+
+  # Terminal tools
+  - tmux
+  - fzf
+  - ripgrep
+  - fd
+  - tree
+  - htop
+  - tig
+  - jq
+  - aria2
+  - mosh
+  - nmap
+  - imagemagick
+  - graphviz
+  - hexyl
+  - ninja
+  - xclip
+  - wl-clipboard
+  - shellcheck
+  - yamllint
+
+  # Editors
+  - neovim
+  - lua-language-server
+
+  # Development
+  - go
+  - nodejs
+  - npm
+  - yarn
+  - clojure
+  - rlwrap
+  - lua51
+  - postgresql-libs
+
+  # Cloud / infra
+  - aws-cli
+
+  # Misc
+  - github-cli
+  - python-httpie
+  - watchman
+
+aur_packages:
+  - git-delta
+  - tealdeer
+  - shfmt
+  - yq
+  - code-minimap
