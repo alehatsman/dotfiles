@@ -85,6 +85,7 @@ pacman_packages:
   # Apps (multilib must be enabled)
   - vlc
   - steam
+  - swaybg
 
   # Wayland / Hyprland
   - hyprland
