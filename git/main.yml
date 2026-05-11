@@ -1,11 +1,10 @@
 ---
-- name: Make sure git is installed (ubuntu)
-  shell: apt-get install -y git
+- name: Make sure git is installed
+  package:
+    name: git
+    state: present
   become: true
   when: os == 'linux'
-  timeout: 5m
-  retries: 3
-  retry_delay: 5s
   tags: [git, install]
 
 - name: Backup existing .gitconfig

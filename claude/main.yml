@@ -1,13 +1,10 @@
 ---
-- name: "Check if claude is installed"
-  shell: "which claude"
-  register: claude_check
-  ignore_errors: true
-  tags: [claude]
-
 - name: "Install claude if not present"
-  when: claude_check.rc != 0
-  shell: "curl -sSL https://claude.ai/install.sh | sh"
+  shell: |
+    if ! which claude >/dev/null 2>&1; then
+      curl -sSL https://claude.ai/install.sh | sh
+    fi
+  ignore_errors: true
   tags: [claude]
 
 - name: "Make sure claude config directory exists"
