@@ -108,3 +108,14 @@ steps:
   - include: ./macos/main.yml
     when: os == "darwin"
     tags: [macos]
+
+  # Linux GUI — Hyprland Wayland compositor
+  - name: Install Hyprland desktop
+    preset: hyprland
+    when: os == "linux" and distribution == "arch"
+    tags: [gui, hyprland]
+
+  - name: Deploy Hyprland configs
+    include: ./hyprland/main.yml
+    when: os == "linux"
+    tags: [gui, hyprland, config]
