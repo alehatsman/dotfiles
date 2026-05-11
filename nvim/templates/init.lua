@@ -12,10 +12,6 @@ if not vim.uv.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- Store treesitter parsers outside lazy's plugin directory so they survive
--- lazy's git integrity checks and don't get re-downloaded every startup.
-local treesitter_parser_dir = vim.fn.stdpath('data') .. '/treesitter'
-vim.fn.mkdir(treesitter_parser_dir, 'p')
 
 ---------------------------------------------
 -- Plugins
@@ -153,10 +149,30 @@ require('lazy').setup({
   'rafamadriz/friendly-snippets',
   'ray-x/lsp_signature.nvim',
 
-  'nvim-treesitter/nvim-treesitter',
-  'nvim-treesitter/playground',
-  'nvim-treesitter/nvim-treesitter-textobjects',
-  'nvim-treesitter/nvim-treesitter-refactor',
+  {
+    'nvim-treesitter/nvim-treesitter',
+    lazy = false,
+    build = function()
+      require('nvim-treesitter.install').update({ with_sync = true })
+    end,
+    config = function()
+      local ts_install_dir = vim.fn.stdpath('data') .. '/treesitter'
+      vim.fn.mkdir(ts_install_dir, 'p')
+      require('nvim-treesitter').setup({ install_dir = ts_install_dir })
+      -- Install parsers (nvim 0.10+ has built-in treesitter highlight/indent)
+      local parsers = {
+        'lua','vim','vimdoc','bash','json','yaml','markdown','markdown_inline',
+        'rust','typescript','tsx','javascript','go','python','regex','toml','html','css','query'
+      }
+      local installed = require('nvim-treesitter').get_installed()
+      local to_install = vim.tbl_filter(function(p)
+        return not vim.tbl_contains(installed, p)
+      end, parsers)
+      if #to_install > 0 then
+        require('nvim-treesitter.install').install(to_install)
+      end
+    end,
+  },
   'nvim-treesitter/nvim-treesitter-context',
 
   'zeertzjq/nvim-paste-fix',
@@ -194,12 +210,6 @@ require('lazy').setup({
         },
       })
     end,
-  },
-}, {
-  performance = {
-    rtp = {
-      paths = { treesitter_parser_dir },
-    },
   },
 })
 
@@ -452,19 +462,6 @@ vim.keymap.set('n', '<leader>rn', '<cmd>lua vim.lsp.buf.rename()<CR>')
 vim.keymap.set('n', '<leader>dd', '<cmd>lua vim.diagnostic.setqflist()<CR>')
 -- vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
 
----------------------------------------------
--- Treesitter
----------------------------------------------
-require('nvim-treesitter.configs').setup({
-  parser_install_dir = treesitter_parser_dir,
-  ensure_installed = {
-    'lua','vim','vimdoc','bash','json','yaml','markdown','markdown_inline',
-    'rust','typescript','tsx','javascript','go','python','regex','toml','html','css','query'
-  },
-  ignore_install = { "ipkg" },
-  indent = { enable = true },  -- FIX: ident -> indent
-  highlight = { enable = true },
-})
 
 require('ts_context_commentstring').setup({
   enable_autocmd = false,

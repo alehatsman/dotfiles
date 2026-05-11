@@ -36,7 +36,11 @@ export JAVA_HOME={{ JAVA_HOME }}
 export CARGO_HOME=~/.cargo
 export ZPLUG_HOME={{ ZPLUG_HOME }}
 export RVM_HOME=~/.rvm
-export FZF_BASE=~/.fzf
+if [[ -d ~/.fzf ]]; then
+  export FZF_BASE=~/.fzf
+else
+  export FZF_BASE=/usr/share/fzf
+fi
 export NVIDIA_GIT_BASE=~/Projects/nvidia/git-helpers
 
 export PYENV_ROOT=~/.pyenv
@@ -56,8 +60,10 @@ export SSH_KEY_PATH=~/.ssh/rsa_id
 
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 
-source ~/.fzf/shell/key-bindings.zsh
-source ~/.fzf/shell/completion.zsh
+if [[ -f $FZF_BASE/shell/key-bindings.zsh ]]; then
+  source $FZF_BASE/shell/key-bindings.zsh
+  source $FZF_BASE/shell/completion.zsh
+fi
 
 if [[ $(uname) != 'Darwin' ]]; then
   export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
@@ -70,7 +76,6 @@ export NVM_LAZY_LOAD=false
 export NVM_AUTO_USE=true
 source $ZPLUG_HOME/init.zsh
 
-zplug 'zplug/zplug', hook-build:'zplug --self-manage'
 zplug "plugins/fzf", from:oh-my-zsh
 zplug "plugins/vi-mode", from:oh-my-zsh
 zplug "plugins/dotenv", from:oh-my-zsh
@@ -98,7 +103,9 @@ fi
 
 zplug load
 
-enable-fzf-tab
+if type enable-fzf-tab > /dev/null 2>&1; then
+  enable-fzf-tab
+fi
 
 #---------------------------------------------
 # Bindings

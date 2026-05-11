@@ -39,11 +39,11 @@ pacman_packages:
 
   # Shell
   - zsh
-  - autojump
 
   # Terminal tools
   - tmux
   - fzf
+  - lsd
   - ripgrep
   - fd
   - tree
@@ -80,8 +80,7 @@ pacman_packages:
 
   # Misc
   - github-cli
-  - python-httpie
-  - watchman
+  - httpie
 
 aur_packages:
   - git-delta
@@ -89,3 +88,5 @@ aur_packages:
   - shfmt
   - yq
   - code-minimap
+  - autojump
+  - tree-sitter-cli
