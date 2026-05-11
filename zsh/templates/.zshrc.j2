@@ -1,6 +1,6 @@
 # Auto-start Hyprland on TTY1 login (Linux only)
 if [[ "$(uname)" == "Linux" ]] && [[ -z $DISPLAY ]] && [[ $(tty) == /dev/tty1 ]]; then
-  exec Hyprland
+  exec start-hyprland
 fi
 
 #---------------------------------------------
