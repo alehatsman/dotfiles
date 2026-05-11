@@ -66,13 +66,7 @@ animations {
 }
 
 dwindle {
-    pseudotile = true
     preserve_split = true
-}
-
-gestures {
-    workspace_swipe = true
-    workspace_swipe_fingers = 3
 }
 
 misc {
@@ -80,13 +74,14 @@ misc {
     disable_hyprland_logo = true
 }
 
-windowrulev2 = float, class:^(pavucontrol)$
-windowrulev2 = float, class:^(blueman-manager)$
-windowrulev2 = float, title:^(Picture-in-Picture)$
-windowrulev2 = float, class:^(nm-connection-editor)$
+windowrule = float 1, match:class ^(pavucontrol)$
+windowrule = float 1, match:class ^(blueman-manager)$
+windowrule = float 1, match:title ^(Picture-in-Picture)$
+windowrule = float 1, match:class ^(nm-connection-editor)$
 
 $mod = SUPER
 
+bind = $mod, P, pseudo
 bind = $mod, Return, exec, alacritty
 bind = $mod, D, exec, wofi --show drun
 bind = $mod, Q, killactive
