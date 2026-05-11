@@ -1,11 +1,10 @@
 ---
-- name: Install zsh (ubuntu)
-  shell: apt-get install -y zsh
+- name: Install zsh
+  package:
+    name: zsh
+    state: present
   become: true
   when: os == "linux"
-  timeout: 5m
-  retries: 3
-  retry_delay: 5s
   tags: [zsh, install]
 
 - name: Install zsh (macos)

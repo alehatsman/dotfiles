@@ -1,13 +1,12 @@
 ---
 # Tmux installation (using custom config, not preset due to template issue)
 
-- name: Install tmux (ubuntu)
-  shell: apt-get install -y tmux
+- name: Install tmux
+  package:
+    name: tmux
+    state: present
   become: true
   when: os == 'linux'
-  timeout: 5m
-  retries: 3
-  retry_delay: 5s
   tags: [tmux, install]
 
 - name: Install tmux (macos)

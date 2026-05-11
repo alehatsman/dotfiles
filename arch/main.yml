@@ -7,13 +7,13 @@
   retries: 3
   retry_delay: 10s
 
-- name: Make sure base-devel is installed
+- name: Install base-devel and git
   shell: |
     pacman -S --noconfirm --needed base-devel git
   become: true
   timeout: 5m
 
-- name: Make sure yay (AUR helper) is installed
+- name: Install yay AUR helper
   shell: |
     if ! command -v yay > /dev/null; then
       tmpdir=$(mktemp -d)
@@ -27,9 +27,9 @@
   changed_when: "'already installed' not in yay_result.stdout"
   timeout: 10m
 
-- include_vars: ./arch_packages.yml
+- include_vars: ./packages.yml
 
-- name: Make sure pacman packages are installed
+- name: Install pacman packages
   shell: |
     pacman -S --noconfirm --needed {{ pacman_packages | join: " " }}
   become: true
@@ -37,24 +37,37 @@
   retries: 3
   retry_delay: 10s
 
-- name: Make sure AUR packages are installed
+- name: Install AUR packages
   shell: |
     yay -S --noconfirm --needed {{ aur_packages | join: " " }}
   timeout: 15m
   retries: 2
   retry_delay: 10s
 
-- name: Enable and start thermald
-  shell: |
-    systemctl enable --now thermald
+- name: Enable NetworkManager
+  shell: systemctl enable --now NetworkManager
   become: true
 
-- name: Enable and start TLP for battery management
-  shell: |
-    systemctl enable --now tlp
+- name: Enable thermald
+  shell: systemctl enable --now thermald
   become: true
 
-- name: Enable and start bluetooth
-  shell: |
-    systemctl enable --now bluetooth
+- name: Enable TLP for battery management
+  shell: systemctl enable --now tlp
+  become: true
+
+- name: Enable bluetooth
+  shell: systemctl enable --now bluetooth
+  become: true
+
+- name: Enable SSH daemon
+  shell: systemctl enable --now sshd
+  become: true
+
+- name: Enable firmware update timer
+  shell: systemctl enable --now fwupd-refresh.timer
+  become: true
+
+- name: Set default shell to zsh
+  shell: chsh -s $(which zsh) {{ OS_USERNAME }}
   become: true

@@ -1,6 +1,6 @@
 ---
 pacman_packages:
-  # System / hardware (ThinkPad X1 Aura Edition)
+  # System / hardware (ThinkPad X1 Carbon Gen 13 Aura Edition)
   - base-devel
   - intel-ucode
   - thermald
@@ -14,6 +14,16 @@ pacman_packages:
   - wireplumber
   - xdg-utils
 
+  # Network
+  - networkmanager
+  - openssh
+  - mosh
+  - nmap
+
+  # Firmware & hardware management
+  - fwupd
+  - fprintd
+
   # Core tools
   - gnupg
   - curl
@@ -24,6 +34,8 @@ pacman_packages:
   - unzip
   - dos2unix
   - ca-certificates
+  - man-db
+  - man-pages
 
   # Shell
   - zsh
@@ -39,8 +51,6 @@ pacman_packages:
   - tig
   - jq
   - aria2
-  - mosh
-  - nmap
   - imagemagick
   - graphviz
   - hexyl
@@ -49,6 +59,7 @@ pacman_packages:
   - wl-clipboard
   - shellcheck
   - yamllint
+  - reflector
 
   # Editors
   - neovim

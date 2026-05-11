@@ -1,5 +1,10 @@
 ---
 steps:
+  # Arch Linux system setup — packages, services, shell default
+  - include: ./arch/main.yml
+    when: os == "linux" and distribution == "arch"
+    tags: [arch, system, packages]
+
   - include: ./claude/main.yml
     tags: [core, claude]
 
