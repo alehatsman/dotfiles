@@ -82,6 +82,10 @@ pacman_packages:
   - github-cli
   - httpie
 
+  # Apps (multilib must be enabled)
+  - vlc
+  - steam
+
   # Wayland / Hyprland
   - hyprland
   - waybar
@@ -114,3 +118,6 @@ aur_packages:
   - code-minimap
   - autojump
   - tree-sitter-cli
+  - google-chrome
+  - 1password
+  - spotify
