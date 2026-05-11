@@ -7,6 +7,14 @@
   retries: 3
   retry_delay: 10s
 
+- name: Enable multilib repository
+  shell: |
+    if ! grep -q '^\[multilib\]' /etc/pacman.conf; then
+      sed -i '/^#\[multilib\]/{s/^#//;n;s/^#//}' /etc/pacman.conf
+      pacman -Sy --noconfirm
+    fi
+  become: true
+
 - name: Install base-devel and git
   shell: |
     pacman -S --noconfirm --needed base-devel git
