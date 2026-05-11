@@ -1,0 +1,90 @@
+---
+- name: Create Hyprland config directory
+  file:
+    path: ~/.config/hypr
+    state: directory
+  tags: [hyprland, config]
+
+- name: Deploy hyprland.conf
+  template:
+    src: ./templates/hyprland.conf.j2
+    dest: ~/.config/hypr/hyprland.conf
+  tags: [hyprland, config]
+
+- name: Deploy hypridle.conf
+  template:
+    src: ./templates/hypridle.conf.j2
+    dest: ~/.config/hypr/hypridle.conf
+  tags: [hyprland, config]
+
+- name: Deploy hyprlock.conf
+  template:
+    src: ./templates/hyprlock.conf.j2
+    dest: ~/.config/hypr/hyprlock.conf
+  tags: [hyprland, config]
+
+- name: Deploy hyprpaper.conf
+  template:
+    src: ./templates/hyprpaper.conf.j2
+    dest: ~/.config/hypr/hyprpaper.conf
+  tags: [hyprland, config]
+
+- name: Create Waybar config directory
+  file:
+    path: ~/.config/waybar
+    state: directory
+  tags: [hyprland, waybar, config]
+
+- name: Deploy Waybar config
+  template:
+    src: ./templates/waybar-config.json.j2
+    dest: ~/.config/waybar/config.json
+  tags: [hyprland, waybar, config]
+
+- name: Deploy Waybar style
+  template:
+    src: ./templates/waybar-style.css.j2
+    dest: ~/.config/waybar/style.css
+  tags: [hyprland, waybar, config]
+
+- name: Create Wofi config directory
+  file:
+    path: ~/.config/wofi
+    state: directory
+  tags: [hyprland, wofi, config]
+
+- name: Deploy Wofi style
+  template:
+    src: ./templates/wofi-style.css.j2
+    dest: ~/.config/wofi/style.css
+  tags: [hyprland, wofi, config]
+
+- name: Create Dunst config directory
+  file:
+    path: ~/.config/dunst
+    state: directory
+  tags: [hyprland, dunst, config]
+
+- name: Deploy dunstrc
+  template:
+    src: ./templates/dunstrc.j2
+    dest: ~/.config/dunst/dunstrc
+  tags: [hyprland, dunst, config]
+
+- name: Create Alacritty config directory
+  file:
+    path: ~/.config/alacritty
+    state: directory
+  tags: [hyprland, alacritty, config]
+
+- name: Deploy Alacritty config (Linux)
+  template:
+    src: ./templates/alacritty.toml.j2
+    dest: ~/.config/alacritty/alacritty.toml
+  tags: [hyprland, alacritty, config]
+
+- name: Create screenshots directory
+  file:
+    path: ~/Pictures/screenshots
+    state: directory
+  tags: [hyprland, config]

@@ -1,0 +1,48 @@
+background {
+    monitor =
+    blur_passes = 3
+    blur_size = 7
+    color = rgb(272822)
+}
+
+label {
+    monitor =
+    text = cmd[update:1000] echo "$(date +'%H:%M')"
+    color = rgba(f8f8f2ff)
+    font_size = 64
+    font_family = JetBrainsMono Nerd Font
+    position = 0, 160
+    halign = center
+    valign = center
+}
+
+label {
+    monitor =
+    text = cmd[update:60000] echo "$(date +'%A, %d %B %Y')"
+    color = rgba(117, 113, 94, 1)
+    font_size = 18
+    font_family = JetBrainsMono Nerd Font
+    position = 0, 80
+    halign = center
+    valign = center
+}
+
+input-field {
+    monitor =
+    size = 280, 50
+    outline_thickness = 2
+    dots_size = 0.25
+    dots_spacing = 0.2
+    outer_color = rgb(a6e22e)
+    inner_color = rgb(3e3d32)
+    font_color = rgb(f8f8f2)
+    fade_on_empty = true
+    placeholder_text = <i>password...</i>
+    hide_input = false
+    check_color = rgb(a6e22e)
+    fail_color = rgb(f92672)
+    fail_text = <i>$FAIL ($ATTEMPTS)</i>
+    position = 0, -60
+    halign = center
+    valign = center
+}

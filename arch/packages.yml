@@ -82,6 +82,30 @@ pacman_packages:
   - github-cli
   - httpie
 
+  # Wayland / Hyprland
+  - hyprland
+  - waybar
+  - wofi
+  - dunst
+  - hyprpaper
+  - hyprlock
+  - hypridle
+  - xdg-desktop-portal-hyprland
+  - xdg-desktop-portal-gtk
+  - qt5-wayland
+  - qt6-wayland
+  - polkit-gnome
+  - grim
+  - slurp
+  - brightnessctl
+  - playerctl
+  - pavucontrol
+  - alacritty
+  - yazi
+  - ttf-jetbrains-mono-nerd
+  - noto-fonts
+  - noto-fonts-emoji
+
 aur_packages:
   - git-delta
   - tealdeer
