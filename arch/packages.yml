@@ -78,6 +78,14 @@ pacman_packages:
   # Cloud / infra
   - aws-cli
 
+  # Containers
+  - podman
+  - podman-compose
+  - buildah
+
+  # Database
+  - pgcli
+
   # Misc
   - github-cli
   - httpie
@@ -114,6 +122,8 @@ pacman_packages:
 aur_packages:
   - git-delta
   - tealdeer
+  - nwg-dock-hyprland
+  - bruno-bin
   - shfmt
   - yq
   - code-minimap
