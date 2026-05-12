@@ -3,7 +3,6 @@ pacman_packages:
   # System / hardware (ThinkPad X1 Carbon Gen 13 Aura Edition)
   - base-devel
   - intel-ucode
-  - thermald
   - tlp
   - tlp-rdw
   - bluez

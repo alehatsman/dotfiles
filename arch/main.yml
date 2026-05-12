@@ -71,10 +71,6 @@
   shell: systemctl enable --now NetworkManager
   become: true
 
-- name: Enable thermald
-  shell: systemctl enable --now thermald
-  become: true
-
 - name: Enable TLP for battery management
   shell: systemctl enable --now tlp
   become: true
