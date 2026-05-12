@@ -42,6 +42,7 @@ pacman_packages:
   # Terminal tools
   - tmux
   - fzf
+  - bat
   - lsd
   - ripgrep
   - fd
@@ -70,6 +71,7 @@ pacman_packages:
   - nodejs
   - npm
   - yarn
+  - pyenv
   - clojure
   - rlwrap
   - lua51
