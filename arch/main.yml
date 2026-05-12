@@ -87,6 +87,10 @@
   shell: systemctl enable --now fwupd-refresh.timer
   become: true
 
+- name: Enable ollama service
+  shell: systemctl enable --now ollama
+  become: true
+
 - name: Set default shell to zsh
   shell: chsh -s $(which zsh) {{ OS_USERNAME }}
   become: true
