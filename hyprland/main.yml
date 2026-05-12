@@ -95,6 +95,24 @@
     dest: ~/.config/nwg-dock-hyprland/style.css
   tags: [hyprland, dock, config]
 
+- name: Deploy Chrome Wayland flags
+  file:
+    path: ~/.config/chrome-flags.conf
+    state: file
+    content: |
+      --ozone-platform=wayland
+      --enable-features=WaylandWindowDecorations
+  tags: [hyprland, config]
+
+- name: Deploy Electron Wayland flags
+  file:
+    path: ~/.config/electron-flags.conf
+    state: file
+    content: |
+      --ozone-platform=wayland
+      --enable-features=WaylandWindowDecorations
+  tags: [hyprland, config]
+
 - name: Create screenshots directory
   file:
     path: ~/Pictures/screenshots
