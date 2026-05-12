@@ -6,7 +6,6 @@ CONFIG="./main.yml"
 VARS="./personal_variables.yml"
 DRY_RUN=""
 TAGS=""
-SUDO_PASS=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -32,9 +31,7 @@ CMD="mooncake run -c $CONFIG -v $VARS"
 if [[ -n "$DRY_RUN" ]]; then
   CMD="$CMD $DRY_RUN"
 else
-  if [[ -f .sudo ]]; then
-    CMD="$CMD -s $(cat .sudo) --insecure-sudo-pass"
-  fi
+  CMD="$CMD -K"
 fi
 
 [[ -n "$TAGS" ]] && CMD="$CMD $TAGS"
