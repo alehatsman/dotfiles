@@ -47,6 +47,7 @@ pacman_packages:
   - fd
   - tree
   - htop
+  - btop
   - tig
   - jq
   - aria2
