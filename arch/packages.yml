@@ -88,6 +88,9 @@ pacman_packages:
   # Misc
   - github-cli
   - httpie
+  - cliphist
+  - network-manager-applet
+  - blueman
 
   # Apps (multilib must be enabled)
   - vlc
