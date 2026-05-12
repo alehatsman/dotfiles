@@ -3,20 +3,18 @@ set -e
 
 # Default values
 CONFIG="./main.yml"
-VARS="./personal_variables.yml"
+VARS="./variables.yml"
 DRY_RUN=""
 TAGS=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --work) VARS="./work_variables.yml"; shift ;;
     --dry-run) DRY_RUN="--dry-run"; shift ;;
     --tags) TAGS="--tags $2"; shift 2 ;;
     -h|--help)
       echo "Usage: $0 [OPTIONS]"
       echo "Options:"
-      echo "  --work      Use work_variables.yml"
       echo "  --dry-run   Preview changes only"
       echo "  --tags TAG  Run specific tags"
       exit 0

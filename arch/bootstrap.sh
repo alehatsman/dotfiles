@@ -25,6 +25,6 @@ info "Installing mooncake..."
 bash install_mooncake.sh
 
 info "Running full setup..."
-mooncake run -c main.yml -v personal_variables.yml
+mooncake run -c main.yml -v variables.yml
 
 info "Done! Restart your shell or run: exec zsh"
