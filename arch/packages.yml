@@ -10,7 +10,6 @@ pacman_packages:
   - pipewire
   - pipewire-pulse
   - pipewire-alsa
-  - pipewire-bluetooth
   - wireplumber
   - xdg-utils
 
