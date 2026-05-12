@@ -19,7 +19,7 @@ docker run --rm -v $(pwd):/dotfiles -w /dotfiles $OS bash -c "
 
   # Run dry-run
   echo 'Running mooncake dry-run...'
-  mooncake run -c main.yml -v personal_variables.yml --dry-run
+  mooncake run -c main.yml -v variables.yml --dry-run
 
   echo 'Docker test completed successfully!'
 "
