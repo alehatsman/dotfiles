@@ -156,7 +156,7 @@ aur_packages:
   - shfmt
   - yq
   - code-minimap
-  - autojump
+  - zoxide
   - tree-sitter-cli
   - google-chrome
   - 1password
