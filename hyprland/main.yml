@@ -83,6 +83,18 @@
     dest: ~/.config/alacritty/alacritty.toml
   tags: [hyprland, alacritty, config]
 
+- name: Create nwg-dock config directory
+  file:
+    path: ~/.config/nwg-dock-hyprland
+    state: directory
+  tags: [hyprland, dock, config]
+
+- name: Deploy nwg-dock style
+  template:
+    src: ./templates/nwg-dock-style.css.j2
+    dest: ~/.config/nwg-dock-hyprland/style.css
+  tags: [hyprland, dock, config]
+
 - name: Create screenshots directory
   file:
     path: ~/Pictures/screenshots
