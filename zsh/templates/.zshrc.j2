@@ -112,6 +112,11 @@ if type enable-fzf-tab > /dev/null 2>&1; then
   enable-fzf-tab
 fi
 
+# Syntax highlighting — must be sourced after all other plugins
+if [[ -f /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
+  source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
+
 #---------------------------------------------
 # Bindings
 #---------------------------------------------
@@ -492,6 +497,11 @@ apply_theme "${COLOR_SCHEME}"
 if [[ $(uname) != 'Darwin' ]]; then
   alias pbcopy='xclip -selection clipboard'
   alias pbpaste='xclip -selection clipboard -o'
+fi
+
+# direnv
+if command -v direnv &>/dev/null; then
+  eval "$(direnv hook zsh)"
 fi
 
 # vi mode

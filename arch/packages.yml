@@ -10,6 +10,7 @@ pacman_packages:
   - pipewire
   - pipewire-pulse
   - pipewire-alsa
+  - pipewire-bluetooth
   - wireplumber
   - xdg-utils
 
@@ -38,6 +39,7 @@ pacman_packages:
 
   # Shell
   - zsh
+  - zsh-syntax-highlighting
 
   # Terminal tools
   - tmux
@@ -52,6 +54,7 @@ pacman_packages:
   - tig
   - jq
   - aria2
+  - ffmpeg
   - imagemagick
   - graphviz
   - hexyl
@@ -61,6 +64,18 @@ pacman_packages:
   - shellcheck
   - yamllint
   - reflector
+  - rsync
+  - socat
+  - tcpdump
+  - wireshark-cli
+
+  # Data recovery / disk
+  - testdisk
+  - ddrescue
+
+  # Backup
+  - borg
+  - restic
 
   # Editors
   - neovim
@@ -75,7 +90,7 @@ pacman_packages:
   - clojure
   - rlwrap
   - lua51
-  - postgresql-libs
+  - sqlite
 
   # Cloud / infra
   - aws-cli
@@ -86,11 +101,19 @@ pacman_packages:
   - buildah
 
   # Database
+  - postgresql
+  - redis
   - pgcli
+
+  # Offline / security
+  - keepassxc
+  - zeal
+  - ollama
 
   # Misc
   - github-cli
   - httpie
+  - direnv
   - cliphist
   - network-manager-applet
   - blueman
@@ -118,6 +141,8 @@ pacman_packages:
   - brightnessctl
   - playerctl
   - pavucontrol
+  - hyprsunset
+  - gnome-keyring
   - alacritty
   - yazi
   - ttf-jetbrains-mono-nerd
@@ -136,4 +161,5 @@ aur_packages:
   - tree-sitter-cli
   - google-chrome
   - 1password
+  - 1password-cli
   - spotify
