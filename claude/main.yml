@@ -8,19 +8,19 @@
   tags: [claude]
 
 - name: "Make sure claude config directory exists"
-  file:
+  file.write:
     path: "~/.claude"
     state: directory
   tags: [claude]
 
 - name: "Deploy claude config"
-  template:
+  file.template:
     src: "./config.yml"
     dest: "~/.claude/config.yml"
   tags: [claude]
 
 - name: "Deploy claude settings"
-  copy:
+  file.copy:
     src: "./settings.json"
     dest: "~/.claude/settings.json"
   tags: [claude]

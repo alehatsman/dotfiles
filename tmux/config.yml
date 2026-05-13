@@ -2,13 +2,13 @@
 # Tmux configuration deployment (installation handled by preset)
 
 - name: Create tmux config directory
-  file:
+  file.write:
     path: ~/.config/tmux
     state: directory
   tags: [tmux, config]
 
 - name: Create tmux plugins directory
-  file:
+  file.write:
     path: ~/.config/tmux/plugins
     state: directory
   tags: [tmux, config]
@@ -22,7 +22,7 @@
   tags: [tmux, backup]
 
 - name: Deploy .tmux.conf
-  template:
+  file.template:
     src: ./.tmux.conf.j2
     dest: ~/.tmux.conf
   tags: [tmux, config]

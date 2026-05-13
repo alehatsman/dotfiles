@@ -2,10 +2,10 @@
 # Tmux installation (using custom config, not preset due to template issue)
 
 - name: Install tmux
-  package:
+  pkg:
     name: tmux
     state: present
-  become: true
+  as_user: root
   when: os == 'linux'
   tags: [tmux, install]
 

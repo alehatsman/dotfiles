@@ -1,0 +1,4 @@
+#!/bin/sh
+# GUI sudo askpass — invoked by `sudo -A` or anything that reads SUDO_ASKPASS.
+# Uses wofi (already part of the Hyprland setup) so we don't need extra deps.
+echo "" | wofi --dmenu --password --prompt "sudo:" 2>/dev/null

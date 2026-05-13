@@ -60,6 +60,11 @@ export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 export VISUAL="nvim"
 export EDITOR="nvim"
 
+# GUI sudo prompt for non-TTY contexts (editor terminals, mooncake -K, sudo -A)
+if [[ "$(uname)" == "Linux" ]]; then
+  export SUDO_ASKPASS=$HOME/.local/bin/gui-askpass
+fi
+
 export SSH_KEY_PATH=~/.ssh/rsa_id
 
 export FZF_DEFAULT_COMMAND="rg --files --hidden"

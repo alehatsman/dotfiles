@@ -50,4 +50,4 @@
       "/System/Library/CoreServices/Menu Extras/Volume.menu"
 
     defaults write -g AppleFontSmoothing -int 0
-  become: true
+  as_user: root

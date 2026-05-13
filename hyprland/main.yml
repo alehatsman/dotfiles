@@ -1,102 +1,102 @@
 ---
 - name: Create Hyprland config directory
-  file:
+  file.write:
     path: ~/.config/hypr
     state: directory
   tags: [hyprland, config]
 
 - name: Deploy hyprland.conf
-  template:
+  file.template:
     src: ./templates/hyprland.conf.j2
     dest: ~/.config/hypr/hyprland.conf
   tags: [hyprland, config]
 
 - name: Deploy hypridle.conf
-  template:
+  file.template:
     src: ./templates/hypridle.conf.j2
     dest: ~/.config/hypr/hypridle.conf
   tags: [hyprland, config]
 
 - name: Deploy hyprlock.conf
-  template:
+  file.template:
     src: ./templates/hyprlock.conf.j2
     dest: ~/.config/hypr/hyprlock.conf
   tags: [hyprland, config]
 
 - name: Deploy hyprpaper.conf
-  template:
+  file.template:
     src: ./templates/hyprpaper.conf.j2
     dest: ~/.config/hypr/hyprpaper.conf
   tags: [hyprland, config]
 
 - name: Create Waybar config directory
-  file:
+  file.write:
     path: ~/.config/waybar
     state: directory
   tags: [hyprland, waybar, config]
 
 - name: Deploy Waybar config
-  template:
+  file.template:
     src: ./templates/waybar-config.json.j2
     dest: ~/.config/waybar/config.jsonc
   tags: [hyprland, waybar, config]
 
 - name: Deploy Waybar style
-  template:
+  file.template:
     src: ./templates/waybar-style.css.j2
     dest: ~/.config/waybar/style.css
   tags: [hyprland, waybar, config]
 
 - name: Create Wofi config directory
-  file:
+  file.write:
     path: ~/.config/wofi
     state: directory
   tags: [hyprland, wofi, config]
 
 - name: Deploy Wofi style
-  template:
+  file.template:
     src: ./templates/wofi-style.css.j2
     dest: ~/.config/wofi/style.css
   tags: [hyprland, wofi, config]
 
 - name: Create Dunst config directory
-  file:
+  file.write:
     path: ~/.config/dunst
     state: directory
   tags: [hyprland, dunst, config]
 
 - name: Deploy dunstrc
-  template:
+  file.template:
     src: ./templates/dunstrc.j2
     dest: ~/.config/dunst/dunstrc
   tags: [hyprland, dunst, config]
 
 - name: Create Alacritty config directory
-  file:
+  file.write:
     path: ~/.config/alacritty
     state: directory
   tags: [hyprland, alacritty, config]
 
 - name: Deploy Alacritty config (Linux)
-  template:
+  file.template:
     src: ./templates/alacritty.toml.j2
     dest: ~/.config/alacritty/alacritty.toml
   tags: [hyprland, alacritty, config]
 
 - name: Create nwg-dock config directory
-  file:
+  file.write:
     path: ~/.config/nwg-dock-hyprland
     state: directory
   tags: [hyprland, dock, config]
 
 - name: Deploy nwg-dock style
-  template:
+  file.template:
     src: ./templates/nwg-dock-style.css.j2
     dest: ~/.config/nwg-dock-hyprland/style.css
   tags: [hyprland, dock, config]
 
 - name: Deploy Chrome Wayland flags
-  file:
+  file.write:
     path: ~/.config/chrome-flags.conf
     state: file
     content: |
@@ -105,7 +105,7 @@
   tags: [hyprland, config]
 
 - name: Deploy Electron Wayland flags
-  file:
+  file.write:
     path: ~/.config/electron-flags.conf
     state: file
     content: |
@@ -114,7 +114,20 @@
   tags: [hyprland, config]
 
 - name: Create screenshots directory
-  file:
+  file.write:
     path: ~/Pictures/screenshots
     state: directory
   tags: [hyprland, config]
+
+- name: Create ~/.local/bin
+  file.write:
+    path: ~/.local/bin
+    state: directory
+  tags: [hyprland, askpass]
+
+- name: Deploy GUI askpass helper for sudo prompts
+  file.template:
+    src: ./templates/gui-askpass.sh.j2
+    dest: ~/.local/bin/gui-askpass
+    mode: '0755'
+  tags: [hyprland, askpass]

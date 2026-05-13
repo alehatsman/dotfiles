@@ -2,13 +2,13 @@
 # Alacritty configuration deployment (installation handled by preset)
 
 - name: Create alacritty config directory
-  file:
+  file.write:
     path: ~/.config/alacritty
     state: directory
   tags: [alacritty, config]
 
 - name: Deploy alacritty config
-  template:
+  file.template:
     src: ./alacritty.toml
     dest: ~/.config/alacritty/alacritty.toml
   tags: [alacritty, config]

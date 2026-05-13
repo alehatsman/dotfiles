@@ -1,9 +1,9 @@
 ---
 - name: Update pacman mirrors and upgrade system
-  package:
+  pkg:
     manager: pacman
     upgrade: true
-  become: true
+  as_user: root
   timeout: 15m
   retries: 3
   retry_delay: 10s
@@ -15,17 +15,17 @@
       sed -i '/^#\[multilib\]/{s/^#//;n;s/^#//}' /etc/pacman.conf
       pacman -Sy --noconfirm
     fi
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
 - name: Install base-devel and git
-  package:
+  pkg:
     manager: pacman
     state: present
     names:
       - base-devel
       - git
-  become: true
+  as_user: root
   timeout: 5m
   tags: [arch, system, packages]
 
@@ -50,7 +50,7 @@
       pacman -U --noconfirm "$build_dir"/yay-*.pkg.tar.zst
       rm -rf "$build_dir"
     fi
-  become: true
+  as_user: root
   timeout: 5m
   tags: [arch, system, packages]
 
@@ -58,45 +58,45 @@
   shell: |
     echo "{{ OS_USERNAME }} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/{{ OS_USERNAME }}-nopasswd
     chmod 440 /etc/sudoers.d/{{ OS_USERNAME }}-nopasswd
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
-- include: ./packages.yml
+- import: ./packages.yml
   tags: [arch, system, packages]
 
 - name: Enable NetworkManager
   shell: systemctl enable --now NetworkManager
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
 - name: Enable TLP for battery management
   shell: systemctl enable --now tlp
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
 - name: Enable bluetooth
   shell: systemctl enable --now bluetooth
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
 - name: Enable SSH daemon
   shell: systemctl enable --now sshd
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
 - name: Enable firmware update timer
   shell: systemctl enable --now fwupd-refresh.timer
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
 - name: Enable ollama service
   shell: systemctl enable --now ollama
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
 - name: Set default shell to zsh
   shell: chsh -s $(which zsh) {{ OS_USERNAME }}
-  become: true
+  as_user: root
   tags: [arch, system, packages]
 
 - name: Remap CapsLock to Ctrl and keep in lowercase mode
@@ -115,5 +115,5 @@
     echo 'ACTION=="add", SUBSYSTEM=="leds", KERNEL=="input*::capslock", ATTR{brightness}="0"' \
       > /etc/udev/rules.d/99-capslock-led.rules
     echo 0 > /sys/class/leds/input3::capslock/brightness 2>/dev/null || true
-  become: true
+  as_user: root
   tags: [arch, system, packages]

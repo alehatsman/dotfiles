@@ -14,7 +14,7 @@
 - name: Make sure rosetta 2 is installed
   shell: |
     softwareupdate --install-rosetta --agree-to-license
-  become: true
+  as_user: root
   register: rosetta_result
   failed_when: rosetta_result.rc not in [0, 1]
   changed_when: rosetta_result.rc == 0
@@ -34,12 +34,12 @@
   retries: 3
   retry_delay: 10s
 
-- include_vars: ./darwin_packages.yml
+- vars.load: ./darwin_packages.yml
 
 - name: Make sure all the taps are present
   shell: |
     brew tap {{ item }}
-  with_items: "{{ taps }}"
+  for_each: "{{ taps }}"
   register: tap_result
   failed_when: tap_result.rc not in [0, 1]
   changed_when: "'already tapped' not in tap_result.stderr"

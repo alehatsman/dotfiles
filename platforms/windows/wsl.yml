@@ -2,10 +2,10 @@
 # Deploy /etc/wsl.conf — enables systemd so services survive WSL restarts.
 # Note: changes take effect after 'wsl --shutdown' + reconnect.
 - name: Deploy /etc/wsl.conf
-  template:
+  file.template:
     src: ./templates/wsl.conf.j2
     dest: /etc/wsl.conf
-  become: true
+  as_user: root
 
 - name: Install compute packages
   shell: |
@@ -21,7 +21,7 @@
       nvtop \
       unzip \
       python3-pip
-  become: true
+  as_user: root
   timeout: 15m
   retries: 3
   retry_delay: 10s
@@ -29,13 +29,13 @@
 # Drop-in config avoids clobbering the base sshd_config
 - name: Configure SSH server
   shell: mkdir -p /etc/ssh/sshd_config.d
-  become: true
+  as_user: root
 
 - name: Deploy SSH server config
-  template:
+  file.template:
     src: ./templates/sshd_config.j2
     dest: /etc/ssh/sshd_config.d/wsl.conf
-  become: true
+  as_user: root
 
 - name: Enable and start SSH
   shell: |
@@ -45,7 +45,7 @@
     else
       echo "WARNING: systemd not running — run 'wsl --shutdown' then reconnect, then re-run provisioning"
     fi
-  become: true
+  as_user: root
 
 - name: Install CUDA toolkit
   shell: |
@@ -60,14 +60,14 @@
     else
       echo "CUDA already installed: $(nvcc --version | head -1)"
     fi
-  become: true
+  as_user: root
   timeout: 45m
 
 # Writes mirrored-networking config to the Windows host filesystem.
 # Requires WINDOWS_USERNAME to be set in your variables file.
 - name: Deploy .wslconfig to Windows user directory
-  template:
+  file.template:
     src: ./templates/wslconfig.j2
     dest: /mnt/c/Users/{{ WINDOWS_USERNAME }}/.wslconfig
-  become: true
-  when: WINDOWS_USERNAME
+  as_user: root
+  when: WINDOWS_USERNAME != ""

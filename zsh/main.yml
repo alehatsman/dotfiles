@@ -1,9 +1,9 @@
 ---
 - name: Install zsh
-  package:
+  pkg:
     name: zsh
     state: present
-  become: true
+  as_user: root
   when: os == "linux"
   tags: [zsh, install]
 
@@ -16,15 +16,15 @@
   tags: [zsh, install]
 
 - name: Make sure zsh config directory is present
-  file:
+  file.write:
     path: ~/.config/zsh
     state: directory
   tags: [zsh, config]
 
-- include_vars: ./vars/ubuntu_vars.yml
+- vars.load: ./vars/ubuntu_vars.yml
   when: os == 'linux'
 
-- include_vars: ./vars/macos_{{arch}}.yml
+- vars.load: ./vars/macos_{{arch}}.yml
   when: os == "darwin"
 
 - name: Backup existing .zshrc
@@ -44,13 +44,13 @@
   tags: [zsh, backup]
 
 - name: Deploy .zshrc
-  template:
+  file.template:
     src: ./templates/.zshrc.j2
     dest: ~/.zshrc
   tags: [zsh, config]
 
 - name: Deploy .ignore
-  template:
+  file.template:
     src: ./templates/.ignore.j2
     dest: ~/.ignore
   tags: [zsh, config]
@@ -80,7 +80,7 @@
     if ! echo "$SHELL" | grep -q zsh; then
       chsh -s $(which zsh) {{ username }}
     fi
-  become: true
+  as_user: root
   tags: [zsh, shell]
 
 - name: Verify zsh installation
