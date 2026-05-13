@@ -164,6 +164,24 @@
   as_user: root
   tags: [arch, system, packages]
 
+- name: Enable Intel HDA audio runtime power-save
+  file.write:
+    path: /etc/modprobe.d/snd_hda_intel-powersave.conf
+    state: file
+    content: |
+      # Let the HDA audio chip enter D3 when idle (~0.5 W).
+      options snd_hda_intel power_save=1 power_save_controller=Y
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages]
+
+- name: Apply HDA powersave now (no reboot needed)
+  shell: |
+    echo 1 > /sys/module/snd_hda_intel/parameters/power_save 2>/dev/null || true
+    echo Y > /sys/module/snd_hda_intel/parameters/power_save_controller 2>/dev/null || true
+  as_user: root
+  tags: [arch, system, packages]
+
 - name: Append i915 power-save params to systemd-boot cmdline
   shell: |
     ENTRY=/boot/loader/entries/arch.conf

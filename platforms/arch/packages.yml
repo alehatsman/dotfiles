@@ -9,6 +9,7 @@
       - intel-ucode
       - tlp
       - tlp-rdw
+      - powertop
       - bluez
       - bluez-utils
       - pipewire

@@ -138,3 +138,29 @@
     dest: ~/.local/bin/waybar-cpu-temp
     mode: '0755'
   tags: [hyprland, waybar, config]
+
+- name: Deploy GTK 3 dark theme preference
+  file.write:
+    path: ~/.config/gtk-3.0/settings.ini
+    state: file
+    content: |
+      [Settings]
+      gtk-application-prefer-dark-theme=1
+      gtk-theme-name=Adwaita-dark
+  tags: [hyprland, theme]
+
+- name: Deploy GTK 4 dark theme preference
+  file.write:
+    path: ~/.config/gtk-4.0/settings.ini
+    state: file
+    content: |
+      [Settings]
+      gtk-application-prefer-dark-theme=1
+      gtk-theme-name=Adwaita-dark
+  tags: [hyprland, theme]
+
+- name: Set freedesktop color-scheme to prefer-dark (Chrome and portal-aware apps read this)
+  shell: |
+    gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+    gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+  tags: [hyprland, theme]
