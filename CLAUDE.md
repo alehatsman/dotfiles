@@ -15,9 +15,9 @@ a one-line CSS tweak or a quick test.
 From the repo root:
 
 ```
-./run.sh --tags <tag>          # deploy a specific slice
-./run.sh --tags <tag> --dry-run  # preview without applying
-./run.sh                       # full provision (prompts for sudo via -K)
+./scripts/run.sh --tags <tag>          # deploy a specific slice
+./scripts/run.sh --tags <tag> --dry-run  # preview without applying
+./scripts/run.sh                       # full provision (prompts for sudo via -K)
 ```
 
 Tags are defined per-step in `*/main.yml`. Examples:
@@ -39,8 +39,8 @@ run the area-level tag (e.g. `hyprland`).
 ### Workflow
 
 1. Edit the template (`*.j2`) or `main.yml` in the repo.
-2. Run `./run.sh --tags <tag> --dry-run` first to see what mooncake will do.
-3. Run `./run.sh --tags <tag>` to apply.
+2. Run `./scripts/run.sh --tags <tag> --dry-run` first to see what mooncake will do.
+3. Run `./scripts/run.sh --tags <tag>` to apply.
 4. If mooncake fails or behaves unexpectedly, **stop and report it** — that's
    the whole point. Do not fall back to `cp` to "just get it deployed."
 

@@ -1,24 +1,13 @@
-.PHONY: help plan install install-work backup test-ubuntu
+.PHONY: help plan install backup test-ubuntu install-wsl install-tag
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
 
-plan: ## Preview changes (dry-run)
-	mooncake run -c main.yml -v personal_variables.yml --dry-run
+plan: ## Preview changes (mooncake plan)
+	mooncake plan -c main.yml -v variables.yml
 
 install: ## Install dotfiles
-	@if [ -f .sudo ]; then \
-		mooncake run -c main.yml -v personal_variables.yml -s $$(cat .sudo) --insecure-sudo-pass; \
-	else \
-		mooncake run -c main.yml -v personal_variables.yml; \
-	fi
-
-install-work: ## Install with work config
-	@if [ -f .sudo ]; then \
-		mooncake run -c main.yml -v work_variables.yml -s $$(cat .sudo) --insecure-sudo-pass; \
-	else \
-		mooncake run -c main.yml -v work_variables.yml; \
-	fi
+	mooncake apply -c main.yml -v variables.yml -K
 
 backup: ## Backup current configs
 	@echo "Creating backup..."
@@ -36,14 +25,10 @@ test-ubuntu: ## Test in Ubuntu Docker
 		apt-get update && apt-get install -y curl git && \
 		curl -sSL https://raw.githubusercontent.com/alehatsman/mooncake/main/install.sh | bash && \
 		export PATH=\$$PATH:/root/.local/bin && \
-		mooncake run -c main.yml -v personal_variables.yml --dry-run"
+		mooncake plan -c main.yml -v variables.yml"
 
-install-wsl: ## Install on a WSL2 machine (set is_wsl=true in personal_variables.yml)
-	mooncake run -c main.yml -v personal_variables.yml --tags wsl
+install-wsl: ## Install on a WSL2 machine (set is_wsl=true in variables.yml)
+	mooncake apply -c main.yml -v variables.yml -K --tags wsl
 
-install-tag: ## Install with specific tag
-	@if [ -f .sudo ]; then \
-		mooncake run -c main.yml -v personal_variables.yml -s $$(cat .sudo) --insecure-sudo-pass --tags $(TAG) --raw; \
-	else \
-		mooncake run -c main.yml -v personal_variables.yml --tags $(TAG) --log-level debug --raw; \
-	fi
+install-tag: ## Install with specific tag (TAG=...)
+	mooncake apply -c main.yml -v variables.yml -K --tags $(TAG) --raw
