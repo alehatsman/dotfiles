@@ -1,7 +1,7 @@
 ---
 steps:
   # Arch Linux system setup — packages, services, shell default
-  - include: ./arch/main.yml
+  - include: ./platforms/arch/main.yml
     when: os == "linux" and distribution == "arch"
     tags: [arch, system, packages]
 
@@ -105,9 +105,14 @@ steps:
     when: os == "darwin"
     tags: [macos, terminal, config]
 
-  - include: ./macos/main.yml
+  - include: ./platforms/macos/main.yml
     when: os == "darwin"
     tags: [macos]
+
+  # Windows WSL2 — SSH, CUDA, compute packages
+  - include: ./platforms/windows/wsl.yml
+    when: is_wsl
+    tags: [wsl, windows]
 
   # Linux GUI — Hyprland Wayland compositor
   - name: Install Hyprland desktop

@@ -38,6 +38,9 @@ test-ubuntu: ## Test in Ubuntu Docker
 		export PATH=\$$PATH:/root/.local/bin && \
 		mooncake run -c main.yml -v personal_variables.yml --dry-run"
 
+install-wsl: ## Install on a WSL2 machine (set is_wsl=true in personal_variables.yml)
+	mooncake run -c main.yml -v personal_variables.yml --tags wsl
+
 install-tag: ## Install with specific tag
 	@if [ -f .sudo ]; then \
 		mooncake run -c main.yml -v personal_variables.yml -s $$(cat .sudo) --insecure-sudo-pass --tags $(TAG) --raw; \

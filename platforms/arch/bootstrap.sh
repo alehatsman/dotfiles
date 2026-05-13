@@ -22,7 +22,7 @@ fi
 cd "$DOTFILES_DIR"
 
 info "Installing mooncake..."
-bash install_mooncake.sh
+bash scripts/install_mooncake.sh
 
 info "Running full setup..."
 mooncake run -c main.yml -v variables.yml

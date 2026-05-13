@@ -4,3 +4,6 @@ EMAIL: aleh.atsman@gmail.com
 GOPATH: "~/Projects/go-workspace"
 OS_USERNAME: alehatsman
 use_win32yank: false
+is_wsl: false
+WINDOWS_USERNAME: ""
+wsl_ssh_port: "2222"
