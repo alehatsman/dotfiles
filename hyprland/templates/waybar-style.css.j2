@@ -50,6 +50,7 @@ window#waybar {
     padding: 0 8px;
 }
 
+#temperature,
 #backlight,
 #pulseaudio,
 #battery,
@@ -60,9 +61,18 @@ window#waybar {
     padding: 0 8px;
 }
 
+#temperature.critical {
+    color: #f92672;
+}
+
 #custom-power {
     padding-right: 14px;
     margin-right: 4px;
+}
+
+#battery.charging,
+#battery.plugged {
+    color: #a6e22e;
 }
 
 #battery.warning {
