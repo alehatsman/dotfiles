@@ -1,165 +1,192 @@
 ---
-pacman_packages:
-  # System / hardware (ThinkPad X1 Carbon Gen 13 Aura Edition)
-  - base-devel
-  - intel-ucode
-  - tlp
-  - tlp-rdw
-  - bluez
-  - bluez-utils
-  - pipewire
-  - pipewire-pulse
-  - pipewire-alsa
-  - wireplumber
-  - xdg-utils
+- name: Install pacman packages
+  package:
+    manager: pacman
+    state: present
+    names:
+      # System / hardware (ThinkPad X1 Carbon Gen 13 Aura Edition)
+      - base-devel
+      - intel-ucode
+      - tlp
+      - tlp-rdw
+      - bluez
+      - bluez-utils
+      - pipewire
+      - pipewire-pulse
+      - pipewire-alsa
+      - wireplumber
+      - sof-firmware
+      - alsa-firmware
+      - alsa-ucm-conf
+      - alsa-utils
+      - xdg-utils
 
-  # Network
-  - networkmanager
-  - openssh
-  - mosh
-  - nmap
+      # Network
+      - networkmanager
+      - openssh
+      - mosh
+      - nmap
+      - impala
 
-  # Firmware & hardware management
-  - fwupd
-  - fprintd
+      # Firmware & hardware management
+      - fwupd
+      - fprintd
 
-  # Core tools
-  - gnupg
-  - curl
-  - wget
-  - git
-  - make
-  - cmake
-  - unzip
-  - dos2unix
-  - ca-certificates
-  - man-db
-  - man-pages
+      # Core tools
+      - gnupg
+      - curl
+      - wget
+      - git
+      - make
+      - cmake
+      - unzip
+      - dos2unix
+      - ca-certificates
+      - man-db
+      - man-pages
 
-  # Shell
-  - zsh
-  - zsh-syntax-highlighting
+      # Shell
+      - zsh
+      - zsh-syntax-highlighting
 
-  # Terminal tools
-  - tmux
-  - fzf
-  - bat
-  - lsd
-  - ripgrep
-  - fd
-  - tree
-  - htop
-  - btop
-  - tig
-  - jq
-  - aria2
-  - ffmpeg
-  - imagemagick
-  - graphviz
-  - hexyl
-  - ninja
-  - xclip
-  - wl-clipboard
-  - shellcheck
-  - yamllint
-  - reflector
-  - rsync
-  - socat
-  - tcpdump
-  - wireshark-cli
+      # Terminal tools
+      - tmux
+      - fzf
+      - bat
+      - lsd
+      - ripgrep
+      - fd
+      - tree
+      - htop
+      - btop
+      - tig
+      - lazygit
+      - jq
+      - aria2
+      - ffmpeg
+      - imagemagick
+      - graphviz
+      - hexyl
+      - ninja
+      - xclip
+      - wl-clipboard
+      - shellcheck
+      - yamllint
+      - reflector
+      - rsync
+      - socat
+      - tcpdump
+      - wireshark-cli
 
-  # Data recovery / disk
-  - testdisk
-  - ddrescue
+      # Data recovery / disk
+      - testdisk
+      - ddrescue
 
-  # Backup
-  - borg
-  - restic
+      # Backup
+      - borg
+      - restic
 
-  # Editors
-  - neovim
-  - lua-language-server
+      # Editors
+      - neovim
+      - lua-language-server
 
-  # Development
-  - go
-  - nodejs
-  - npm
-  - yarn
-  - pyenv
-  - clojure
-  - rlwrap
-  - lua51
-  - sqlite
+      # Development
+      - go
+      - nodejs
+      - npm
+      - yarn
+      - pyenv
+      - clojure
+      - rlwrap
+      - lua51
+      - sqlite
 
-  # Cloud / infra
-  - aws-cli
+      # Cloud / infra
+      - aws-cli
 
-  # Containers
-  - podman
-  - podman-compose
-  - buildah
+      # Containers
+      - podman
+      - podman-compose
+      - buildah
+      - lazydocker
 
-  # Database
-  - postgresql
-  - redis
-  - pgcli
+      # Database
+      - postgresql
+      - redis
+      - pgcli
 
-  # Offline / security
-  - keepassxc
-  - zeal
-  - ollama
+      # Offline / security
+      - keepassxc
+      - zeal
+      - ollama
 
-  # Misc
-  - github-cli
-  - httpie
-  - direnv
-  - cliphist
-  - network-manager-applet
-  - blueman
+      # Misc
+      - github-cli
+      - httpie
+      - direnv
+      - cliphist
+      - network-manager-applet
+      - blueman
 
-  # Apps (multilib must be enabled)
-  - vlc
-  - steam
-  - swaybg
+      # Apps (multilib must be enabled)
+      - vlc
+      - mpv
+      - thunderbird
+      - steam
+      - swaybg
 
-  # Wayland / Hyprland
-  - hyprland
-  - waybar
-  - wofi
-  - dunst
-  - hyprpaper
-  - hyprlock
-  - hypridle
-  - xdg-desktop-portal-hyprland
-  - xdg-desktop-portal-gtk
-  - qt5-wayland
-  - qt6-wayland
-  - polkit-gnome
-  - grim
-  - slurp
-  - brightnessctl
-  - playerctl
-  - pavucontrol
-  - hyprsunset
-  - gnome-keyring
-  - alacritty
-  - yazi
-  - ttf-jetbrains-mono-nerd
-  - noto-fonts
-  - noto-fonts-emoji
+      # Wayland / Hyprland
+      - hyprland
+      - waybar
+      - wofi
+      - dunst
+      - hyprpaper
+      - hyprlock
+      - hypridle
+      - xdg-desktop-portal-hyprland
+      - xdg-desktop-portal-gtk
+      - qt5-wayland
+      - qt6-wayland
+      - polkit-gnome
+      - grim
+      - slurp
+      - brightnessctl
+      - playerctl
+      - pavucontrol
+      - hyprsunset
+      - gnome-keyring
+      - alacritty
+      - yazi
+      - ttf-jetbrains-mono-nerd
+      - noto-fonts
+      - noto-fonts-emoji
+  become: true
+  timeout: 20m
+  retries: 3
+  retry_delay: 10s
+  tags: [arch, system, packages]
 
-aur_packages:
-  - git-delta
-  - tealdeer
-  - nwg-dock-hyprland
-  - bruno-bin
-  - shfmt
-  - yq
-  - code-minimap
-  - zoxide
-  - tree-sitter-cli
-  - google-chrome
-  - 1password
-  - 1password-cli
-  - spotify
-  - globalprotect-openconnect
+# AUR packages — kept as shell because mooncake's package action
+# does not support yay/paru. Migrate once AUR manager support lands.
+- name: Install AUR packages
+  shell: |
+    yay -S --noconfirm --needed \
+      git-delta \
+      tealdeer \
+      nwg-dock-hyprland \
+      bruno-bin \
+      shfmt \
+      yq \
+      code-minimap \
+      zoxide \
+      tree-sitter-cli \
+      google-chrome \
+      1password \
+      1password-cli \
+      spotify \
+      globalprotect-openconnect \
+      bluetuith
+  timeout: 15m
+  retries: 2
+  retry_delay: 10s
+  tags: [arch, system, packages]
