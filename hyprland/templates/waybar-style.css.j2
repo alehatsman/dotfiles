@@ -50,7 +50,7 @@ window#waybar {
     padding: 0 8px;
 }
 
-#temperature,
+#custom-cpu-temp,
 #cpu,
 #memory,
 #backlight,
@@ -63,12 +63,16 @@ window#waybar {
     padding: 0 8px;
 }
 
-/* Pair temperature + cpu visually so "47°C / 25%" reads as one block */
-#temperature {
+/* Pair cpu-temp + cpu-util visually so "47°C / 25%" reads as one block */
+#custom-cpu-temp {
     padding-right: 0;
 }
 #cpu {
     padding-left: 0;
+}
+
+#custom-cpu-temp.critical {
+    color: #f92672;
 }
 
 #temperature.critical {
