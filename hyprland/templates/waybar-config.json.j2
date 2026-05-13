@@ -10,7 +10,8 @@
     "hyprland/workspaces": {
         "format": "{id}",
         "on-click": "activate",
-        "sort-by-number": true
+        "sort-by-number": true,
+        "tooltip": false
     },
 
     "custom/cpu-temp": {
@@ -85,7 +86,18 @@
 
     "clock": {
         "format": "{:%H:%M}",
-        "tooltip-format": "<big>{:%A, %d %B %Y}</big>\n<tt><small>{calendar}</small></tt>"
+        "tooltip-format": "<big>{:%A, %d %B %Y}</big>\n<tt><small>{calendar}</small></tt>",
+        "calendar": {
+            "mode": "month",
+            "weeks-pos": "left",
+            "format": {
+                "months":   "<span color='#f8f8f2'><b>{}</b></span>",
+                "weekdays": "<span color='#75715e'><b>{}</b></span>",
+                "weeks":    "<span color='#75715e'>w{}</span>",
+                "days":     "<span color='#f8f8f2'>{}</span>",
+                "today":    "<span color='#f92672'><b><u>{}</u></b></span>"
+            }
+        }
     },
 
     "custom/power": {
