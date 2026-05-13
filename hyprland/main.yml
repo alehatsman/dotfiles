@@ -131,3 +131,10 @@
     dest: ~/.local/bin/gui-askpass
     mode: '0755'
   tags: [hyprland, askpass]
+
+- name: Deploy waybar-cpu-temp helper (temp + fan tooltip)
+  file.template:
+    src: ./templates/waybar-cpu-temp.sh.j2
+    dest: ~/.local/bin/waybar-cpu-temp
+    mode: '0755'
+  tags: [hyprland, waybar, config]

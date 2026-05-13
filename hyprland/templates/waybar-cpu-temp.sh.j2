@@ -1,0 +1,23 @@
+#!/bin/sh
+# Read CPU package temp + ThinkPad fan RPMs, emit waybar JSON.
+
+temp_c=$(awk '{print int($1/1000)}' /sys/devices/platform/coretemp.0/hwmon/hwmon*/temp1_input 2>/dev/null | head -1)
+: "${temp_c:=0}"
+
+fan1=?; fan2=?
+for f in /sys/class/hwmon/hwmon*; do
+    if [ "$(cat "$f/name" 2>/dev/null)" = "thinkpad" ]; then
+        [ -f "$f/fan1_input" ] && fan1=$(cat "$f/fan1_input")
+        [ -f "$f/fan2_input" ] && fan2=$(cat "$f/fan2_input")
+        break
+    fi
+done
+
+if [ "$temp_c" -ge 85 ]; then
+    class=critical
+else
+    class=normal
+fi
+
+tooltip="CPU temp: ${temp_c}°C\nFan 1: ${fan1} RPM\nFan 2: ${fan2} RPM"
+printf '{"text":"\xf3\xb0\x8d\x9b %s°C","tooltip":"%s","class":"%s"}\n' "$temp_c" "$tooltip" "$class"
