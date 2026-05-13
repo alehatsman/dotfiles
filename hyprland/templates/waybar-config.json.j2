@@ -3,9 +3,9 @@
     "position": "top",
     "height": 40,
     "spacing": 4,
-    "modules-left": ["hyprland/workspaces", "hyprland/window"],
-    "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "network", "battery", "tray"],
+    "modules-left": ["hyprland/workspaces"],
+    "modules-center": [],
+    "modules-right": ["backlight", "pulseaudio", "battery", "bluetooth", "network", "clock", "custom/power"],
 
     "hyprland/workspaces": {
         "format": "{id}",
@@ -13,14 +13,19 @@
         "sort-by-number": true
     },
 
-    "hyprland/window": {
-        "max-length": 60,
-        "separate-outputs": true
+    "backlight": {
+        "format": "󰃟 {percent}%",
+        "on-scroll-up": "brightnessctl set +5%",
+        "on-scroll-down": "brightnessctl set 5%-"
     },
 
-    "clock": {
-        "format": "{:%a %d %b  %H:%M}",
-        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": "󰝟 muted",
+        "format-icons": {
+            "default": ["󰕿", "󰖀", "󰕾"]
+        },
+        "on-click": "pavucontrol"
     },
 
     "battery": {
@@ -34,24 +39,29 @@
         "format-icons": ["󰁺", "󰁻", "󰁼", "󰁾", "󰂀", "󰂂", "󰁹"]
     },
 
+    "bluetooth": {
+        "format": "󰂯",
+        "format-disabled": "󰂲",
+        "format-off": "󰂲",
+        "format-connected": "󰂱",
+        "on-click": "blueman-manager"
+    },
+
     "network": {
-        "format-wifi": "󰤨 {signalStrength}%",
-        "format-ethernet": "󰈀 connected",
-        "format-disconnected": "󰤭 disconnected",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)\n{ifname}: {ipaddr}",
-        "tooltip-format-ethernet": "{ifname}: {ipaddr}"
+        "format-wifi": "󰤨",
+        "format-ethernet": "󰈀",
+        "format-disconnected": "󰤭",
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+        "on-click": "nm-connection-editor"
     },
 
-    "pulseaudio": {
-        "format": "{icon} {volume}%",
-        "format-muted": "󰝟 muted",
-        "format-icons": {
-            "default": ["󰕿", "󰖀", "󰕾"]
-        },
-        "on-click": "pavucontrol"
+    "clock": {
+        "format": "{:%H:%M}"
     },
 
-    "tray": {
-        "spacing": 8
+    "custom/power": {
+        "format": "⏻",
+        "tooltip": false,
+        "on-click": "wlogout"
     }
 }

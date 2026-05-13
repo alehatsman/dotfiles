@@ -50,9 +50,19 @@ window#waybar {
     padding: 0 8px;
 }
 
-#battery {
-    color: #a6e22e;
+#backlight,
+#pulseaudio,
+#battery,
+#bluetooth,
+#network,
+#custom-power {
+    color: #f8f8f2;
     padding: 0 8px;
+}
+
+#custom-power {
+    padding-right: 14px;
+    margin-right: 4px;
 }
 
 #battery.warning {
@@ -64,22 +74,11 @@ window#waybar {
     animation: blink 0.5s infinite alternate;
 }
 
-#network {
+#network.disconnected,
+#pulseaudio.muted,
+#bluetooth.disabled,
+#bluetooth.off {
     color: #75715e;
-    padding: 0 8px;
-}
-
-#network.disconnected {
-    color: #3e3d32;
-}
-
-#pulseaudio {
-    color: #75715e;
-    padding: 0 8px;
-}
-
-#pulseaudio.muted {
-    color: #3e3d32;
 }
 
 #tray {

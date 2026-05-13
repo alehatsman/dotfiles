@@ -153,6 +153,7 @@
       - brightnessctl
       - playerctl
       - pavucontrol
+      - wlogout
       - hyprsunset
       - gnome-keyring
       - alacritty
