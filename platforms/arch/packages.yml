@@ -1,6 +1,6 @@
 ---
 - name: Install pacman packages
-  package:
+  pkg:
     manager: pacman
     state: present
     names:
@@ -153,7 +153,6 @@
       - brightnessctl
       - playerctl
       - pavucontrol
-      - wlogout
       - hyprsunset
       - gnome-keyring
       - alacritty
@@ -161,7 +160,7 @@
       - ttf-jetbrains-mono-nerd
       - noto-fonts
       - noto-fonts-emoji
-  become: true
+  as_user: root
   timeout: 20m
   retries: 3
   retry_delay: 10s
@@ -186,7 +185,8 @@
       1password-cli \
       spotify \
       globalprotect-openconnect \
-      bluetuith
+      bluetuith \
+      wlogout
   timeout: 15m
   retries: 2
   retry_delay: 10s

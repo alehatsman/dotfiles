@@ -1,6 +1,6 @@
 ---
-- include: ./ubuntu.yml
+- import: ./ubuntu.yml
   when: os == "linux" and distribution in ["ubuntu", "debian"]
 
-- include: ./darwin.yml
+- import: ./darwin.yml
   when: os == "darwin"

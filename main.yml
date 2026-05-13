@@ -1,30 +1,32 @@
 ---
 steps:
   # Arch Linux system setup — packages, services, shell default
-  - include: ./platforms/arch/main.yml
+  - import: ./platforms/arch/main.yml
     when: os == "linux" and distribution == "arch"
     tags: [arch, system, packages]
 
-  - include: ./claude/main.yml
+  - import: ./claude/main.yml
     tags: [core, claude]
 
   # Version control
-  - include: ./git/main.yml
+  - import: ./git/main.yml
     tags: [core, git]
 
   # Programming languages - Using Presets
   - name: Install Python via pyenv
-    preset: python
-    with:
-      version: "3.12.12"
-      install_virtualenv: true
+    use:
+      name: python
+      with:
+        version: "3.12.12"
+        install_virtualenv: true
     tags: [dev, python]
 
   - name: Install Rust toolchain
-    preset: rust
-    with:
-      toolchain: stable
-      profile: default
+    use:
+      name: rust
+      with:
+        toolchain: stable
+        profile: default
     tags: [dev, rust]
 
   # Node.js already installed manually (v22.22.0)
@@ -53,73 +55,78 @@ steps:
   #   tags: [tools, modern-unix]
 
   - name: Install Go toolchain
-    preset: go
-    with:
-      version: "latest"
+    use:
+      name: go
+      with:
+        version: "latest"
     tags: [dev, golang]
 
   # Other languages
   - name: Install Java JDK
-    preset: java
-    with:
-      version: "21"
-      set_java_home: true
+    use:
+      name: java
+      with:
+        version: "21"
+        set_java_home: true
     tags: [dev, java]
 
   - name: Install Clojure
-    preset: clojure
+    use:
+      name: clojure
     tags: [dev, clojure]
 
   - name: Deploy Clojure configs
-    include: ./clojure/config.yml
+    import: ./clojure/config.yml
     tags: [dev, clojure, config]
 
   # Terminal tools
   - name: Install fzf fuzzy finder
-    preset: fzf
-    with:
-      install_shell_extensions: true
-      install_vim_plugin: false
+    use:
+      name: fzf
+      with:
+        install_shell_extensions: true
+        install_vim_plugin: false
     tags: [tools, fzf]
 
-  - include: ./zsh/main.yml
+  - import: ./zsh/main.yml
     tags: [core, shell]
 
   # Tmux - using custom installation due to preset template issue
-  - include: ./tmux/install.yml
+  - import: ./tmux/install.yml
     tags: [tools, tmux]
 
   - name: Deploy tmux config
-    include: ./tmux/config.yml
+    import: ./tmux/config.yml
     tags: [tools, tmux, config]
 
   # Editors
-  - include: ./nvim/main.yml
+  - import: ./nvim/main.yml
     tags: [editor, nvim]
 
   # macOS specific
   # Note: Install Alacritty via Homebrew cask: brew install --cask alacritty
   - name: Deploy Alacritty config
-    include: ./alacritty/config.yml
+    import: ./alacritty/config.yml
     when: os == "darwin"
     tags: [macos, terminal, config]
 
-  - include: ./platforms/macos/main.yml
+  - import: ./platforms/macos/main.yml
     when: os == "darwin"
     tags: [macos]
 
   # Windows WSL2 — SSH, CUDA, compute packages
-  - include: ./platforms/windows/wsl.yml
+  - import: ./platforms/windows/wsl.yml
     when: is_wsl
     tags: [wsl, windows]
 
   # Linux GUI — Hyprland Wayland compositor
   - name: Install Hyprland desktop
-    preset: hyprland
+    use:
+      name: hyprland
     when: os == "linux" and distribution == "arch"
     tags: [gui, hyprland]
 
   - name: Deploy Hyprland configs
-    include: ./hyprland/main.yml
+    import: ./hyprland/main.yml
     when: os == "linux"
     tags: [gui, hyprland, config]

@@ -1,32 +1,32 @@
 ---
-- include_vars: ./variables.yml
+- vars.load: ./variables.yml
 
 - name: Make sure undo dir is present
-  file:
+  file.write:
     path: "{{ config_path }}/undodir"
     state: directory
   tags: [nvim, setup]
 
 - name: Create directory after
-  file:
+  file.write:
     path: "{{ config_path }}/after"
     state: directory
   tags: [nvim, setup]
 
 - name: Create directory ftplugin
-  file:
+  file.write:
     path: "{{ config_path }}/ftplugin"
     state: directory
   tags: [nvim, setup]
 
 - name: Create directory lua
-  file:
+  file.write:
     path: "{{ config_path }}/lua"
     state: directory
   tags: [nvim, setup]
 
 - name: Create directory lua/claude_nvim
-  file:
+  file.write:
     path: "{{ config_path }}/lua/claude_nvim"
     state: directory
   tags: [nvim, setup]
@@ -40,14 +40,14 @@
   tags: [nvim, backup]
 
 - name: Deploy config file {{ item.Path }}
-  template:
+  file.template:
     src: "{{ item.Src }}"
     dest: "{{ config_path }}/{{ item.Path }}"
-  with_filetree: "./templates"
-  when: item.State == "file"
+  for_each_file: "./templates"
+  when: not item.IsDir
   tags: [nvim, config]
 
-- include: ./win32yank.yml
+- import: ./win32yank.yml
   when: use_win32yank
   tags: [nvim, win32yank]
 
@@ -58,7 +58,7 @@
   retry_delay: 10s
   tags: [nvim, plugins]
 
-- include: ./copilot.yml
+- import: ./copilot.yml
   tags: [nvim, copilot]
 
 - name: Verify nvim installation

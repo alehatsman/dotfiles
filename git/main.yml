@@ -1,9 +1,9 @@
 ---
 - name: Make sure git is installed
-  package:
+  pkg:
     name: git
     state: present
-  become: true
+  as_user: root
   when: os == 'linux'
   tags: [git, install]
 
@@ -16,7 +16,7 @@
   tags: [git, backup]
 
 - name: Deploy .gitconfig
-  template:
+  file.template:
     src: ./.gitconfig.j2
     dest: ~/.gitconfig
   tags: [git, config]
