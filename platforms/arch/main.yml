@@ -99,6 +99,25 @@
   as_user: root
   tags: [arch, system, packages]
 
+- name: Set TLP platform_profile to balanced
+  file.write:
+    path: /etc/tlp.d/01-platform-profile.conf
+    state: file
+    content: |
+      # Hold the firmware ACPI profile at "balanced" so the fan curve
+      # and power limits don't drift back to "performance" across boots
+      # or service restarts.
+      PLATFORM_PROFILE_ON_AC=balanced
+      PLATFORM_PROFILE_ON_BAT=balanced
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages]
+
+- name: Apply TLP config
+  shell: tlp start
+  as_user: root
+  tags: [arch, system, packages]
+
 - name: Remap CapsLock to Ctrl and keep in lowercase mode
   shell: |
     mkdir -p /usr/local/share/kbd/keymaps
