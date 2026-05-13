@@ -1,0 +1,73 @@
+---
+# Deploy /etc/wsl.conf — enables systemd so services survive WSL restarts.
+# Note: changes take effect after 'wsl --shutdown' + reconnect.
+- name: Deploy /etc/wsl.conf
+  template:
+    src: ./templates/wsl.conf.j2
+    dest: /etc/wsl.conf
+  become: true
+
+- name: Install compute packages
+  shell: |
+    apt-get update && apt-get install -y \
+      openssh-server \
+      build-essential \
+      cmake \
+      tmux \
+      curl \
+      wget \
+      git \
+      htop \
+      nvtop \
+      unzip \
+      python3-pip
+  become: true
+  timeout: 15m
+  retries: 3
+  retry_delay: 10s
+
+# Drop-in config avoids clobbering the base sshd_config
+- name: Configure SSH server
+  shell: mkdir -p /etc/ssh/sshd_config.d
+  become: true
+
+- name: Deploy SSH server config
+  template:
+    src: ./templates/sshd_config.j2
+    dest: /etc/ssh/sshd_config.d/wsl.conf
+  become: true
+
+- name: Enable and start SSH
+  shell: |
+    if [ "$(ps -p 1 -o comm= 2>/dev/null)" = "systemd" ]; then
+      systemctl enable ssh
+      systemctl restart ssh
+    else
+      echo "WARNING: systemd not running — run 'wsl --shutdown' then reconnect, then re-run provisioning"
+    fi
+  become: true
+
+- name: Install CUDA toolkit
+  shell: |
+    if ! command -v nvcc &>/dev/null; then
+      UBUNTU_VER=$(lsb_release -sr | tr -d '.')
+      wget "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_VER}/x86_64/cuda-keyring_1.1-1_all.deb" \
+        -O /tmp/cuda-keyring.deb
+      dpkg -i /tmp/cuda-keyring.deb
+      apt-get update
+      apt-get install -y cuda-toolkit
+      rm -f /tmp/cuda-keyring.deb
+    else
+      echo "CUDA already installed: $(nvcc --version | head -1)"
+    fi
+  become: true
+  timeout: 45m
+
+# Writes mirrored-networking config to the Windows host filesystem.
+# Requires WINDOWS_USERNAME to be set in your variables file.
+- name: Deploy .wslconfig to Windows user directory
+  template:
+    src: ./templates/wslconfig.j2
+    dest: /mnt/c/Users/{{ WINDOWS_USERNAME }}/.wslconfig
+  become: true
+  when: WINDOWS_USERNAME
