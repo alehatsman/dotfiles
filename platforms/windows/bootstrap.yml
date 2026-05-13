@@ -1,0 +1,100 @@
+---
+# Windows host bootstrap — replaces the old bootstrap.ps1.
+#
+# Run from an Administrator PowerShell on a fresh Windows 11 box:
+#   mooncake.exe apply -c platforms/windows/bootstrap.yml -v variables.yml
+#
+# After this finishes: reboot, finish Ubuntu first-run setup, then run
+# mooncake apply -c main.yml -v variables.yml from inside WSL.
+#
+# Idempotency: each step's inner PowerShell script does its own "if not
+# present" check, so re-running is safe. (Mooncake's shell action will
+# still report changed=true; that's a cosmetic issue, not a correctness one.)
+
+- name: Set WSL default version to 2
+  shell:
+    cmd: wsl --set-default-version 2
+    run_as_admin: true
+
+- name: Install Ubuntu in WSL (if no Ubuntu* distro is present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      # wsl --list output is UTF-16 with embedded NULs — strip them before
+      # matching so PowerShell's -match works against ASCII.
+      $distros = (wsl --list --quiet 2>$null) -replace "`0", ""
+      if ($distros -match "Ubuntu") {
+        Write-Host "Ubuntu* distro already installed — skipping wsl --install"
+      } else {
+        Write-Host "Installing {{ wsl_distro }}..."
+        wsl --install -d {{ wsl_distro }}
+      }
+
+- name: Deploy .wslconfig to the Windows user home
+  file.template:
+    src: ./templates/wslconfig.j2
+    dest: "{{ user_home }}/.wslconfig"
+
+- name: Add firewall rule for WSL SSH (if not already present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $ruleName = "WSL2 SSH"
+      if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
+        Write-Host "Adding firewall rule for port {{ wsl_ssh_port }}..."
+        New-NetFirewallRule `
+          -DisplayName $ruleName `
+          -Direction Inbound `
+          -Protocol TCP `
+          -LocalPort {{ wsl_ssh_port }} `
+          -Action Allow `
+          -Profile Domain,Private | Out-Null
+      } else {
+        Write-Host "Firewall rule '$ruleName' already exists"
+      }
+
+- name: Register Task Scheduler entry to start WSL SSH at boot (if not already present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $taskName = "WSL2-SSH-Autostart"
+      if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
+        Write-Host "Scheduled task '$taskName' already exists"
+      } else {
+        Write-Host "Registering scheduled task '$taskName'..."
+        $action = New-ScheduledTaskAction `
+          -Execute "C:\Windows\System32\wsl.exe" `
+          -Argument "--exec sudo service ssh start"
+        $trigger = New-ScheduledTaskTrigger -AtStartup
+        $principal = New-ScheduledTaskPrincipal `
+          -UserId "SYSTEM" `
+          -LogonType ServiceAccount `
+          -RunLevel Highest
+        $settings = New-ScheduledTaskSettingsSet `
+          -ExecutionTimeLimit (New-TimeSpan -Minutes 2) `
+          -RestartCount 3 `
+          -RestartInterval (New-TimeSpan -Minutes 1)
+        Register-ScheduledTask `
+          -TaskName $taskName `
+          -Action $action `
+          -Trigger $trigger `
+          -Principal $principal `
+          -Settings $settings `
+          -Force | Out-Null
+      }
+
+- name: Print next steps
+  log:
+    msg: |
+      Windows host bootstrap complete. Next steps:
+        1. Reboot the machine
+        2. Finish Ubuntu first-run setup (set username + password)
+        3. Inside WSL, run:
+             git clone https://github.com/alehatsman/dotfiles ~/dotfiles
+             cd ~/dotfiles && bash scripts/install_mooncake.sh
+             mooncake apply -c main.yml -v variables.yml
+        4. Add your SSH public key to ~/.ssh/authorized_keys
+        5. wsl --shutdown, then verify: ssh <this-pc-ip> -p {{ wsl_ssh_port }}
