@@ -113,10 +113,121 @@
   as_user: root
   tags: [arch, system, packages]
 
+- name: Drop TLP cooling tweaks (capped turbo, deeper EPP, ASPM, runtime PM)
+  file.write:
+    path: /etc/tlp.d/02-cool.conf
+    state: file
+    content: |
+      # Cooling tweaks for X1 Carbon Gen 13 / Ultra 7 255U.
+      # Goal: cold + quiet, perf not a priority. Combine with the
+      # RAPL PL1/PL2 caps from the intel-rapl-cap.service unit.
+
+      # Cap clock ceiling — turbo still works but bounded.
+      CPU_MIN_PERF_ON_AC=0
+      CPU_MAX_PERF_ON_AC=80
+      CPU_MIN_PERF_ON_BAT=0
+      CPU_MAX_PERF_ON_BAT=60
+
+      # Tell HWP to prefer power over performance at every decision.
+      CPU_ENERGY_PERF_POLICY_ON_AC=power
+      CPU_ENERGY_PERF_POLICY_ON_BAT=power
+
+      # Disable HWP's autonomous opportunistic boost.
+      CPU_HWP_DYN_BOOST_ON_AC=0
+      CPU_HWP_DYN_BOOST_ON_BAT=0
+
+      # Aggressive PCIe ASPM — biggest idle-watt reduction.
+      PCIE_ASPM_ON_AC=powersupersave
+      PCIE_ASPM_ON_BAT=powersupersave
+
+      # Runtime PM + USB autosuspend on everywhere.
+      RUNTIME_PM_ON_AC=auto
+      RUNTIME_PM_ON_BAT=auto
+      USB_AUTOSUSPEND=1
+
+      # WiFi power-save always on (free idle wattage).
+      WIFI_PWR_ON_AC=on
+      WIFI_PWR_ON_BAT=on
+
+      # Let the scheduler park work on LP-E cores.
+      SCHED_POWERSAVE_ON_AC=1
+      SCHED_POWERSAVE_ON_BAT=1
+
+      # Stop NMI watchdog from waking every CPU constantly.
+      NMI_WATCHDOG=0
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages]
+
 - name: Apply TLP config
   shell: tlp start
   as_user: root
   tags: [arch, system, packages]
+
+- name: Deploy intel-rapl-cap script (PL1=12W, PL2=25W)
+  file.write:
+    path: /usr/local/bin/intel-rapl-cap
+    state: file
+    content: |
+      #!/bin/sh
+      # Cap Intel RAPL power limits — PL1 sustained, PL2 brief burst.
+      # 12W sustained keeps the fan at minimum; 25W burst preserves snap
+      # without ever letting the package draw 57W like firmware allows.
+      PL1_UW=12000000
+      PL2_UW=25000000
+      RAPL=/sys/class/powercap/intel-rapl/intel-rapl:0
+      [ -d "$RAPL" ] || exit 0
+      echo "$PL1_UW" > "$RAPL/constraint_0_power_limit_uw" 2>/dev/null || true
+      echo "$PL2_UW" > "$RAPL/constraint_1_power_limit_uw" 2>/dev/null || true
+    mode: '0755'
+  as_user: root
+  tags: [arch, system, packages, rapl]
+
+- name: Deploy intel-rapl-cap.service (apply at boot)
+  file.write:
+    path: /etc/systemd/system/intel-rapl-cap.service
+    state: file
+    content: |
+      [Unit]
+      Description=Cap Intel RAPL power limits (PL1/PL2) for thermals
+      After=multi-user.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/intel-rapl-cap
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages, rapl]
+
+- name: Deploy intel-rapl-cap-resume.service (re-apply after suspend)
+  file.write:
+    path: /etc/systemd/system/intel-rapl-cap-resume.service
+    state: file
+    content: |
+      [Unit]
+      Description=Re-apply Intel RAPL caps after resume
+      After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/intel-rapl-cap
+
+      [Install]
+      WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages, rapl]
+
+- name: Enable and start intel-rapl-cap services
+  shell: |
+    systemctl daemon-reload
+    systemctl enable --now intel-rapl-cap.service
+    systemctl enable intel-rapl-cap-resume.service
+  as_user: root
+  tags: [arch, system, packages, rapl]
 
 - name: Remap CapsLock to Ctrl and keep in lowercase mode
   shell: |
