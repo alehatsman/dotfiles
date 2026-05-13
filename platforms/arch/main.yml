@@ -164,6 +164,20 @@
   as_user: root
   tags: [arch, system, packages]
 
+- name: Append i915 power-save params to systemd-boot cmdline
+  shell: |
+    ENTRY=/boot/loader/entries/arch.conf
+    PARAMS="i915.enable_fbc=1 i915.enable_psr=1 i915.enable_dc=4 nmi_watchdog=0"
+    [ -f "$ENTRY" ] || { echo "boot entry not found, skipping"; exit 0; }
+    if ! grep -q 'i915.enable_fbc' "$ENTRY"; then
+      sed -i "s|^options |options $PARAMS |" "$ENTRY"
+      echo "added: $PARAMS"
+    else
+      echo "already present"
+    fi
+  as_user: root
+  tags: [arch, system, packages, bootloader]
+
 - name: Deploy intel-rapl-cap script (PL1=12W, PL2=25W)
   file.write:
     path: /usr/local/bin/intel-rapl-cap
