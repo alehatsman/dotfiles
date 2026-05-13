@@ -83,6 +83,10 @@ xwayland {
 misc {
     force_default_wallpaper = 0
     disable_hyprland_logo = true
+    # VRR: 1 = on, lets the compositor stop pushing frames when nothing
+    # changes (panel is 60Hz IPS — no adaptive sync but vrr=1 still
+    # cuts iGPU draw at idle).
+    vrr = 1
 }
 
 windowrule = float 1, match:class ^(pavucontrol)$
