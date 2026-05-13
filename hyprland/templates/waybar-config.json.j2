@@ -5,7 +5,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces"],
     "modules-center": [],
-    "modules-right": ["temperature", "backlight", "pulseaudio", "battery", "bluetooth", "network", "clock", "custom/power"],
+    "modules-right": ["temperature", "cpu", "memory", "backlight", "pulseaudio", "battery", "bluetooth", "network", "clock", "custom/power"],
 
     "hyprland/workspaces": {
         "format": "{id}",
@@ -17,12 +17,26 @@
         "hwmon-path-abs": "/sys/devices/platform/coretemp.0/hwmon",
         "input-filename": "temp1_input",
         "critical-threshold": 85,
-        "format": "󰔏 {temperatureC}°C",
-        "format-critical": "󰔏 {temperatureC}°C"
+        "format": "󰍛 {temperatureC}°C",
+        "format-critical": "󰍛 {temperatureC}°C",
+        "tooltip-format": "CPU temp: {temperatureC}°C"
+    },
+
+    "cpu": {
+        "interval": 3,
+        "format": " / {usage}%",
+        "tooltip-format": "CPU util: {usage}%"
+    },
+
+    "memory": {
+        "interval": 5,
+        "format": "{used:0.1f}G",
+        "tooltip-format": "RAM: {used:0.1f}G / {total:0.1f}G ({percentage}%)"
     },
 
     "backlight": {
         "format": "󰃟 {percent}%",
+        "tooltip-format": "Brightness: {percent}%",
         "on-scroll-up": "brightnessctl set +5%",
         "on-scroll-down": "brightnessctl set 5%-"
     },
@@ -33,6 +47,7 @@
         "format-icons": {
             "default": ["󰕿", "󰖀", "󰕾"]
         },
+        "tooltip-format": "Volume: {volume}% ({desc})",
         "on-click": "pavucontrol"
     },
 
@@ -44,14 +59,20 @@
         "format": "{icon} {capacity}%",
         "format-charging": "󰂄 {capacity}%",
         "format-plugged": "󰚥 {capacity}%",
-        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁾", "󰂀", "󰂂", "󰁹"]
+        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁾", "󰂀", "󰂂", "󰁹"],
+        "tooltip-format": "Battery: {capacity}% — {time}"
     },
 
     "bluetooth": {
         "format": "󰂯",
         "format-disabled": "󰂲",
         "format-off": "󰂲",
-        "format-connected": "󰂱",
+        "format-connected": "󰂱 {num_connections}",
+        "tooltip-format": "BT: on\n{controller_alias}",
+        "tooltip-format-disabled": "BT: disabled",
+        "tooltip-format-off": "BT: off",
+        "tooltip-format-connected": "BT: {num_connections} connected\n{device_enumerate}",
+        "tooltip-format-enumerate-connected": "{device_alias}",
         "on-click": "blueman-manager"
     },
 
@@ -59,12 +80,15 @@
         "format-wifi": "󰤨",
         "format-ethernet": "󰈀",
         "format-disconnected": "󰤭",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)",
+        "tooltip-format-wifi": "Wi-Fi: {essid} ({signalStrength}%)\n{ifname}: {ipaddr}\n↓ {bandwidthDownBits}  ↑ {bandwidthUpBits}",
+        "tooltip-format-ethernet": "Ethernet: {ifname}\n{ipaddr}\n↓ {bandwidthDownBits}  ↑ {bandwidthUpBits}",
+        "tooltip-format-disconnected": "Net: disconnected",
         "on-click": "nm-connection-editor"
     },
 
     "clock": {
-        "format": "{:%H:%M}"
+        "format": "{:%H:%M}",
+        "tooltip-format": "<big>{:%A, %d %B %Y}</big>\n<tt><small>{calendar}</small></tt>"
     },
 
     "custom/power": {
