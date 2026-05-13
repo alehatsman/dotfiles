@@ -1,0 +1,15 @@
+---
+# main_pc — Windows 11 desktop, provisioned via WSL2 Ubuntu.
+#
+# Two-step provisioning:
+#   1. Windows host (from an Administrator PowerShell):
+#        mooncake.exe apply -c platforms/windows/bootstrap.yml \
+#                           -v variables.yml -v vars/main_pc.yml
+#   2. Inside WSL Ubuntu:
+#        mooncake apply -c entries/main_pc.yml \
+#                       -v variables.yml -v vars/main_pc.yml -K
+
+- import: ../common.yml
+
+- import: ../platforms/windows/wsl.yml
+  tags: [wsl, windows]

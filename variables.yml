@@ -1,12 +1,11 @@
 ---
+# Cross-machine identity. Per-machine vars live in vars/<machine>.yml and
+# are layered on top via a second `-v` flag.
+#
+#   mooncake apply -c entries/<machine>.yml -v variables.yml -v vars/<machine>.yml -K
+#
+# The current OS username is exposed by mooncake as {{ username }} — no
+# need to set it here.
 FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
-OS_USERNAME: alehatsman
 use_win32yank: false
-is_wsl: false
-WINDOWS_USERNAME: ""
-wsl_ssh_port: "2222"
-# wsl_distro is the distro to `wsl --install` only when no Ubuntu* distro exists.
-# Pre-existing Ubuntu installations are kept as-is (bootstrap.yml skips on any
-# Ubuntu* match).
-wsl_distro: "Ubuntu-24.04"
