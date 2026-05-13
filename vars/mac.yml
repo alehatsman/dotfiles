@@ -1,0 +1,3 @@
+---
+# mac-specific variables.
+is_wsl: false

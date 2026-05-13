@@ -1,0 +1,16 @@
+---
+# mini_pc — second Windows 11 box, provisioned via WSL2 Ubuntu.
+# Identical structure to main_pc; the vars file picks up the differences.
+#
+# Two-step provisioning:
+#   1. Windows host (from an Administrator PowerShell):
+#        mooncake.exe apply -c platforms/windows/bootstrap.yml \
+#                           -v variables.yml -v vars/mini_pc.yml
+#   2. Inside WSL Ubuntu:
+#        mooncake apply -c entries/mini_pc.yml \
+#                       -v variables.yml -v vars/mini_pc.yml -K
+
+- import: ../common.yml
+
+- import: ../platforms/windows/wsl.yml
+  tags: [wsl, windows]

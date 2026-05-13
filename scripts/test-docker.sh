@@ -17,9 +17,9 @@ docker run --rm -v $(pwd):/dotfiles -w /dotfiles $OS bash -c "
   curl -sSL https://raw.githubusercontent.com/alehatsman/mooncake/main/install.sh | bash
   export PATH=\$PATH:/root/.local/bin
 
-  # Run dry-run
-  echo 'Running mooncake dry-run...'
-  mooncake run -c main.yml -v variables.yml --dry-run
+  # Smoke-test the WSL entry's plan (closest to a vanilla Ubuntu container).
+  echo 'Running mooncake plan for entries/main_pc.yml...'
+  mooncake plan -c entries/main_pc.yml -v variables.yml -v vars/main_pc.yml
 
   echo 'Docker test completed successfully!'
 "

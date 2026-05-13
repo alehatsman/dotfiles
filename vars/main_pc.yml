@@ -1,0 +1,5 @@
+---
+# main_pc-specific variables (Windows + WSL Ubuntu).
+is_wsl: true
+wsl_distro: "Ubuntu-24.04"
+wsl_ssh_port: "2222"

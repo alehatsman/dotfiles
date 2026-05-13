@@ -1,0 +1,80 @@
+---
+# Shared provisioning across every machine. Each entry under entries/
+# imports this on top of its OS/host-specific bits.
+#
+# Anything OS-conditional (apt vs brew vs pacman, macOS defaults, hyprland,
+# wsl) lives outside this file — entries own that.
+
+- import: ./claude/main.yml
+  tags: [core, claude]
+
+# Cross-environment package install (apt on Ubuntu/Debian, brew on macOS,
+# pacman on Arch). packages/main.yml routes by os + distribution; the
+# arch branch is currently empty because Arch's pacman install lives in
+# platforms/arch/packages.yml — invoked from entries/x1.yml directly.
+- import: ./packages/main.yml
+  tags: [core, packages]
+
+- import: ./git/main.yml
+  tags: [core, git]
+
+- name: Install Python via pyenv
+  use:
+    name: python
+    with:
+      version: "3.12.12"
+      install_virtualenv: true
+  tags: [dev, python]
+
+- name: Install Rust toolchain
+  use:
+    name: rust
+    with:
+      toolchain: stable
+      profile: default
+  tags: [dev, rust]
+
+- name: Install Go toolchain
+  use:
+    name: go
+    with:
+      version: "latest"
+  tags: [dev, golang]
+
+- name: Install Java JDK
+  use:
+    name: java
+    with:
+      version: "21"
+      set_java_home: true
+  tags: [dev, java]
+
+- name: Install Clojure
+  use:
+    name: clojure
+  tags: [dev, clojure]
+
+- name: Deploy Clojure configs
+  import: ./clojure/config.yml
+  tags: [dev, clojure, config]
+
+- name: Install fzf fuzzy finder
+  use:
+    name: fzf
+    with:
+      install_shell_extensions: true
+      install_vim_plugin: false
+  tags: [tools, fzf]
+
+- import: ./zsh/main.yml
+  tags: [core, shell]
+
+- import: ./tmux/install.yml
+  tags: [tools, tmux]
+
+- name: Deploy tmux config
+  import: ./tmux/config.yml
+  tags: [tools, tmux, config]
+
+- import: ./nvim/main.yml
+  tags: [editor, nvim]

@@ -1,4 +1,12 @@
 ---
+# WSL-specific provisioning. Runs INSIDE the WSL Ubuntu distro.
+#
+# Cross-environment packages (git, tmux, htop, build-essential, etc.) are
+# installed by packages/main.yml — those aren't WSL-specific.
+#
+# Host-side bits (.wslconfig, firewall rule, scheduled task) are owned by
+# platforms/windows/bootstrap.yml — those run on the Windows host, not here.
+
 # Deploy /etc/wsl.conf — enables systemd so services survive WSL restarts.
 # Note: changes take effect after 'wsl --shutdown' + reconnect.
 - name: Deploy /etc/wsl.conf
@@ -7,22 +15,14 @@
     dest: /etc/wsl.conf
   as_user: root
 
-- name: Install compute packages
+# Just the WSL-only piece — the SSH server that lets the Windows host reach
+# this guest. Everything else common (git, tmux, htop, ...) comes from
+# packages/ubuntu_packages.yml.
+- name: Install openssh-server
   shell: |
-    apt-get update && apt-get install -y \
-      openssh-server \
-      build-essential \
-      cmake \
-      tmux \
-      curl \
-      wget \
-      git \
-      htop \
-      nvtop \
-      unzip \
-      python3-pip
+    apt-get update && apt-get install -y openssh-server
   as_user: root
-  timeout: 15m
+  timeout: 10m
   retries: 3
   retry_delay: 10s
 
@@ -37,6 +37,18 @@
     dest: /etc/ssh/sshd_config.d/wsl.conf
   as_user: root
 
+# WSL2 mirrored networking shares the Windows host's port 22 binding (the
+# host's OpenSSH listens there for cross-machine SSH). Ubuntu's default
+# ssh.socket also wants 0.0.0.0:22, so the bind collides and ssh.service
+# fails its socket dependency. Disable ssh.socket and let ssh.service own
+# the listener on port 2222 (from our drop-in above).
+- name: Disable ssh.socket (conflicts with port 22 under mirrored networking)
+  shell: |
+    if systemctl list-unit-files ssh.socket >/dev/null 2>&1; then
+      systemctl disable --now ssh.socket 2>&1 | grep -v "Removed\|not loaded" || true
+    fi
+  as_user: root
+
 - name: Enable and start SSH
   shell: |
     if [ "$(ps -p 1 -o comm= 2>/dev/null)" = "systemd" ]; then
@@ -47,8 +59,16 @@
     fi
   as_user: root
 
-- name: Install CUDA toolkit
+# GPU tooling. nvtop is a small Vulkan/NVIDIA monitor; CUDA is the heavy
+# toolkit (multi-GB, ~30 min on first install). Both are skipped on
+# machines without an NVIDIA GPU.
+- name: Install GPU tooling (nvtop + CUDA, if NVIDIA GPU present)
   shell: |
+    if ! lspci 2>/dev/null | grep -qi nvidia; then
+      echo "No NVIDIA GPU detected — skipping GPU tooling"
+      exit 0
+    fi
+    apt-get install -y nvtop
     if ! command -v nvcc &>/dev/null; then
       UBUNTU_VER=$(lsb_release -sr | tr -d '.')
       wget "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_VER}/x86_64/cuda-keyring_1.1-1_all.deb" \
@@ -62,12 +82,3 @@
     fi
   as_user: root
   timeout: 45m
-
-# Writes mirrored-networking config to the Windows host filesystem.
-# Requires WINDOWS_USERNAME to be set in your variables file.
-- name: Deploy .wslconfig to Windows user directory
-  file.template:
-    src: ./templates/wslconfig.j2
-    dest: /mnt/c/Users/{{ WINDOWS_USERNAME }}/.wslconfig
-  as_user: root
-  when: WINDOWS_USERNAME != ""

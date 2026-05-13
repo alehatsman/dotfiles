@@ -1,0 +1,13 @@
+---
+# mac — macOS workstation. Homebrew + macOS defaults + dotfiles.
+# Run with:
+#   mooncake apply -c entries/mac.yml -v variables.yml -v vars/mac.yml -K
+
+- import: ../common.yml
+
+- name: Deploy Alacritty config
+  import: ../alacritty/config.yml
+  tags: [macos, terminal, config]
+
+- import: ../platforms/macos/main.yml
+  tags: [macos]

@@ -43,6 +43,10 @@ apps:
   - lua5.1
   - golang-go
 
+  # Compilers / dev toolchain (needed by pyenv builds and many sources)
+  - build-essential
+  - python3-pip
+
   - httpie
 
   # - terraform

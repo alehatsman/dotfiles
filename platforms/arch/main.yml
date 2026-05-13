@@ -56,8 +56,8 @@
 
 - name: Configure passwordless sudo for user
   shell: |
-    echo "{{ OS_USERNAME }} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/{{ OS_USERNAME }}-nopasswd
-    chmod 440 /etc/sudoers.d/{{ OS_USERNAME }}-nopasswd
+    echo "{{ username }} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/{{ username }}-nopasswd
+    chmod 440 /etc/sudoers.d/{{ username }}-nopasswd
   as_user: root
   tags: [arch, system, packages]
 
@@ -95,7 +95,7 @@
   tags: [arch, system, packages]
 
 - name: Set default shell to zsh
-  shell: chsh -s $(which zsh) {{ OS_USERNAME }}
+  shell: chsh -s $(which zsh) {{ username }}
   as_user: root
   tags: [arch, system, packages]
 
