@@ -84,10 +84,19 @@ window#waybar {
     animation: blink 0.5s infinite alternate;
 }
 
-#network.disconnected,
-#pulseaudio.muted,
-#bluetooth.disabled,
-#bluetooth.off {
+#network,
+#bluetooth {
+    color: #75715e;
+}
+
+#network.wifi,
+#network.ethernet,
+#network.linked,
+#bluetooth.connected {
+    color: #a6e22e;
+}
+
+#pulseaudio.muted {
     color: #75715e;
 }
 
