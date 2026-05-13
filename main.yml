@@ -56,7 +56,6 @@ steps:
     preset: go
     with:
       version: "latest"
-      gopath: "{{ GOPATH }}"
     tags: [dev, golang]
 
   # Other languages
