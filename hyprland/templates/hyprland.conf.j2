@@ -100,7 +100,12 @@ bind = $mod, P, pseudo
 bind = $mod, Return, exec, alacritty
 bind = $mod, D, exec, wofi --show drun
 bind = $mod, Space, exec, wofi --show drun
-bind = $mod, V, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy
+# System-wide copy/paste. wm-clip detects terminal vs GUI and sends the right
+# Ctrl(+Shift) combo via sendshortcut. Ctrl+C stays untouched → SIGINT in
+# terminals, default copy in GUI apps.
+bind = $mod, C, exec, ~/.local/bin/wm-clip copy
+bind = $mod, V, exec, ~/.local/bin/wm-clip paste
+bind = $mod SHIFT, V, exec, cliphist list | wofi --dmenu | cliphist decode | wl-copy
 bind = $mod, Q, killactive
 bind = $mod SHIFT, Q, exit
 bind = $mod, F, fullscreen
