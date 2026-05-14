@@ -320,6 +320,45 @@ Copy it there before running bootstrap, e.g. from a cross-compile:
         Write-Warning "Token file not at $tokenFile — agentd may not have started yet"
       }
 
+# Belt-and-suspenders to vmIdleTimeout=-1 in .wslconfig: a repeating
+# scheduled task that re-runs `systemctl start ssh` every 5 minutes. It's
+# a fast no-op when sshd is already running, and the wsl.exe invocation
+# itself wakes a stopped VM. Runs as the current user (not SYSTEM) so the
+# user's registered WSL distros are visible. S4U logon means the task
+# fires even when the user isn't logged in.
+- name: Register Task Scheduler entry to keep WSL SSH alive (if not already present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $taskName = "WSL2-SSH-Keepalive"
+      if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
+        Write-Host "Scheduled task '$taskName' already exists"
+      } else {
+        Write-Host "Registering scheduled task '$taskName'..."
+        $action = New-ScheduledTaskAction `
+          -Execute "C:\Windows\System32\wsl.exe" `
+          -Argument "-d {{ wsl_distro }} -u root -- systemctl start ssh"
+        $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
+          -RepetitionInterval (New-TimeSpan -Minutes 5)
+        $principal = New-ScheduledTaskPrincipal `
+          -UserId "$env:USERDOMAIN\$env:USERNAME" `
+          -LogonType S4U `
+          -RunLevel Highest
+        $settings = New-ScheduledTaskSettingsSet `
+          -ExecutionTimeLimit (New-TimeSpan -Minutes 2) `
+          -AllowStartIfOnBatteries `
+          -DontStopIfGoingOnBatteries `
+          -StartWhenAvailable
+        Register-ScheduledTask `
+          -TaskName $taskName `
+          -Action $action `
+          -Trigger $trigger `
+          -Principal $principal `
+          -Settings $settings `
+          -Force | Out-Null
+      }
+
 - name: Print next steps
   log:
     msg: |
