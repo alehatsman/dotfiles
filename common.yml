@@ -5,6 +5,28 @@
 # Anything OS-conditional (apt vs brew vs pacman, macOS defaults, hyprland,
 # wsl) lives outside this file — entries own that.
 
+# Make sure mooncake's preset library is available locally. The first
+# `use:` step in this file (Install Python via pyenv) needs ~/.mooncake/presets
+# populated; mooncake's binary doesn't bundle them today. Clone-or-pull
+# the mooncake source and symlink its presets/ dir into the per-user
+# search path. Idempotent.
+- name: Ensure mooncake preset library is installed
+  shell: |
+    set -e
+    SRC=$HOME/.mooncake-src
+    LINK=$HOME/.mooncake/presets
+    if [ ! -d "$SRC/.git" ]; then
+      mkdir -p "$(dirname "$SRC")"
+      git clone --depth=1 https://github.com/alehatsman/mooncake.git "$SRC"
+    else
+      git -C "$SRC" pull --ff-only --quiet || true
+    fi
+    mkdir -p "$(dirname "$LINK")"
+    # ln -sfn replaces dangling/old symlinks atomically.
+    ln -sfn "$SRC/presets" "$LINK"
+    test -e "$LINK/python/preset.yml" || { echo "preset library missing python/"; exit 1; }
+  tags: [core, presets]
+
 - import: ./claude/main.yml
   tags: [core, claude]
 
