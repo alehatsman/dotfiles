@@ -1,0 +1,38 @@
+# mcsearch SSH tunnel — user-level systemd unit on Linux clients.
+#
+# Forwards 127.0.0.1:{{ mcsearch_local_port }} on this machine through the
+# GPU host's WSL SSH listener to 127.0.0.1:{{ mcsearch_remote_port }} on
+# the remote side, where the docker-composed embedding service is bound.
+#
+# Why an SSH tunnel rather than plain LAN HTTP:
+#   - reuses existing SSH auth (no new bearer token to issue + rotate)
+#   - keeps the embedding endpoint off the LAN (semantic embeddings of
+#     your codebase are source-derived; treat them as sensitive)
+#   - avoids a new Windows-FW + Hyper-V-FW rule pair on the GPU host
+#
+# Requires ~/.ssh/config to define `Host {{ mcsearch_remote_host }}` with
+# the right port + IdentityFile.
+#
+# ServerAlive* + ExitOnForwardFailure ensure a half-broken tunnel exits
+# cleanly so systemd can restart it.
+
+[Unit]
+Description=mcsearch SSH tunnel to {{ mcsearch_remote_host }}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh \
+  -N \
+  -o ExitOnForwardFailure=yes \
+  -o ServerAliveInterval=30 \
+  -o ServerAliveCountMax=3 \
+  -o StrictHostKeyChecking=accept-new \
+  -L 127.0.0.1:{{ mcsearch_local_port }}:127.0.0.1:{{ mcsearch_remote_port }} \
+  {{ mcsearch_remote_host }}
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=default.target

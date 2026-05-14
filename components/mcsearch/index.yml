@@ -1,0 +1,113 @@
+---
+# mcsearch — local semantic-search MCP helper for Claude Code.
+#
+# Role-gated:
+#   mcsearch_role=skip    no-op (default; set in shared/variables.yml)
+#   mcsearch_role=client  install the Go binary + register MCP + SSH tunnel
+#   mcsearch_role=server  additionally bring up the embedding service in WSL
+#
+# See components/mcsearch/server.yml for server-side steps.
+
+- vars.load: ./variables.yml
+
+- name: "mcsearch — role=skip; nothing to do"
+  log:
+    msg: "mcsearch_role=skip on this machine; component is a no-op"
+  when: mcsearch_role == 'skip'
+  tags: [mcsearch]
+
+# ───────────────── CLIENT (and server — server is a superset) ──────────────
+
+- name: "Ensure Go toolchain is installed (for building mcsearch)"
+  shell: |
+    if ! command -v go >/dev/null 2>&1; then
+      echo "go is not installed; expected components/languages to have provided it"
+      exit 1
+    fi
+  when: mcsearch_role != 'skip'
+  tags: [mcsearch, build]
+
+- name: "Clone or update mcsearch source"
+  git.clone:
+    repo: "{{ mcsearch_src_url }}"
+    dest: "{{ mcsearch_src_dir }}"
+    update: true
+  when: mcsearch_role != 'skip'
+  tags: [mcsearch, build]
+
+- name: "Build mcsearch binary"
+  shell: |
+    cd "{{ mcsearch_src_dir }}"
+    go build -trimpath -ldflags "-s -w" -o ./mcsearch ./cmd/mcsearch
+  when: mcsearch_role != 'skip'
+  tags: [mcsearch, build]
+
+- name: "Install mcsearch to {{ mcsearch_bin_path }}"
+  shell: |
+    install -m 0755 "{{ mcsearch_src_dir }}/mcsearch" "{{ mcsearch_bin_path }}"
+  as_user: root
+  when: mcsearch_role != 'skip'
+  tags: [mcsearch, build]
+
+- name: "Register mcsearch with Claude Code (user scope)"
+  # remove-then-add keeps the command/args in lockstep with this template
+  # so future arg changes propagate cleanly.
+  shell: |
+    claude mcp remove mcsearch --scope user 2>/dev/null || true
+    claude mcp add --scope user mcsearch -- {{ mcsearch_bin_path }} mcp
+  when: mcsearch_role != 'skip'
+  tags: [mcsearch, claude]
+
+- name: "Verify mcsearch is on $PATH"
+  assert:
+    command:
+      cmd: which mcsearch
+  when: mcsearch_role != 'skip'
+  tags: [mcsearch, verify]
+
+- name: "Verify mcsearch is registered with Claude Code"
+  shell: claude mcp list | grep -q '^mcsearch'
+  changed_when: false
+  when: mcsearch_role != 'skip'
+  tags: [mcsearch, verify]
+
+# ───────────────── CLIENT-ONLY TUNNEL (Linux + macOS) ──────────────────────
+#
+# Server hosts skip the tunnel — they reach the embedding endpoint over
+# loopback (mcsearch is fine pointing at the same 127.0.0.1:8082 that the
+# server publishes).
+
+- name: "Deploy mcsearch-tunnel user systemd unit"
+  file.template:
+    src: ./templates/mcsearch-tunnel.service.j2
+    dest: "~/.config/systemd/user/mcsearch-tunnel.service"
+  when: mcsearch_role == 'client' and os == 'linux'
+  tags: [mcsearch, tunnel]
+
+- name: "Enable and start mcsearch-tunnel.service"
+  shell: |
+    systemctl --user daemon-reload
+    systemctl --user enable --now mcsearch-tunnel.service
+  when: mcsearch_role == 'client' and os == 'linux'
+  tags: [mcsearch, tunnel]
+
+- name: "Deploy mcsearch-tunnel launchd plist (mac)"
+  file.template:
+    src: ./templates/mcsearch-tunnel.plist.j2
+    dest: "~/Library/LaunchAgents/com.alehatsman.mcsearch-tunnel.plist"
+  when: mcsearch_role == 'client' and os == 'darwin'
+  tags: [mcsearch, tunnel]
+
+- name: "Load mcsearch-tunnel launchd plist (mac)"
+  shell: |
+    plist=~/Library/LaunchAgents/com.alehatsman.mcsearch-tunnel.plist
+    launchctl unload "$plist" 2>/dev/null || true
+    launchctl load "$plist"
+  when: mcsearch_role == 'client' and os == 'darwin'
+  tags: [mcsearch, tunnel]
+
+# ───────────────── SERVER (main_pc) ────────────────────────────────────────
+
+- import: ./server.yml
+  when: mcsearch_role == 'server'
+  tags: [mcsearch, server]

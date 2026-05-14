@@ -1,0 +1,92 @@
+---
+# Server-side bring-up: docker + NVIDIA container runtime + the embedding
+# service unit. Runs only on the GPU host (mcsearch_role=server).
+#
+# The service binds 127.0.0.1:{{ mcsearch_remote_port }} — never exposed
+# on the LAN. Clients reach it through SSH tunnels (see
+# components/mcsearch/templates/mcsearch-tunnel.service.j2).
+
+- name: "Install docker (if missing)"
+  shell: |
+    if ! command -v docker >/dev/null 2>&1; then
+      apt-get update
+      apt-get install -y docker.io
+      systemctl enable --now docker
+    fi
+  as_user: root
+  tags: [mcsearch, server, docker]
+
+- name: "Add current user to docker group"
+  shell: |
+    if ! id -nG "{{ username }}" | tr ' ' '\n' | grep -qx docker; then
+      usermod -aG docker "{{ username }}"
+    fi
+  as_user: root
+  tags: [mcsearch, server, docker]
+
+- name: "Install NVIDIA container toolkit (for --gpus all in docker)"
+  shell: |
+    if dpkg -l nvidia-container-toolkit 2>/dev/null | grep -q '^ii'; then
+      exit 0
+    fi
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+      | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+    curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+      | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+      > /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    apt-get update
+    apt-get install -y nvidia-container-toolkit
+    nvidia-ctk runtime configure --runtime=docker
+    systemctl restart docker
+  as_user: root
+  timeout: 15m
+  tags: [mcsearch, server, nvidia]
+
+- name: "Ensure /opt/mcsearch exists"
+  shell: |
+    mkdir -p /opt/mcsearch
+    chown {{ username }}:{{ username }} /opt/mcsearch
+  as_user: root
+  tags: [mcsearch, server]
+
+- name: "Deploy docker-compose for embedding engine"
+  file.template:
+    src: ./templates/embed.compose.yml.j2
+    dest: /opt/mcsearch/embed.compose.yml
+  tags: [mcsearch, server]
+
+- name: "Deploy mcsearch-embed systemd unit"
+  file.template:
+    src: ./templates/mcsearch-embed.service.j2
+    dest: /etc/systemd/system/mcsearch-embed.service
+  as_user: root
+  tags: [mcsearch, server]
+
+- name: "Enable and start mcsearch-embed.service"
+  shell: |
+    systemctl daemon-reload
+    systemctl enable --now mcsearch-embed.service
+  as_user: root
+  tags: [mcsearch, server]
+
+- name: "Wait for the embedding endpoint to become ready"
+  # First boot pulls the image and warms the model — vLLM Qwen3-Embedding-4B
+  # typically takes ~60 s. Give it a generous window, but bail with a
+  # readable message if it never comes up.
+  shell: |
+    for i in $(seq 1 90); do
+      if curl -sf --max-time 3 -X POST \
+           -H 'Content-Type: application/json' \
+           -d '{"model":"{{ mcsearch_embed_model }}","input":["ping"]}' \
+           http://127.0.0.1:{{ mcsearch_remote_port }}/v1/embeddings >/dev/null; then
+        echo "✓ mcsearch-embed is up after ${i}0s"
+        exit 0
+      fi
+      sleep 10
+    done
+    echo "✗ mcsearch-embed never returned 2xx from /v1/embeddings"
+    echo "  inspect: journalctl -u mcsearch-embed -n 100"
+    echo "  inspect: docker logs mcsearch-embed"
+    exit 1
+  timeout: 20m
+  tags: [mcsearch, server, verify]
