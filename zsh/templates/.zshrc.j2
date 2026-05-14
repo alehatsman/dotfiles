@@ -239,6 +239,101 @@ gbd!() { # git delete branch force
   git push origin --delete --force $@
 }
 
+# Worktree helpers — sibling layout: ../<repo>-<name>
+_gw_root()    { git rev-parse --show-toplevel 2>/dev/null }
+_gw_path()    { echo "$(dirname "$(_gw_root)")/$(basename "$(_gw_root)")-$1" }
+_gw_default() {
+  local ref
+  ref=$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null)
+  if [[ -n "$ref" ]]; then echo "${ref#refs/remotes/origin/}"; return; fi
+  for b in master main; do
+    git show-ref --verify --quiet "refs/heads/$b" && { echo "$b"; return; }
+  done
+}
+
+gwc() { # git worktree create: gwc <name> [base]
+  [[ $# -lt 1 ]] && { echo "usage: gwc <name> [base]" >&2; return 1 }
+  local name="$1" base="${2:-$(_gw_default)}" path
+  _gw_root >/dev/null || { echo "not in a git repo" >&2; return 1 }
+  path=$(_gw_path "$name")
+  [[ -e "$path" ]] && { echo "path exists: $path" >&2; return 1 }
+  git fetch origin "$base" --quiet 2>/dev/null
+  if git show-ref --verify --quiet "refs/heads/$name"; then
+    git worktree add "$path" "$name" || return 1
+  else
+    git worktree add -b "$name" "$path" "origin/$base" 2>/dev/null \
+      || git worktree add -b "$name" "$path" "$base" || return 1
+  fi
+  cd "$path"
+}
+
+gwd() { # git worktree delete (safe): gwd <name>
+  [[ $# -lt 1 ]] && { echo "usage: gwd <name>" >&2; return 1 }
+  local name="$1" root path
+  root=$(_gw_root) || { echo "not in a git repo" >&2; return 1 }
+  path=$(_gw_path "$name")
+  [[ -d "$path" ]] || { echo "no worktree at $path" >&2; return 1 }
+
+  if ! git -C "$path" diff --quiet || ! git -C "$path" diff --cached --quiet; then
+    echo "uncommitted changes in $path — commit/stash or use gwd! $name" >&2
+    return 1
+  fi
+  local upstream ahead
+  upstream=$(git -C "$path" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)
+  if [[ -n "$upstream" ]]; then
+    ahead=$(git -C "$path" rev-list --count "$upstream..HEAD" 2>/dev/null)
+    if [[ "${ahead:-0}" -gt 0 ]]; then
+      echo "$name is $ahead ahead of $upstream — push or use gwd! $name" >&2
+      return 1
+    fi
+  else
+    ahead=$(git -C "$path" rev-list --count "$name" "^$(_gw_default)" 2>/dev/null)
+    if [[ "${ahead:-0}" -gt 0 ]]; then
+      echo "$name has $ahead local commits with no upstream — push or use gwd! $name" >&2
+      return 1
+    fi
+  fi
+
+  [[ "$PWD/" == "$path/"* ]] && cd "$root"
+  git worktree remove "$path" || return 1
+  git branch -d "$name"
+  git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1 \
+    && git push origin --delete "$name"
+}
+
+gwd!() { # git worktree delete force: gwd! <name>
+  [[ $# -lt 1 ]] && { echo "usage: gwd! <name>" >&2; return 1 }
+  local name="$1" root path
+  root=$(_gw_root) || { echo "not in a git repo" >&2; return 1 }
+  path=$(_gw_path "$name")
+  [[ "$PWD/" == "$path/"* ]] && cd "$root"
+  [[ -d "$path" ]] && git worktree remove --force "$path"
+  git branch -D "$name" 2>/dev/null
+  git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1 \
+    && git push origin --delete --force "$name"
+}
+
+alias gwl="git worktree list"
+
+fgw() { # fzf-pick a worktree and cd
+  local sel
+  sel=$(git worktree list | fzf-tmux --height 40% +m) || return
+  cd "$(echo "$sel" | awk '{print $1}')"
+}
+
+_gw_complete_worktrees() {
+  local root names
+  root=$(git rev-parse --show-toplevel 2>/dev/null) || return
+  names=("${(@f)$(git worktree list --porcelain 2>/dev/null | awk -v main="$root" '
+    /^worktree / { wt = $2 }
+    /^branch refs\/heads\// {
+      if (wt != main) { sub(/^branch refs\/heads\//, ""); print }
+    }')}")
+  _describe 'worktree' names
+}
+compdef _gw_complete_worktrees gwd
+compdef _gw_complete_worktrees 'gwd!'
+
 fgcb() {
   local branches branch
   branches=$(git branch --all | rg -v HEAD) &&
