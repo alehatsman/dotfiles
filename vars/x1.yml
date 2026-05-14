@@ -2,3 +2,24 @@
 # x1-specific variables. Username is detected at runtime via {{ username }};
 # no need to set OS_USERNAME here.
 is_wsl: false
+
+# ─── Thermal tuning (Ultra 7 255U, Xe2 iGPU) ────────────────────────────────
+# Re-apply any change with:
+#   ./scripts/run.sh --machine x1 --tags thermal
+
+# ACPI hint to firmware/EC — drives fan curve + firmware power envelope.
+#   Allowed: low-power | balanced | performance
+thermal_platform_profile: low-power
+
+# RAPL package power caps (watts). PL1 = sustained, PL2 = brief burst.
+# Firmware default ceiling on this part is ~57W.
+thermal_rapl_pl1_w: 12
+thermal_rapl_pl2_w: 25
+
+# Intel iGPU (Xe2) max frequency cap (MHz). Hardware range RPn=800..RP0=2100.
+# Lower = cooler under GPU load; invisible for compositor/browser/video.
+thermal_igpu_max_mhz: 1100
+
+# HWP max P-state percent (0–100). Caps turbo ceiling without disabling it.
+thermal_cpu_max_perf_ac: 80
+thermal_cpu_max_perf_bat: 60
