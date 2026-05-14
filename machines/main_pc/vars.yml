@@ -16,14 +16,7 @@ wsl_agentd_port: "7878"
 windows_agentd_port: "7879"
 
 # ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
-# This box has the RTX 5090; it's the embedding-service host for the fleet.
-#
-# To turn on (one-time prep):
-#   1. Confirm `nvidia-smi` lists the GPU inside WSL.
-#   2. Pull / warm the model once: `docker compose -f /opt/mcsearch/embed.compose.yml pull`
-#   3. Set the var below to `server`, then:
-#        ./scripts/run.sh --machine main_pc --tags mcsearch
-#
-# Default is `skip` so a fresh re-provision doesn't accidentally drag in
-# CUDA + a multi-GB image pull.
+# This box has the RTX 5090 — it's the embedding-service host for the fleet.
+# Overrides the shared default of `client`. First provision pulls CUDA +
+# the embedding container; confirm `nvidia-smi` works inside WSL first.
 mcsearch_role: server

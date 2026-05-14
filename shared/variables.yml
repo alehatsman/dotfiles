@@ -11,11 +11,11 @@ EMAIL: aleh.atsman@gmail.com
 use_win32yank: false
 
 # ─── mcsearch — local semantic-search MCP helper ───────────────────────────
-# Per-machine override of mcsearch_role enables the component:
-#   server  — run the embedding service on this host's GPU (main_pc only)
-#   client  — install the MCP binary + SSH tunnel to the GPU host
-#   skip    — no-op (default)
-mcsearch_role: skip
+# Default role is client (install the binary + tunnel + MCP registration).
+# main_pc overrides to `server` to additionally run the embedding service
+# on its 5090. Machines that don't want mcsearch at all simply omit the
+# component import from their machines/<m>/index.yml.
+mcsearch_role: client
 
 # Inference engine running on the GPU host. vllm (default) supports
 # Qwen3-Embedding cleanly; tei is the simpler-but-narrower alternative.
