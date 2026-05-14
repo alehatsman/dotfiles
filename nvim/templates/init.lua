@@ -176,7 +176,7 @@ require('lazy').setup({
   'nvim-treesitter/nvim-treesitter-context',
 
   'zeertzjq/nvim-paste-fix',
-  'github/copilot.vim',
+  -- 'github/copilot.vim',
 
   {
     'iamcco/markdown-preview.nvim',
@@ -569,12 +569,12 @@ vim.keymap.set('n', '<leader>sx', '<cmd>Inspect<CR>')
 ---------------------------------------------
 -- Copilot
 ---------------------------------------------
-vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
-vim.g.copilot_no_tab_map = true
-do
-  local copilot_node = vim.fn.expand('~/.nvm/versions/node/v22.21.0/bin/node')
-  vim.g.copilot_node_command = (vim.fn.executable(copilot_node) == 1) and copilot_node or 'node'
-end
+-- vim.api.nvim_set_keymap('i', '<C-j>', 'copilot#Accept()', { silent = true, script = true, expr = true })
+-- vim.g.copilot_no_tab_map = true
+-- do
+--   local copilot_node = vim.fn.expand('~/.nvm/versions/node/v22.21.0/bin/node')
+--   vim.g.copilot_node_command = (vim.fn.executable(copilot_node) == 1) and copilot_node or 'node'
+-- end
 
 ---------------------------------------------
 -- Minimap
