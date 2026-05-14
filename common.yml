@@ -5,11 +5,10 @@
 # Anything OS-conditional (apt vs brew vs pacman, macOS defaults, hyprland,
 # wsl) lives outside this file — entries own that.
 
-# Make sure mooncake's preset library is available locally. The first
-# `use:` step in this file (Install Python via pyenv) needs ~/.mooncake/presets
-# populated; mooncake's binary doesn't bundle them today. Clone-or-pull
-# the mooncake source and symlink its presets/ dir into the per-user
-# search path. Idempotent.
+# Make sure mooncake's preset library is available locally. Subsequent
+# `use:` steps need ~/.mooncake/presets populated; mooncake's binary
+# doesn't bundle them today. Clone-or-pull the mooncake source and
+# symlink its presets/ dir into the per-user search path. Idempotent.
 - name: Ensure mooncake preset library is installed
   shell: |
     set -e
@@ -18,10 +17,12 @@
     # Fail fast instead of hanging on a credential prompt when run from a
     # non-interactive context (mooncake's shell action has no TTY).
     export GIT_TERMINAL_PROMPT=0
-    # Use the marker file as the "installed" check — a half-cloned $SRC
-    # (e.g. left over by a killed run) has .git but no presets/python.
-    # The pull branch is silent on failure, so .git alone isn't enough.
-    if [ ! -e "$SRC/presets/python/preset.yml" ]; then
+    # Use `mise/preset.yml` as the marker — the current mooncake presets/
+    # dir only ships a small library (mise, docker, fzf, jq, k8s-tools…).
+    # Older presets (python, rust, go, java) moved to presets-archive
+    # upstream; this dotfile installs language toolchains directly via
+    # the package manager / mise instead of via `use:` on those.
+    if [ ! -e "$SRC/presets/mise/preset.yml" ]; then
       rm -rf "$SRC"
       mkdir -p "$(dirname "$SRC")"
       # SSH URL — the mooncake repo may be private; HTTPS would require
@@ -34,7 +35,7 @@
     mkdir -p "$(dirname "$LINK")"
     # ln -sfn replaces dangling/old symlinks atomically.
     ln -sfn "$SRC/presets" "$LINK"
-    test -e "$LINK/python/preset.yml" || { echo "preset library missing python/"; exit 1; }
+    test -e "$LINK/mise/preset.yml" || { echo "preset library missing mise/"; exit 1; }
   tags: [core, presets]
 
 - name: Rename ~/Projects to ~/projects (lowercase convention)
@@ -58,53 +59,82 @@
 - import: ./git/main.yml
   tags: [core, git]
 
-- name: Install Python via pyenv
-  use:
-    name: python
-    with:
-      version: "3.12.12"
-      install_virtualenv: true
+# Python 3 install via the system package manager. Was previously the
+# `python` preset (pyenv-based version pinning), now archived upstream.
+# For pinned-version workflows on top of this, use mise (Install mise
+# elsewhere in this stack) and `mise install python@<version>`.
+- name: Install Python 3
+  shell: |
+    set -e
+    # Already provisioned?
+    if command -v python3 >/dev/null 2>&1 \
+       && command -v pip3 >/dev/null 2>&1 \
+       && python3 -c "import venv" >/dev/null 2>&1; then
+      exit 0
+    fi
+    if command -v apt-get >/dev/null 2>&1; then
+      sudo apt-get update -qq
+      sudo apt-get install -y python3 python3-pip python3-venv
+    elif command -v brew >/dev/null 2>&1; then
+      brew install python
+    elif command -v pacman >/dev/null 2>&1; then
+      sudo pacman -S --noconfirm --needed python python-pip
+    else
+      echo "no supported package manager (apt/brew/pacman)" >&2
+      exit 1
+    fi
   tags: [dev, python]
 
+# Rust via rustup (the canonical installer). The `--no-modify-path` keeps
+# our shell init untouched — the cargo bin dir is added by zsh config.
 - name: Install Rust toolchain
-  use:
-    name: rust
-    with:
-      toolchain: stable
-      profile: default
+  shell: |
+    set -e
+    if command -v rustup >/dev/null 2>&1; then
+      rustup show >/dev/null && exit 0
+    fi
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+      sh -s -- -y --default-toolchain stable --profile default --no-modify-path
   tags: [dev, rust]
 
 - name: Install Go toolchain
-  use:
-    name: go
-    with:
-      version: "latest"
+  shell: |
+    set -e
+    if command -v go >/dev/null 2>&1; then exit 0; fi
+    if command -v apt-get >/dev/null 2>&1; then
+      sudo apt-get update -qq
+      sudo apt-get install -y golang-go
+    elif command -v brew >/dev/null 2>&1; then
+      brew install go
+    elif command -v pacman >/dev/null 2>&1; then
+      sudo pacman -S --noconfirm --needed go
+    else
+      echo "no supported package manager" >&2; exit 1
+    fi
   tags: [dev, golang]
 
 - name: Install Java JDK
-  use:
-    name: java
-    with:
-      version: "21"
-      set_java_home: true
+  shell: |
+    set -e
+    if command -v javac >/dev/null 2>&1; then exit 0; fi
+    if command -v apt-get >/dev/null 2>&1; then
+      sudo apt-get update -qq
+      sudo apt-get install -y openjdk-21-jdk
+    elif command -v brew >/dev/null 2>&1; then
+      brew install openjdk@21
+    elif command -v pacman >/dev/null 2>&1; then
+      sudo pacman -S --noconfirm --needed jdk21-openjdk
+    else
+      echo "no supported package manager" >&2; exit 1
+    fi
   tags: [dev, java]
 
-- name: Install Clojure
-  use:
-    name: clojure
-  tags: [dev, clojure]
-
+# Clojure and fzf are listed in packages/ubuntu_packages.yml / darwin_packages.yml
+# and get installed by the import: ./packages/main.yml step above. No
+# separate `use:` blocks needed — those moved to presets-archive.
 - name: Deploy Clojure configs
   import: ./clojure/config.yml
   tags: [dev, clojure, config]
-
-- name: Install fzf fuzzy finder
-  use:
-    name: fzf
-    with:
-      install_shell_extensions: true
-      install_vim_plugin: false
-  tags: [tools, fzf]
 
 - import: ./zsh/main.yml
   tags: [core, shell]
