@@ -521,6 +521,11 @@ vim.keymap.set('n', '<c-k>', '<c-w>k')
 vim.keymap.set('n', '<c-l>', '<c-w>l')
 vim.keymap.set('n', '<c-w>o', '<c-w><c-o>')
 
+-- Split creation (mirrors tmux <prefix> v / s)
+vim.keymap.set('n', '<leader>wv', ':vsplit<CR>')
+vim.keymap.set('n', '<leader>ws', ':split<CR>')
+vim.keymap.set('n', '<leader>wq', ':close<CR>')
+
 -- Splits resizing
 vim.keymap.set('', '<A-h>', '<C-w><')
 vim.keymap.set('', '<A-j>', '<C-W>+')
@@ -679,6 +684,9 @@ wk.add({
   { "<c-j>", desc = "Window down" },
   { "<c-l>", desc = "Window right" },
   { "<c-w>o", desc = "Only this window" },
+  { "<leader>wv", desc = "Split vertical" },
+  { "<leader>ws", desc = "Split horizontal" },
+  { "<leader>wq", desc = "Close split" },
 
   -- Window resizing
   { "<A-h>", desc = "Resize narrower" },
