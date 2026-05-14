@@ -58,6 +58,21 @@
   retry_delay: 10s
   tags: [nvim, plugins]
 
+# vim-go is lazy-loaded on Go filetype, so it prompts to run :GoInstallBinaries
+# the first time a .go file is opened. Do it here so users never see the prompt.
+# Opening a stub .go file triggers vim-go via FileType; :GoInstallBinaries is
+# idempotent (skips binaries already present).
+- name: Pre-install vim-go binaries (gopls, goimports, ...)
+  shell: |
+    set -e
+    command -v go >/dev/null 2>&1 || { echo "go not installed, skipping"; exit 0; }
+    tmp=$(mktemp --suffix=.go)
+    echo 'package main' > "$tmp"
+    nvim --headless "$tmp" "+GoInstallBinaries" +qa
+    rm -f "$tmp"
+  timeout: 15m
+  tags: [nvim, golang]
+
 - import: ./copilot.yml
   tags: [nvim, copilot]
 
