@@ -15,6 +15,9 @@
     set -e
     SRC=$HOME/.mooncake-src
     LINK=$HOME/.mooncake/presets
+    # Fail fast instead of hanging on a credential prompt when run from a
+    # non-interactive context (mooncake's shell action has no TTY).
+    export GIT_TERMINAL_PROMPT=0
     if [ ! -d "$SRC/.git" ]; then
       mkdir -p "$(dirname "$SRC")"
       git clone --depth=1 https://github.com/alehatsman/mooncake.git "$SRC"
