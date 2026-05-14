@@ -60,7 +60,20 @@ fi
 if [[ -n "$PLAN_ONLY" ]]; then
   CMD="mooncake plan -c $CONFIG -v $VARS_BASE -v $VARS_MACHINE $TAGS"
 else
-  CMD="mooncake apply -c $CONFIG -v $VARS_BASE -v $VARS_MACHINE -K $TAGS"
+  # Decide whether to pass -K (prompt for sudo password). Mooncake reads the
+  # password from /dev/tty, which fails in non-interactive shells (and bogus
+  # SUDO_ASKPASS paths trip it earlier). Skip it when no step actually needs
+  # root so single-tag deploys like `--tags zsh` don't demand a password.
+  BECOME_FLAG="-K"
+  if command -v jq >/dev/null 2>&1; then
+    ROOT_STEPS=$(mooncake plan -c "$CONFIG" -v "$VARS_BASE" -v "$VARS_MACHINE" $TAGS --format json 2>/dev/null \
+      | jq '[.steps[] | select((.as_user == "root") and (.skipped != true))] | length' 2>/dev/null)
+    if [[ "$ROOT_STEPS" =~ ^[0-9]+$ ]] && [[ "$ROOT_STEPS" -eq 0 ]]; then
+      BECOME_FLAG=""
+      echo "(no root steps in scope — skipping -K)"
+    fi
+  fi
+  CMD="mooncake apply -c $CONFIG -v $VARS_BASE -v $VARS_MACHINE $BECOME_FLAG $TAGS"
 fi
 
 echo "Running: $CMD"
