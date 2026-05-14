@@ -25,13 +25,7 @@ thermal_cpu_max_perf_ac: 80
 thermal_cpu_max_perf_bat: 60
 
 # ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
-# x1 is a client; the embedding service runs on main_pc.
-#
-# To turn on (one-time prep):
-#   1. Add a `Host main_pc-wsl` entry to ~/.ssh/config that points at
-#      <main_pc-lan-ip>:2222 with your key — `ssh main_pc-wsl true` must
-#      succeed non-interactively before mcsearch-tunnel.service can start.
-#   2. Set the var below to `client`, then:
-#        ./scripts/run.sh --machine x1 --tags mcsearch
-#
-# mcsearch_role: client
+# Inherits mcsearch_role=client from shared/variables.yml. Prerequisite:
+# a non-interactive `ssh main_pc-wsl true` must succeed (configure the
+# `Host main_pc-wsl` alias in ~/.ssh/config pointing at the WSL :2222),
+# otherwise mcsearch-tunnel.service won't come up.

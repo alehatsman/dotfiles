@@ -2,10 +2,15 @@
 # Component-local defaults. Override at the machine level via vars.yml.
 # Cross-machine defaults live in shared/variables.yml.
 
-# Where the built binary lands. The component clones the upstream repo
-# (mcsearch_src_url) into ~/.mcsearch-src and builds from there.
+# The component clones mcsearch_src_url into mcsearch_src_dir and builds.
+# Path lives under ~/.local/share/ to make "this is mooncake's checkout —
+# don't hack here" obvious. Keep dev checkouts in ~/projects/<repo>/ so
+# mooncake's git.clone update:true (which refuses divergent local commits)
+# trips on accidents, not on intentional dev work.
 mcsearch_src_url: "git@github.com:alehatsman/mcsearch.git"
-mcsearch_src_dir: "~/.mcsearch-src"
+# Fully-resolved path (not "~/...") — shell heredocs quote the var and
+# bash won't expand tilde inside quotes; the resulting `cd "~/..."` fails.
+mcsearch_src_dir: "{{ user_home }}/.local/share/mcsearch-src"
 mcsearch_bin_path: "/usr/local/bin/mcsearch"
 
 # Server-side container image tag for the embedding engine. The vLLM

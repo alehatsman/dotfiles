@@ -1,20 +1,15 @@
 ---
 # mcsearch — local semantic-search MCP helper for Claude Code.
 #
-# Role-gated:
-#   mcsearch_role=skip    no-op (default; set in shared/variables.yml)
+# Role:
 #   mcsearch_role=client  install the Go binary + register MCP + SSH tunnel
 #   mcsearch_role=server  additionally bring up the embedding service in WSL
 #
+# Default is client (see shared/variables.yml); main_pc overrides to server.
+# Machines that don't want mcsearch at all simply omit the import line.
 # See components/mcsearch/server.yml for server-side steps.
 
 - vars.load: ./variables.yml
-
-- name: "mcsearch — role=skip; nothing to do"
-  log:
-    msg: "mcsearch_role=skip on this machine; component is a no-op"
-  when: mcsearch_role == 'skip'
-  tags: [mcsearch]
 
 # ───────────────── CLIENT (and server — server is a superset) ──────────────
 
@@ -24,34 +19,42 @@
       echo "go is not installed; expected components/languages to have provided it"
       exit 1
     fi
-  when: mcsearch_role != 'skip'
   tags: [mcsearch, build]
 
 - name: "Clone or update mcsearch source"
+  # update:true is safe here because mcsearch_src_dir is under
+  # ~/.local/share/ — kept distinct from any dev checkout in ~/projects/.
+  # If somehow this checkout diverges, mooncake refuses with a clear error
+  # instead of silently trampling work.
   git.clone:
     repo: "{{ mcsearch_src_url }}"
     dest: "{{ mcsearch_src_dir }}"
     update: true
-  when: mcsearch_role != 'skip'
   tags: [mcsearch, build]
 
-# {{ mcsearch_src_dir }} is `~/.mcsearch-src` and mooncake expands `~` for
-# its own action paths (above), but bash inside a quoted shell scalar does
-# not expand a literal `~`. Use $HOME inside shell steps to stay portable.
+# Both build + install are skipped when the installed binary's sidecar SHA
+# matches the source HEAD — otherwise every apply rebuilds and re-installs
+# and plan-mode reports a change every run. Force rebuild via:
+#   rm /usr/local/bin/mcsearch{,.sha} && ./scripts/run.sh -m <m> --tags mcsearch
+
 - name: "Build mcsearch binary"
   shell: |
-    cd "$HOME/.mcsearch-src"
+    cd "{{ mcsearch_src_dir }}"
     go build -trimpath -ldflags "-s -w" -o ./mcsearch ./cmd/mcsearch
-  when: mcsearch_role != 'skip'
+  unless_command: |
+    test -x {{ mcsearch_bin_path }} && \
+      [ "$(cat {{ mcsearch_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ mcsearch_src_dir }} rev-parse HEAD 2>/dev/null)" ]
   tags: [mcsearch, build]
 
 - name: "Install mcsearch to {{ mcsearch_bin_path }}"
-  # User-context shell so $HOME resolves to the calling user; sudo is
-  # invoked just for the install step. Matches components/claude's
-  # claude-autoapprove pattern.
   shell: |
-    sudo install -m 0755 "$HOME/.mcsearch-src/mcsearch" "{{ mcsearch_bin_path }}"
-  when: mcsearch_role != 'skip'
+    install -m 0755 "{{ mcsearch_src_dir }}/mcsearch" "{{ mcsearch_bin_path }}"
+    git -C "{{ mcsearch_src_dir }}" rev-parse HEAD > "{{ mcsearch_bin_path }}.sha"
+    chmod 0644 "{{ mcsearch_bin_path }}.sha"
+  as_user: root
+  unless_command: |
+    test -x {{ mcsearch_bin_path }} && \
+      [ "$(cat {{ mcsearch_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ mcsearch_src_dir }} rev-parse HEAD 2>/dev/null)" ]
   tags: [mcsearch, build]
 
 - name: "Register mcsearch with Claude Code (user scope)"
@@ -60,20 +63,17 @@
   shell: |
     claude mcp remove mcsearch --scope user 2>/dev/null || true
     claude mcp add --scope user mcsearch -- {{ mcsearch_bin_path }} mcp
-  when: mcsearch_role != 'skip'
   tags: [mcsearch, claude]
 
 - name: "Verify mcsearch is on $PATH"
   assert:
     command:
       cmd: which mcsearch
-  when: mcsearch_role != 'skip'
   tags: [mcsearch, verify]
 
 - name: "Verify mcsearch is registered with Claude Code"
   shell: claude mcp list | grep -q '^mcsearch'
   changed_when: false
-  when: mcsearch_role != 'skip'
   tags: [mcsearch, verify]
 
 # ───────────────── CLIENT-ONLY TUNNEL (Linux + macOS) ──────────────────────

@@ -9,6 +9,5 @@ wsl_ssh_port: "2222"
 wsl_agentd_port: "7878"
 
 # ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
-# mini_pc has no discrete GPU; it's a client of the embedding service that
-# runs on main_pc. Same activation steps as x1.
-# mcsearch_role: client
+# No discrete GPU here — inherits mcsearch_role=client from shared. Same
+# `Host main_pc-wsl` SSH-alias prerequisite as x1 / mac.
