@@ -3,18 +3,6 @@ system_prompt: >
   Produce concise, structured, implementation-ready outputs.
   Avoid filler.
 
-agent: strict-engineer
-
-agents:
-  strict-engineer:
-    description: Minimal implementation-focused outputs
-    prompt: >
-      Respond in markdown.
-      Use code blocks for commands.
-      No filler.
-      Follow standard conventional commit format
-      unless explicitly instructed otherwise.
-
 allowed_tools:
   - Bash(git:*)
   - Edit
