@@ -515,10 +515,25 @@ fi
 # vi mode
 bindkey -v
 
-# Yank to the system clipboard
+# Make Esc-to-vicmd feel instant and show the current mode via cursor shape.
+KEYTIMEOUT=1
+function zle-keymap-select {
+  case $KEYMAP in
+    vicmd)      printf '\e[2 q' ;;  # block — normal mode
+    main|viins) printf '\e[6 q' ;;  # bar   — insert mode
+  esac
+}
+zle -N zle-keymap-select
+printf '\e[6 q'
+
+# Yank to the system clipboard (pbcopy on macOS, wl-copy on Wayland)
 function vi-yank-xclip {
     zle vi-yank
-   echo "$CUTBUFFER" | pbcopy -i
+    if [[ "$OSTYPE" == darwin* ]]; then
+      printf '%s' "$CUTBUFFER" | pbcopy
+    else
+      printf '%s' "$CUTBUFFER" | wl-copy
+    fi
 }
 
 zle -N vi-yank-xclip
