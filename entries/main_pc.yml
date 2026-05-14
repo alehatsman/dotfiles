@@ -5,9 +5,22 @@
 #   1. Windows host (from an Administrator PowerShell):
 #        mooncake.exe apply -c platforms/windows/bootstrap.yml \
 #                           -v variables.yml -v vars/main_pc.yml
-#   2. Inside WSL Ubuntu:
+#   2. Inside WSL Ubuntu, either:
 #        mooncake apply -c entries/main_pc.yml \
 #                       -v variables.yml -v vars/main_pc.yml -K
+#      or via the daemon:
+#        curl --unix-socket /run/user/$UID/mooncake/agentd.sock \
+#             -d '{"plan_path":"<abs>/entries/main_pc.yml",
+#                  "base_dir":"<abs>"}' http://localhost/v1/runs
+#
+# The vars: step below pins machine-identity values so the agentd path
+# (which doesn't accept -v files yet) works without an external vars
+# file. CLI invocations get the same values via vars/main_pc.yml.
+
+- vars:
+    is_wsl: true
+    wsl_distro: "Ubuntu-24.04"
+    wsl_ssh_port: "2222"
 
 - import: ../common.yml
 
