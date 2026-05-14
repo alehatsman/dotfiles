@@ -1,8 +1,8 @@
-# Keybindings — Unified Vim-style Plan
+# Keybindings — Unified Vim-style Reference
 
-A cross-tool view of every keybinding the dotfiles define, plus a proposal
-for tightening them into one coherent vim-style scheme. The single-tool
-cheatsheets (`nvim.md`, `tmux.md`) stay authoritative for their own tools.
+A cross-tool view of every keybinding the dotfiles define, plus the
+remaining proposals for tightening them. The single-tool cheatsheets
+(`nvim.md`, `tmux.md`) stay authoritative for their own tools.
 
 ## The five layers
 
@@ -26,7 +26,7 @@ hierarchy is a candidate for cleanup.
 
 ## Motion across layers (the vim-key core)
 
-This is already mostly consistent and is the strongest part of the setup:
+The strongest part of the setup — consistent across every layer:
 
 | Combo | Layer | Action |
 | --- | --- | --- |
@@ -37,12 +37,11 @@ This is already mostly consistent and is the strongest part of the setup:
 | `Super+h/j/k/l` | Hyprland | focus left / down / up / right window |
 | `Super+Shift+h/j/k/l` | Hyprland | move window left / down / up / right |
 | `Super+Alt+h/j/k/l` | Hyprland | resize: narrower / taller / shorter / wider |
-| `Alt+h/j/k/l` | Nvim | resize split: **wider / taller / shorter / narrower** ⚠ |
+| `Alt+h/j/k/l` | Nvim | resize split: narrower / taller / shorter / wider |
 | `Alt+h/j/k/l` | Tmux | resize pane 3 cells in that direction |
 
-⚠ Nvim's resize binds are **inverted** compared to Hyprland — `Alt+H`
-makes the nvim split *wider*, but `Super+Alt+H` makes the Hyprland window
-*narrower*. See [Issue R-1](#r-1-flip-nvim-resize-binds).
+All three resize tiers now agree: `l` extends right, `h` contracts;
+`j` extends down, `k` contracts.
 
 ---
 
@@ -53,7 +52,8 @@ makes the nvim split *wider*, but `Super+Alt+H` makes the Hyprland window
 Window / split
 - `Ctrl+h/j/k/l` — move focus (vim-tmux-navigator falls through to tmux)
 - `Ctrl+W o` — only this window
-- `Alt+h/j/k/l` — resize (see ⚠ above)
+- `Alt+h/j/k/l` — resize (narrower / taller / shorter / wider)
+- `<leader>wv / ws / wq` — vsplit / split / close
 
 Tabs (`<leader>t…`)
 - `tt` new · `tn` next · `tp` prev · `tc` close · `to` only · `th/tl` move
@@ -99,15 +99,20 @@ Panes
 - `Alt+h/j/k/l` — resize 3 cells
 
 Copy mode (vi)
-- `<prefix> [` enter · `v` begin selection · `y` copy to system clipboard · `<prefix> p` paste
+- `<prefix> [` enter · `v` begin selection
+- `y` — tmux-yank handles, picks `pbcopy` / `wl-copy` / `xclip` per OS
+- `Enter` — same as `y` (relies on tmux-sensible's `set-clipboard on` + OSC52)
+- `<prefix> p` paste from tmux buffer
 - `h/j/k/l`, `w/b/e`, `gg/G`, `/` — vim motions in scrollback
 
 ### Zsh — `bindkey -v` (vi mode)
 
-- `Ctrl+R` — history (default) · `Ctrl+Space` — fzf history widget
-- `Ctrl+F` — fzf file widget · `Ctrl+N` — accept autosuggestion
+- Cursor shape switches **bar ↔ block** on insert/normal mode change; `KEYTIMEOUT=1` so Esc-to-vicmd is instant
+- `Ctrl+R` — fzf history (oh-my-zsh fzf plugin default)
+- `Ctrl+P` — fzf file widget
+- `Ctrl+N` — accept autosuggestion
 - `Up / Down` — history substring search
-- vicmd `y` — yank line to system clipboard (xclip)
+- vicmd `y` — yank line to system clipboard (cross-platform: `pbcopy` on macOS, `wl-copy` elsewhere; no trailing newline)
 - `Alt+B / Alt+F / Alt+D / Alt+.` — emacs-style word nav even in vi-mode
 
 ### Hyprland — modifier `Super`
@@ -148,103 +153,48 @@ macOS deploy (mac)
 ## Where it's already good
 
 1. **`h j k l` is universal** — motion in nvim, tmux copy-mode, zsh vicmd, and hyprland focus all behave the same.
-2. **vim-tmux-navigator** unifies `Ctrl+h/j/k/l` across nvim and tmux without conflict — the kind of plumbing every tier deserves.
-3. **`Shift` = move** convention holds in Hyprland (`Super+Shift+H` moves windows) and Tmux window swap (`Shift+Left/Right`).
-4. **Numerics are parallel**: `Space+N` jumps to tab N in nvim; `Super+N` jumps to workspace N in Hyprland. Same mental model, different modifier per layer.
-5. **Vi mode in shell** matches the editor — yanking, motion, and `.` all transfer.
-6. **Copy/paste** is now uniform inside terminals after the recent Alacritty change: `Ctrl+C / Ctrl+V` everywhere, `Super+C` for interrupt.
+2. **Resize is universal** — `Alt+h/j/k/l` in nvim, tmux, and `Super+Alt+h/j/k/l` in Hyprland all extend in the direction of the key (`l` rightward, `j` downward).
+3. **vim-tmux-navigator** unifies `Ctrl+h/j/k/l` across nvim and tmux without conflict.
+4. **`Shift` = move** convention holds in Hyprland (`Super+Shift+H` moves windows) and Tmux window swap (`Shift+Left/Right`).
+5. **Numerics are parallel**: `Space+N` jumps to tab N in nvim; `Super+N` jumps to workspace N in Hyprland. Same mental model, different modifier per layer.
+6. **Vi mode in shell** matches the editor — yanking, motion, and `.` all transfer. Cursor shape advertises the current mode; mode-switching is instant.
+7. **Copy/paste** is uniform inside terminals: `Ctrl+C / Ctrl+V` in Alacritty, `Super+C` for interrupt; tmux copy-mode `y` and `Enter` both reach the system clipboard; zsh vicmd `y` reaches the same clipboard; nvim `"+y` reaches the same clipboard.
+8. **Split creation feels the same** in tmux (`<prefix> v / s`) and nvim (`<leader>wv / ws`).
+9. **Cross-platform clipboard** — tmux-yank, the zsh yank function, and the keybindings doc itself all auto-detect `pbcopy` vs `wl-copy` per machine.
 
 ---
 
-## Inconsistencies and proposals
+## Remaining proposals
 
-Each item below is independent — adopt or skip individually.
-
-### R-1: Flip nvim resize binds to match Hyprland
-
-Today:
-- Nvim: `Alt+H` = wider, `Alt+L` = narrower (left key grows, right key shrinks)
-- Hyprland: `Super+Alt+H` = narrower, `Super+Alt+L` = wider (left key shrinks, right key grows)
-
-Hyprland's mapping is the more common tiling-WM convention (`l` extends to the right). Flip nvim to match.
-
-```vim
-" nvim/templates/init.lua — change these four lines
-" before:
-"   Alt-H → :vertical resize +2   (wider)
-"   Alt-L → :vertical resize -2   (narrower)
-" after:
-"   Alt-H → :vertical resize -2   (narrower)
-"   Alt-L → :vertical resize +2   (wider)
-```
-
-Tmux's `Alt+h/j/k/l` resize already matches Hyprland (the key direction *is* the resize direction), so this change brings nvim into line with both.
-
-### R-2: Align FZF chords across nvim and zsh
-
-Today:
-- Nvim: `Ctrl+P` files, `Ctrl+F` grep
-- Zsh:   `Ctrl+F` files, `Ctrl+Space` history
-
-The same chord (`Ctrl+F`) opens *files* in zsh but does *grep* in nvim. Suggest the canonical fzf trio everywhere:
-
-| Chord | Nvim | Zsh |
-| --- | --- | --- |
-| `Ctrl+P` | files (already) | **files (new)** |
-| `Ctrl+F` | grep (already) | **grep — over history? skip** |
-| `Ctrl+R` | (not used) | history (zsh default) |
-
-Concrete `.zshrc.j2` change: rebind the fzf file widget from `Ctrl+F` to `Ctrl+P`, leave history on `Ctrl+R` (zsh's default behaviour). Drop `Ctrl+Space` for fzf-history — it overlaps with nvim's code-actions chord and is non-discoverable.
+Each item independent. R-numbers carry through from the original plan for git-history traceability; H/M/L items came from the second-pass review.
 
 ### R-3: Change tmux prefix to `Ctrl+Space`
 
 `Ctrl+T` is fine, but it (a) shadows readline's `transpose-chars` for anyone who occasionally uses emacs mode, and (b) doesn't telegraph "tmux is in front of me." `Ctrl+Space` is the most common alternative for vim-flavoured tmux setups (no shell conflicts, single chord, easy to chord with letters).
 
-Lower priority — only worth it if `Ctrl+T` has ever bitten. Otherwise leave it.
+Lower priority — only worth it if `Ctrl+T` has ever bitten.
 
-### R-4: Add `<leader>w…` window splits in nvim
-
-Nvim has no shortcut for `:vsp` / `:sp`; you fall back to `:` commands or to `Ctrl+W v / s`. To match tmux's `<prefix> v / s`:
-
-```
-<leader>wv → :vsplit
-<leader>ws → :split
-<leader>wo → <C-w>o   " already roughly covered by <C-w>o
-<leader>wq → :close
-```
-
-This makes "open a split" feel the same in tmux and nvim — both use `v` / `s` after a tier-leader.
-
-### R-5: Mirror Hyprland's workspace digits with tmux windows
+### R-5: Lock in tmux digit binds
 
 Today:
 - Nvim:     `<leader>1…9` → tab N
 - Hyprland: `Super+1…9` → workspace N
 - Tmux:     `<prefix> 0…9` (default) → window N
 
-This is already consistent in spirit but the tmux side relies on tmux's default. Worth a one-line confirmation in `.tmux.conf.j2` so it's not accidentally lost if someone rebinds `0…9`.
+Consistent in spirit, but the tmux side relies on tmux's default. Worth a comment in `.tmux.conf.j2` noting "1..9 must reach select-window" so nobody accidentally rebinds them.
 
 ### R-6: Claude Code — start a `keybindings.json`
 
-The user already runs `editorMode: vim`, which gets most of what matters in the prompt buffer. Beyond that, Claude Code supports a `~/.claude/keybindings.json` for TUI-level chords (submit key, accept/reject, plan mode, etc.).
+`editorMode: vim` covers the prompt buffer. Beyond that, Claude Code supports a `~/.claude/keybindings.json` for TUI-level chords (submit key, accept/reject, plan mode).
 
 Low-effort wins worth considering:
-- A chord for "send and keep working" (alternative submit) for long prompts.
-- A binding for `/plan` so plan mode is one keystroke from any state.
+- A non-Enter submit (Ctrl+Enter or similar) so Enter can stay "newline".
+- A chord for `/plan` so plan mode is one keystroke from any state.
+- A bind to dismiss/cancel a running turn that doesn't conflict with Alacritty's new `Super+C` semantics.
 
-The `keybindings-help` skill (`/keybindings-help` in Claude Code) documents the full surface — invoke once and pick the bindings that match the rest of the scheme.
+The `keybindings-help` skill (`/keybindings-help` in Claude Code) documents the surface — invoke once and pick.
 
-### R-7: Tmux copy-mode `Enter` should also yank
-
-Today only `y` copies in tmux copy mode; `Enter` is unbound. Most users hit Enter reflexively after selecting. Add:
-
-```
-bind-key -T copy-mode-vi Enter send-keys -X copy-pipe-and-cancel "xclip -in -selection clipboard"
-```
-
-(or `pbcopy` on macOS — match the existing `y` binding's command).
-
-### R-8: Standardise the "leader" mental model
+### R-8: Leader mental model in one paragraph
 
 A consistent way to describe each tier to muscle-memory:
 
@@ -253,36 +203,68 @@ A consistent way to describe each tier to muscle-memory:
 - **Editor (nvim):** `Space` then letter; `Tab` is localleader for ftplugin-only things.
 - **Claude Code TUI:** built-in vim mode — no leader beyond what nvim teaches.
 
-Worth a one-paragraph note pinned to the top of this doc once the layout above stabilises.
+Worth pinning to the top of this doc once the layout stabilises (or just leaving it here — the five-layer table at the top already conveys it).
+
+### M-1: Buffer cycling in nvim
+
+You have `<leader>tn`/`tp` for tabs but no buffer-cycle chord. If you ever open files without `:tabnew`, you're stuck doing `:bn`/`:bp`. Add:
+
+```lua
+vim.keymap.set('n', ']b', ':bnext<CR>')
+vim.keymap.set('n', '[b', ':bprev<CR>')
+```
+
+Matches the `]h`/`[h` (hunks) pattern.
+
+### M-2: Tmux paste-from-system-clipboard
+
+`<prefix> p` pastes from tmux's internal buffer. To paste from the *system* clipboard you have to use the terminal's paste chord. Add:
+
+```tmux
+bind P run-shell "tmux set-buffer \"$(wl-paste)\" && tmux paste-buffer"
+```
+
+With an `if-shell` Darwin branch using `pbpaste` (same shape as the late `@copy_cmd` we removed in H-3).
+
+### L-1: Tab as localleader is overloaded
+
+`<localleader> = Tab` collides conceptually with Tab-for-completion in insert mode and Tab-for-indent in normal mode. They're in separate modes so there's no actual conflict, but the mental model is muddy. Candidates: `,` (classic), `\\` (default), or just keep Space-localleader equal to Space-leader.
+
+Low priority — only matters in clojure/go ftplugin where localleader is actually used.
 
 ---
 
 ## Quick consistency table
 
-A snapshot of the proposed end state. Rows are *concepts*; columns are *layers*.
+A snapshot of the current state. Rows are *concepts*; columns are *layers*.
 
-| Concept | WM (Super) | Mux (`Prefix=…`) | Editor (Space leader) | Shell (vi) |
+| Concept | WM (Super) | Mux (Prefix=Ctrl+T) | Editor (Space leader) | Shell (vi) |
 | --- | --- | --- | --- | --- |
 | Move focus left/down/up/right | `Super+h/j/k/l` | `Ctrl+h/j/k/l` | `Ctrl+h/j/k/l` | `h/j/k/l` (vicmd) |
 | Move thing | `Super+Shift+h/j/k/l` | `Shift+Left/Right` | (rare) | — |
-| Resize | `Super+Alt+h/j/k/l` | `Alt+h/j/k/l` | `Alt+h/j/k/l` *(post R-1)* | — |
-| New split / window | (auto-tile) | `Prefix v / s` | `Space wv / ws` *(post R-4)* | — |
+| Resize | `Super+Alt+h/j/k/l` | `Alt+h/j/k/l` | `Alt+h/j/k/l` | — |
+| New split / window | (auto-tile) | `Prefix v / s` | `Space wv / ws` | — |
 | Switch to N | `Super+N` | `Prefix N` | `Space N` | — |
-| Find files | — | — | `Ctrl+P` | `Ctrl+P` *(post R-2)* |
+| Find files | — | — | `Ctrl+P` | `Ctrl+P` |
 | Find text | — | — | `Ctrl+F` | — |
 | History | — | — | — | `Ctrl+R` |
 | Copy selection | — | copy-mode `y` / `Enter` | `y` | vicmd `y` |
-| Paste | `Super+V` (clipboard hist) | `Prefix p` | `p` | `Ctrl+V` (insert raw) |
+| Paste | `Super+V` (clipboard hist) | `Prefix p` (internal) / *M-2 (system)* | `p` | `Ctrl+V` (insert raw) |
 | Interrupt (TUI) | — | — | — | `Super+C` |
 
 ---
 
-## Recommended adoption order
+## Suggested adoption order for the remainder
 
-1. **R-1 (flip nvim resize)** — one-line change, removes the only daily-pain inconsistency.
-2. **R-7 (tmux Enter to copy)** — one-line change, matches reflex.
-3. **R-2 (fzf chords)** — small change, gives `Ctrl+P` a single global meaning.
-4. **R-4 (nvim split leader)** — small additive change, no breakage.
-5. **R-5 (confirm tmux digit binds)** — defensive.
-6. **R-8 (document leaders)** — paragraph at the top of this file.
-7. **R-3 (tmux prefix swap)** and **R-6 (Claude keybindings.json)** — opt-in, do only if pain shows up.
+1. **M-1** (buffer cycling) — three-line additive change, mirrors `]h`/`[h`.
+2. **R-5** (lock in tmux digits) — defensive comment, no functional change.
+3. **M-2** (tmux paste from system clipboard) — small additive change.
+4. **R-8** (leader mental model) — paragraph; arguably already covered by the five-layer table.
+5. **R-6** (Claude `keybindings.json`) — when a long prompt pushes you to want a non-Enter submit.
+6. **R-3** (tmux prefix swap) and **L-1** (localleader change) — opt-in, do only if pain shows up.
+
+---
+
+## Changelog
+
+- **2026-05** — Implemented R-1, R-2, R-4, R-7, H-1, H-2, H-3 and the zsh yank cross-platform fix. See commits `ae0041c`, `cdef02e`, `2b8e145`, `dcf59fd`, `57c16d4`, `e379971`.
