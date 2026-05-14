@@ -60,8 +60,10 @@ export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 export VISUAL="nvim"
 export EDITOR="nvim"
 
-# GUI sudo prompt for non-TTY contexts (editor terminals, mooncake -K, sudo -A)
-if [[ "$(uname)" == "Linux" ]]; then
+# GUI sudo prompt for non-TTY contexts (editor terminals, mooncake -K, sudo -A).
+# Only set when the helper actually exists — it's deployed by the hyprland entry
+# (needs wofi), so non-Hyprland Linux boxes (WSL, headless) skip it.
+if [[ -x "$HOME/.local/bin/gui-askpass" ]]; then
   export SUDO_ASKPASS=$HOME/.local/bin/gui-askpass
 fi
 
