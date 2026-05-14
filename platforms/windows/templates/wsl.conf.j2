@@ -4,3 +4,9 @@ systemd=true
 [network]
 generateHosts=true
 generateResolvConf=true
+
+# Without [user] default=..., wsl.exe defaults to root for the distro. Set
+# it explicitly so `wsl -d <distro> -- ...` (and the scheduled-task SSH
+# bootstrap) land on the expected user account.
+[user]
+default={{ username }}
