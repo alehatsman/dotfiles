@@ -115,8 +115,7 @@ tooltip label {
     animation: blink 0.5s infinite alternate;
 }
 
-#network,
-#bluetooth {
+#network {
     color: #75715e;
 }
 
@@ -125,6 +124,11 @@ tooltip label {
 #network.linked,
 #bluetooth.connected {
     color: #a6e22e;
+}
+
+#bluetooth.disabled,
+#bluetooth.off {
+    color: #75715e;
 }
 
 #pulseaudio.muted {
