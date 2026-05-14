@@ -115,7 +115,7 @@
 
 - name: Create screenshots directory
   file.write:
-    path: ~/Pictures/screenshots
+    path: ~/pictures/screenshots
     state: directory
   tags: [hyprland, config]
 

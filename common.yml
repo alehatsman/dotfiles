@@ -37,6 +37,14 @@
     test -e "$LINK/python/preset.yml" || { echo "preset library missing python/"; exit 1; }
   tags: [core, presets]
 
+- name: Rename ~/Projects to ~/projects (lowercase convention)
+  shell: |
+    if [ -d "$HOME/Projects" ] && [ ! -e "$HOME/projects" ]; then
+      mv "$HOME/Projects" "$HOME/projects"
+    fi
+  when: os == "linux"
+  tags: [core, home]
+
 - import: ./claude/main.yml
   tags: [core, claude]
 
