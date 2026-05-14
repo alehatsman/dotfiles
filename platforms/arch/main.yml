@@ -89,29 +89,23 @@
   as_user: root
   tags: [arch, system, packages]
 
-- name: Enable ollama service
-  shell: systemctl enable --now ollama
-  as_user: root
-  tags: [arch, system, packages]
-
 - name: Set default shell to zsh
   shell: chsh -s $(which zsh) {{ username }}
   as_user: root
   tags: [arch, system, packages]
 
-- name: Set TLP platform_profile to balanced
+- name: Set TLP platform_profile from vars
   file.write:
     path: /etc/tlp.d/01-platform-profile.conf
     state: file
     content: |
-      # Hold the firmware ACPI profile at "balanced" so the fan curve
-      # and power limits don't drift back to "performance" across boots
-      # or service restarts.
-      PLATFORM_PROFILE_ON_AC=balanced
-      PLATFORM_PROFILE_ON_BAT=balanced
+      # Hold the firmware ACPI profile across boots and TLP restarts.
+      # Value sourced from vars/<machine>.yml → thermal_platform_profile.
+      PLATFORM_PROFILE_ON_AC={{ thermal_platform_profile }}
+      PLATFORM_PROFILE_ON_BAT={{ thermal_platform_profile }}
     mode: '0644'
   as_user: root
-  tags: [arch, system, packages]
+  tags: [arch, system, packages, thermal]
 
 - name: Drop TLP cooling tweaks (capped turbo, deeper EPP, ASPM, runtime PM)
   file.write:
@@ -124,9 +118,9 @@
 
       # Cap clock ceiling — turbo still works but bounded.
       CPU_MIN_PERF_ON_AC=0
-      CPU_MAX_PERF_ON_AC=80
+      CPU_MAX_PERF_ON_AC={{ thermal_cpu_max_perf_ac }}
       CPU_MIN_PERF_ON_BAT=0
-      CPU_MAX_PERF_ON_BAT=60
+      CPU_MAX_PERF_ON_BAT={{ thermal_cpu_max_perf_bat }}
 
       # Tell HWP to prefer power over performance at every decision.
       CPU_ENERGY_PERF_POLICY_ON_AC=power
@@ -157,12 +151,12 @@
       NMI_WATCHDOG=0
     mode: '0644'
   as_user: root
-  tags: [arch, system, packages]
+  tags: [arch, system, packages, thermal]
 
 - name: Apply TLP config
   shell: tlp start
   as_user: root
-  tags: [arch, system, packages]
+  tags: [arch, system, packages, thermal]
 
 - name: Enable Intel HDA audio runtime power-save
   file.write:
@@ -196,24 +190,24 @@
   as_user: root
   tags: [arch, system, packages, bootloader]
 
-- name: Deploy intel-rapl-cap script (PL1=12W, PL2=25W)
+- name: Deploy intel-rapl-cap script
   file.write:
     path: /usr/local/bin/intel-rapl-cap
     state: file
     content: |
       #!/bin/sh
       # Cap Intel RAPL power limits — PL1 sustained, PL2 brief burst.
-      # 12W sustained keeps the fan at minimum; 25W burst preserves snap
-      # without ever letting the package draw 57W like firmware allows.
-      PL1_UW=12000000
-      PL2_UW=25000000
+      # Values come from vars/<machine>.yml at deploy time; firmware default
+      # ceiling on Ultra 7 255U is ~57W.
+      PL1_UW=$(({{ thermal_rapl_pl1_w }} * 1000000))
+      PL2_UW=$(({{ thermal_rapl_pl2_w }} * 1000000))
       RAPL=/sys/class/powercap/intel-rapl/intel-rapl:0
       [ -d "$RAPL" ] || exit 0
       echo "$PL1_UW" > "$RAPL/constraint_0_power_limit_uw" 2>/dev/null || true
       echo "$PL2_UW" > "$RAPL/constraint_1_power_limit_uw" 2>/dev/null || true
     mode: '0755'
   as_user: root
-  tags: [arch, system, packages, rapl]
+  tags: [arch, system, packages, rapl, thermal]
 
 - name: Deploy intel-rapl-cap.service (apply at boot)
   file.write:
@@ -232,7 +226,7 @@
       WantedBy=multi-user.target
     mode: '0644'
   as_user: root
-  tags: [arch, system, packages, rapl]
+  tags: [arch, system, packages, rapl, thermal]
 
 - name: Deploy intel-rapl-cap-resume.service (re-apply after suspend)
   file.write:
@@ -251,7 +245,7 @@
       WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
     mode: '0644'
   as_user: root
-  tags: [arch, system, packages, rapl]
+  tags: [arch, system, packages, rapl, thermal]
 
 - name: Enable and start intel-rapl-cap services
   shell: |
@@ -259,7 +253,78 @@
     systemctl enable --now intel-rapl-cap.service
     systemctl enable intel-rapl-cap-resume.service
   as_user: root
-  tags: [arch, system, packages, rapl]
+  tags: [arch, system, packages, rapl, thermal]
+
+- name: Deploy intel-gt-freq-cap script
+  file.write:
+    path: /usr/local/bin/intel-gt-freq-cap
+    state: file
+    content: |
+      #!/bin/sh
+      # Cap Intel iGPU max frequency for thermals. Value is templated from
+      # vars/<machine>.yml; on Lunar Lake Xe2 the hardware range is
+      # RPn=800..RP0=2100 MHz. Cap boost too — left uncapped, boost paths
+      # still spike to RP0.
+      CAP_MHZ={{ thermal_igpu_max_mhz }}
+      for card in /sys/class/drm/card*; do
+          [ -f "$card/gt_max_freq_mhz" ] || continue
+          echo "$CAP_MHZ" > "$card/gt_max_freq_mhz" 2>/dev/null || true
+          [ -f "$card/gt_boost_freq_mhz" ] && \
+              echo "$CAP_MHZ" > "$card/gt_boost_freq_mhz" 2>/dev/null || true
+          for gt in "$card"/gt/gt*; do
+              [ -f "$gt/rps_max_freq_mhz" ] || continue
+              echo "$CAP_MHZ" > "$gt/rps_max_freq_mhz" 2>/dev/null || true
+          done
+      done
+    mode: '0755'
+  as_user: root
+  tags: [arch, system, packages, igpu, thermal]
+
+- name: Deploy intel-gt-freq-cap.service (apply at boot)
+  file.write:
+    path: /etc/systemd/system/intel-gt-freq-cap.service
+    state: file
+    content: |
+      [Unit]
+      Description=Cap Intel iGPU max frequency for thermals
+      After=multi-user.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/intel-gt-freq-cap
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages, igpu, thermal]
+
+- name: Deploy intel-gt-freq-cap-resume.service (re-apply after suspend)
+  file.write:
+    path: /etc/systemd/system/intel-gt-freq-cap-resume.service
+    state: file
+    content: |
+      [Unit]
+      Description=Re-apply Intel iGPU freq cap after resume
+      After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/intel-gt-freq-cap
+
+      [Install]
+      WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages, igpu, thermal]
+
+- name: Enable and start intel-gt-freq-cap services
+  shell: |
+    systemctl daemon-reload
+    systemctl enable --now intel-gt-freq-cap.service
+    systemctl enable intel-gt-freq-cap-resume.service
+  as_user: root
+  tags: [arch, system, packages, igpu, thermal]
 
 - name: Remap CapsLock to Ctrl and keep in lowercase mode
   shell: |
