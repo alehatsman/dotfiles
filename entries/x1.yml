@@ -1,7 +1,8 @@
 ---
 # x1 — ThinkPad X1 Carbon, Arch Linux, Hyprland Wayland.
-# Run with:
-#   mooncake apply -c entries/x1.yml -v variables.yml -v vars/x1.yml -K
+
+- vars:
+    is_wsl: false
 
 - import: ../platforms/arch/main.yml
   tags: [arch, system, packages]

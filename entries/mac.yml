@@ -1,7 +1,8 @@
 ---
 # mac — macOS workstation. Homebrew + macOS defaults + dotfiles.
-# Run with:
-#   mooncake apply -c entries/mac.yml -v variables.yml -v vars/mac.yml -K
+
+- vars:
+    is_wsl: false
 
 - import: ../common.yml
 
