@@ -2,6 +2,9 @@
 networkingMode=mirrored
 dnsTunneling=true
 firewall=true
+# Never idle-shut-down the VM. Without this, WSL exits after ~60s with
+# no live process and sshd on :2222 disappears with it.
+vmIdleTimeout=-1
 
 [experimental]
 autoMemoryReclaim=gradual
