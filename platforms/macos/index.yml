@@ -1,4 +1,7 @@
 ---
+- import: ./packages.yml
+  tags: [macos, packages]
+
 - name: Make sure macos configuration is set
   shell: |
     # Disable window animations ('new window' scale effect)

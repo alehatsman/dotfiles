@@ -4,11 +4,33 @@
 - vars:
     is_wsl: false
 
-- import: ../common.yml
+- import: ../../shared/bootstrap.yml
 
-- name: Deploy Alacritty config
-  import: ../alacritty/config.yml
-  tags: [macos, terminal, config]
-
-- import: ../platforms/macos/main.yml
+- import: ../../platforms/macos/index.yml
   tags: [macos]
+
+# Cross-platform components
+- import: ../../components/claude/index.yml
+  tags: [core, claude]
+
+- import: ../../components/git/index.yml
+  tags: [core, git]
+
+- import: ../../components/languages/index.yml
+  tags: [dev, languages]
+
+- import: ../../components/clojure/index.yml
+  tags: [dev, clojure, config]
+
+- import: ../../components/zsh/index.yml
+  tags: [core, shell]
+
+- import: ../../components/tmux/index.yml
+  tags: [tools, tmux]
+
+- import: ../../components/nvim/index.yml
+  tags: [editor, nvim]
+
+# Terminal
+- import: ../../components/alacritty/index.yml
+  tags: [macos, terminal, config]

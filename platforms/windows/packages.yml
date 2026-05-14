@@ -9,7 +9,7 @@
   retries: 3
   retry_delay: 10s
 
-- name: Define basic packages
+- name: Define basic + app packages
   vars:
     basic_packages:
       - gnupg
@@ -17,8 +17,45 @@
       - curl
       - ca-certificates
       - apt-transport-https
-
-- vars.load: ./ubuntu_packages.yml
+    apps:
+      - gnupg
+      - curl
+      - clojure
+      - rlwrap
+      - make
+      - cmake
+      - dos2unix
+      - git
+      - graphviz
+      - htop
+      - imagemagick
+      - jq
+      - mosh
+      - nmap
+      - sshfs
+      - tldr
+      - tmux
+      - tor
+      - tree
+      - wget
+      - yamllint
+      - unzip
+      - neovim
+      - ripgrep
+      - nodejs
+      - yarn
+      - npm
+      - zsh
+      - lua5.1
+      - golang-go
+      - build-essential
+      - python3-pip
+      - httpie
+      - hexyl
+      - ruby-full
+      - postgresql-client
+      - wl-clipboard
+      - watchman
 
 - name: Make sure basics are installed
   shell: |
