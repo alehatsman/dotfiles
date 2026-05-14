@@ -43,6 +43,15 @@ set-option -g default-shell $SHELL
 set -g default-terminal "screen-256color" # colors!
 # tell Tmux that outside terminal supports true color
 set -ga terminal-overrides ",xterm-256color*:Tc"
+# tell Tmux the outer terminal accepts OSC 52 so set-clipboard actually
+# emits the escape — makes remote-tmux copy land in the local clipboard
+# over SSH (e.g. WSL tmux on main_pc → alacritty on x1 → wl-clipboard).
+set -ga terminal-features ",xterm-256color*:clipboard"
+
+# 'on' (vs the tmux default 'external') also passes OSC 52 emitted by
+# apps inside the pane (vim+oscyank, printf '\e]52;...', etc.) out to
+# the outer terminal — not just tmux's own copy-mode operations.
+set -g set-clipboard on
 
 # decrease command delay (increases vim responsiveness)
 set-option -sg escape-time 0
