@@ -3,3 +3,7 @@
 is_wsl: true
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
+# Mooncake agentd TCP port (inside WSL). Mirrored networking means the
+# Windows host listens on the same port; firewall + Hyper-V firewall
+# rules in platforms/windows/bootstrap.yml open it inbound.
+wsl_agentd_port: "7878"

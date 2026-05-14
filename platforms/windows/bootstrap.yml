@@ -82,6 +82,47 @@
         Write-Host "Hyper-V firewall rule '$ruleName' already exists"
       }
 
+- name: Add firewall rule for WSL mooncake agentd (if not already present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $ruleName = "WSL2 Mooncake Agentd"
+      if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
+        Write-Host "Adding firewall rule for port {{ wsl_agentd_port }}..."
+        New-NetFirewallRule `
+          -DisplayName $ruleName `
+          -Direction Inbound `
+          -Protocol TCP `
+          -LocalPort {{ wsl_agentd_port }} `
+          -Action Allow `
+          -Profile Domain,Private | Out-Null
+      } else {
+        Write-Host "Firewall rule '$ruleName' already exists"
+      }
+
+- name: Add Hyper-V firewall rule for WSL mooncake agentd (if not already present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $ruleName = "WSL2 Mooncake Agentd"
+      $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
+      $existing = Get-NetFirewallHyperVRule -VMCreatorId $wslId -ErrorAction SilentlyContinue |
+        Where-Object { $_.DisplayName -eq $ruleName }
+      if (-not $existing) {
+        Write-Host "Adding Hyper-V firewall rule for port {{ wsl_agentd_port }}..."
+        New-NetFirewallHyperVRule `
+          -DisplayName $ruleName `
+          -VMCreatorId $wslId `
+          -Direction Inbound `
+          -Protocol TCP `
+          -LocalPorts {{ wsl_agentd_port }} `
+          -Action Allow | Out-Null
+      } else {
+        Write-Host "Hyper-V firewall rule '$ruleName' already exists"
+      }
+
 - name: Register Task Scheduler entry to start WSL SSH at boot (if not already present)
   shell:
     interpreter: powershell
