@@ -55,6 +55,33 @@
         Write-Host "Firewall rule '$ruleName' already exists"
       }
 
+# With networkingMode=mirrored + firewall=true in .wslconfig, the WSL VM
+# sits behind the Hyper-V Firewall — a separate stack from the regular
+# Windows Firewall. The New-NetFirewallRule above governs the host's
+# NICs, but inbound traffic still gets dropped at the VM boundary unless
+# a matching New-NetFirewallHyperVRule exists with the WSL VMCreatorId.
+- name: Add Hyper-V firewall rule for WSL SSH (if not already present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $ruleName = "WSL2 SSH"
+      $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
+      $existing = Get-NetFirewallHyperVRule -VMCreatorId $wslId -ErrorAction SilentlyContinue |
+        Where-Object { $_.DisplayName -eq $ruleName }
+      if (-not $existing) {
+        Write-Host "Adding Hyper-V firewall rule for port {{ wsl_ssh_port }}..."
+        New-NetFirewallHyperVRule `
+          -DisplayName $ruleName `
+          -VMCreatorId $wslId `
+          -Direction Inbound `
+          -Protocol TCP `
+          -LocalPorts {{ wsl_ssh_port }} `
+          -Action Allow | Out-Null
+      } else {
+        Write-Host "Hyper-V firewall rule '$ruleName' already exists"
+      }
+
 - name: Register Task Scheduler entry to start WSL SSH at boot (if not already present)
   shell:
     interpreter: powershell
