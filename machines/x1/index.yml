@@ -1,18 +1,45 @@
 ---
-# x1 — ThinkPad X1 Carbon, Arch Linux, Hyprland Wayland.
+# x1 — ThinkPad X1 Carbon Gen 13, Arch Linux, Hyprland Wayland.
 
 - vars:
     is_wsl: false
 
-- import: ../platforms/arch/main.yml
+- import: ../../shared/bootstrap.yml
+
+- import: ../../platforms/arch/index.yml
   tags: [arch, system, packages]
 
-- import: ../common.yml
+# x1-specific tuning (TLP, RAPL, iGPU freq cap, HDA, i915 cmdline)
+- import: ./thermal.yml
+  tags: [thermal]
 
+# Cross-platform components
+- import: ../../components/claude/index.yml
+  tags: [core, claude]
+
+- import: ../../components/git/index.yml
+  tags: [core, git]
+
+- import: ../../components/languages/index.yml
+  tags: [dev, languages]
+
+- import: ../../components/clojure/index.yml
+  tags: [dev, clojure, config]
+
+- import: ../../components/zsh/index.yml
+  tags: [core, shell]
+
+- import: ../../components/tmux/index.yml
+  tags: [tools, tmux]
+
+- import: ../../components/nvim/index.yml
+  tags: [editor, nvim]
+
+# Desktop
 - name: Install Hyprland desktop
   use:
     name: hyprland
   tags: [gui, hyprland]
 
-- import: ../hyprland/main.yml
+- import: ../../components/hyprland/index.yml
   tags: [gui, hyprland, config]

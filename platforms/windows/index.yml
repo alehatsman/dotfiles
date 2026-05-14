@@ -1,11 +1,11 @@
 ---
-# WSL-specific provisioning. Runs INSIDE the WSL Ubuntu distro.
-#
-# Cross-environment packages (git, tmux, htop, build-essential, etc.) are
-# installed by packages/main.yml — those aren't WSL-specific.
+# WSL-side provisioning. Runs INSIDE the WSL Ubuntu distro.
 #
 # Host-side bits (.wslconfig, firewall rule, scheduled task) are owned by
 # platforms/windows/bootstrap.yml — those run on the Windows host, not here.
+
+- import: ./packages.yml
+  tags: [wsl, packages]
 
 # Deploy /etc/wsl.conf — enables systemd so services survive WSL restarts.
 # Note: changes take effect after 'wsl --shutdown' + reconnect.
@@ -49,9 +49,25 @@
     fi
   as_user: root
 
+# Ubuntu's stock ssh.service is Restart=on-failure, which only covers
+# crashes — clean exits and signal-kills aren't restarted. Bump it to
+# Restart=always with a 2s respawn. The Windows-side WSL2-SSH-Keepalive
+# task still handles the VM-down case (idle-shutdown or `wsl --shutdown`);
+# this drop-in handles sshd-down-but-VM-up.
+- name: Ensure /etc/systemd/system/ssh.service.d exists
+  shell: mkdir -p /etc/systemd/system/ssh.service.d
+  as_user: root
+
+- name: Deploy ssh.service Restart=always drop-in
+  file.template:
+    src: ./templates/ssh-restart.conf.j2
+    dest: /etc/systemd/system/ssh.service.d/restart.conf
+  as_user: root
+
 - name: Enable and start SSH
   shell: |
     if [ "$(ps -p 1 -o comm= 2>/dev/null)" = "systemd" ]; then
+      systemctl daemon-reload
       systemctl enable ssh
       systemctl restart ssh
     else

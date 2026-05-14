@@ -3,7 +3,7 @@ set -e
 
 # Wrapper around `mooncake apply` / `mooncake plan` for per-machine entries.
 #
-#   ./scripts/run.sh --machine x1            # apply entries/x1.yml + vars/x1.yml
+#   ./scripts/run.sh --machine x1            # apply machines/x1/{index,vars}.yml
 #   ./scripts/run.sh --machine main_pc --plan
 #   ./scripts/run.sh --machine x1 --tags zsh,nvim
 #
@@ -44,9 +44,9 @@ if [[ -z "$MACHINE" ]]; then
   exit 1
 fi
 
-CONFIG="./entries/${MACHINE}.yml"
-VARS_BASE="./variables.yml"
-VARS_MACHINE="./vars/${MACHINE}.yml"
+CONFIG="./machines/${MACHINE}/index.yml"
+VARS_BASE="./shared/variables.yml"
+VARS_MACHINE="./machines/${MACHINE}/vars.yml"
 
 if [[ ! -f "$CONFIG" ]]; then
   echo "Error: $CONFIG not found"

@@ -34,7 +34,94 @@
   retries: 3
   retry_delay: 10s
 
-- vars.load: ./darwin_packages.yml
+- name: Define brew taps, formulae, and casks
+  vars:
+    taps:
+      - wata727/tflint
+      - borkdude/brew
+      - wagoodman/dive
+      - AdoptOpenJDK/openjdk
+    apps:
+      - aria2
+      - autoenv
+      - autojump
+      - aws-iam-authenticator
+      - awscli
+      - caddy
+      - cmake
+      - fd
+      - fzf
+      - gnu-sed
+      - graphviz
+      - git
+      - git-delta
+      - htop
+      - hub
+      - imagemagick
+      - jq
+      - lastpass-cli
+      - libpq
+      - mosh
+      - nmap
+      - packer
+      - python
+      - ripgrep
+      - rustup
+      - shellcheck
+      - shfmt
+      - terraform
+      - terraform-inventory
+      - tig
+      - tldr
+      - tree
+      - watchman
+      - wget
+      - xsv
+      - yamllint
+      - yq
+      - clojure
+      - leiningen
+      - boot-clj
+      - clj-kondo
+      - dive
+      - kubernetes-cli
+      - go
+      - node
+      - nvm
+      - yarn
+      - tmux
+      - reattach-to-user-namespace
+      - zsh
+      - httpie
+      - ninja
+      - hexyl
+      - gh
+      - code-minimap
+      - lua-language-server
+      - xclip
+    cask_apps:
+      - adobe-acrobat-reader
+      - amazon-workspaces
+      - anki
+      - docker
+      - font-fira-code
+      - google-drive
+      - google-chrome
+      - google-cloud-sdk
+      - kap
+      - pgadmin4
+      - postman
+      - slack
+      - spectacle
+      - telegram
+      - transmission
+      - tunnelblick
+      - veracrypt
+      - visual-studio-code
+      - vlc
+      - xmind
+      - zoom
+      - font-jetbrains-mono-nerd-font
 
 - name: Make sure all the taps are present
   shell: |
