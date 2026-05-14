@@ -242,9 +242,9 @@ Copy it there before running bootstrap, e.g. from a cross-compile:
         $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
         $taskArgs  = 'agentd --bind 0.0.0.0:{{ windows_agentd_port }} --token-file "' + $tokenFile + '"'
         $action    = New-ScheduledTaskAction -Execute $exe -Argument $taskArgs
-        $trigger   = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+        $trigger   = New-ScheduledTaskTrigger -AtLogOn -User "$env:COMPUTERNAME\$env:USERNAME"
         $principal = New-ScheduledTaskPrincipal `
-          -UserId "$env:USERDOMAIN\$env:USERNAME" `
+          -UserId "$env:COMPUTERNAME\$env:USERNAME" `
           -LogonType Interactive `
           -RunLevel Limited
         $settings  = New-ScheduledTaskSettingsSet `
