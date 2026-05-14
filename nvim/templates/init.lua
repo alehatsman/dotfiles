@@ -522,10 +522,10 @@ vim.keymap.set('n', '<c-l>', '<c-w>l')
 vim.keymap.set('n', '<c-w>o', '<c-w><c-o>')
 
 -- Splits resizing
-vim.keymap.set('', '<A-h>', '<C-w>>')
+vim.keymap.set('', '<A-h>', '<C-w><')
 vim.keymap.set('', '<A-j>', '<C-W>+')
 vim.keymap.set('', '<A-k>', '<C-W>-')
-vim.keymap.set('', '<A-l>', '<C-w><')
+vim.keymap.set('', '<A-l>', '<C-w>>')
 
 -- Tabs mappings
 vim.keymap.set('n', '<leader>tt', ':tabnew<CR>')
@@ -681,10 +681,10 @@ wk.add({
   { "<c-w>o", desc = "Only this window" },
 
   -- Window resizing
-  { "<A-h>", desc = "Resize wider" },
+  { "<A-h>", desc = "Resize narrower" },
   { "<A-j>", desc = "Resize taller" },
   { "<A-k>", desc = "Resize shorter" },
-  { "<A-l>", desc = "Resize narrower" },
+  { "<A-l>", desc = "Resize wider" },
 }, { mode = "n" })
 
 -- Clipboard setup for WSL and SSH with osc52
