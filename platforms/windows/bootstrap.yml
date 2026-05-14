@@ -375,8 +375,11 @@
           -Argument "-d {{ wsl_distro }} -u root -- systemctl start ssh"
         $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
           -RepetitionInterval (New-TimeSpan -Minutes 5)
+        # $env:USERDOMAIN is sometimes unset in mooncake's elevated shell;
+        # $env:COMPUTERNAME\$env:USERNAME is the canonical local-account
+        # form and matches the agentd registration above.
         $principal = New-ScheduledTaskPrincipal `
-          -UserId "$env:USERDOMAIN\$env:USERNAME" `
+          -UserId "$env:COMPUTERNAME\$env:USERNAME" `
           -LogonType S4U `
           -RunLevel Highest
         $settings = New-ScheduledTaskSettingsSet `
