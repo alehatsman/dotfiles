@@ -18,11 +18,15 @@
     # Fail fast instead of hanging on a credential prompt when run from a
     # non-interactive context (mooncake's shell action has no TTY).
     export GIT_TERMINAL_PROMPT=0
-    if [ ! -d "$SRC/.git" ]; then
+    # Use the marker file as the "installed" check — a half-cloned $SRC
+    # (e.g. left over by a killed run) has .git but no presets/python.
+    # The pull branch is silent on failure, so .git alone isn't enough.
+    if [ ! -e "$SRC/presets/python/preset.yml" ]; then
+      rm -rf "$SRC"
       mkdir -p "$(dirname "$SRC")"
-      # SSH URL — the mooncake repo may be private; HTTPS would require a
-      # token. Each machine is expected to have an SSH key registered on
-      # GitHub (the same one used to push from this dotfiles repo).
+      # SSH URL — the mooncake repo may be private; HTTPS would require
+      # a token. Each machine is expected to have an SSH key registered
+      # on GitHub (the same one used to push from this dotfiles repo).
       git clone --depth=1 git@github.com:alehatsman/mooncake.git "$SRC"
     else
       git -C "$SRC" pull --ff-only --quiet || true
