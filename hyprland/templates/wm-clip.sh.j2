@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Hyprland system-wide copy/paste dispatcher.
+# Terminals copy with Ctrl+Shift+C/V; GUI apps use Ctrl+C/V. This script picks
+# the right combo based on the focused window's class and sends it via
+# `hyprctl dispatch sendshortcut`, so a single Super+C / Super+V Hyprland bind
+# Just Works everywhere.
+set -euo pipefail
+
+case "${1:-}" in
+  copy)  key=c ;;
+  paste) key=v ;;
+  *) echo "usage: wm-clip {copy|paste}" >&2; exit 2 ;;
+esac
+
+class=$(hyprctl activewindow -j | jq -r '.class // empty')
+
+case "$class" in
+  Alacritty|alacritty|foot|kitty|wezterm|org.wezfurlong.wezterm|com.mitchellh.ghostty|Ghostty)
+    mods="CTRL SHIFT" ;;
+  *)
+    mods="CTRL" ;;
+esac
+
+hyprctl dispatch sendshortcut "$mods,$key,activewindow" >/dev/null

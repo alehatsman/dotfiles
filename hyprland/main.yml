@@ -139,6 +139,13 @@
     mode: '0755'
   tags: [hyprland, waybar, config]
 
+- name: Deploy wm-clip system-wide copy/paste dispatcher
+  file.template:
+    src: ./templates/wm-clip.sh.j2
+    dest: ~/.local/bin/wm-clip
+    mode: '0755'
+  tags: [hyprland, config]
+
 - name: Deploy GTK 3 dark theme preference
   file.write:
     path: ~/.config/gtk-3.0/settings.ini
