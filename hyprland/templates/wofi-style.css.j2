@@ -1,10 +1,22 @@
-window {
+/* Make the GTK root window fully transparent so the rectangular layer
+   surface can't leak any background/shadow at the corners. The visible
+   panel (background + border + rounded corners) lives on #outer-box. */
+window,
+window:backdrop {
+    margin: 0;
+    border: none;
+    background-color: transparent;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 14px;
+    box-shadow: none;
+}
+
+#outer-box {
     margin: 0;
     border: 1px solid #3e3d32;
     border-radius: 8px;
     background-color: #272822;
-    font-family: "JetBrainsMono Nerd Font", monospace;
-    font-size: 14px;
+    padding: 4px;
 }
 
 #input {
@@ -24,7 +36,6 @@ window {
 }
 
 #inner-box,
-#outer-box,
 #scroll {
     margin: 4px;
     background-color: transparent;
