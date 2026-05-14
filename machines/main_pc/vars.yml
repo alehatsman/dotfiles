@@ -26,4 +26,4 @@ windows_agentd_port: "7879"
 #
 # Default is `skip` so a fresh re-provision doesn't accidentally drag in
 # CUDA + a multi-GB image pull.
-# mcsearch_role: server
+mcsearch_role: server

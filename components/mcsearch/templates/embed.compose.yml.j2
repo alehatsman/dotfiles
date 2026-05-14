@@ -10,13 +10,13 @@ services:
     container_name: mcsearch-embed
 {% if mcsearch_engine == 'vllm' %}
     image: {{ mcsearch_vllm_image }}
-    # Embedding-only task on the indexing model. vLLM auto-detects the
-    # embedding head when --task embed is passed.
+    # Image entrypoint is already `vllm serve` — pass only the positional
+    # model and flags. The old `--task embed` flag was replaced by
+    # `--runner pooling` for embedding workloads.
     command:
-      - --model
       - {{ mcsearch_embed_model }}
-      - --task
-      - embed
+      - --runner
+      - pooling
       - --port
       - "{{ mcsearch_remote_port }}"
       - --host
