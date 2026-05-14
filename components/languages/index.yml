@@ -1,0 +1,73 @@
+---
+# Language toolchains. Each step is gated on the package manager
+# available on the current host, so the same import works across
+# Ubuntu/macOS/Arch.
+
+- name: Install Python 3 (apt)
+  pkg:
+    names: [python3, python3-pip, python3-venv]
+  as_user: root
+  when: apt_available
+  tags: [dev, python]
+
+- name: Install Python 3 (brew)
+  pkg:
+    name: python
+  when: brew_available
+  tags: [dev, python]
+
+- name: Install Python 3 (pacman)
+  pkg:
+    names: [python, python-pip]
+  as_user: root
+  when: pacman_available
+  tags: [dev, python]
+
+# Rust via rustup. `--no-modify-path` keeps shell init untouched —
+# the cargo bin dir is added by zsh config.
+- name: Install Rust toolchain via rustup
+  shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+      sh -s -- -y --default-toolchain stable --profile default --no-modify-path
+  unless_command: command -v rustup >/dev/null 2>&1 && rustup show >/dev/null 2>&1
+  tags: [dev, rust]
+
+- name: Install Go toolchain (apt)
+  pkg:
+    name: golang-go
+  as_user: root
+  when: apt_available
+  tags: [dev, golang]
+
+- name: Install Go toolchain (brew)
+  pkg:
+    name: go
+  when: brew_available
+  tags: [dev, golang]
+
+- name: Install Go toolchain (pacman)
+  pkg:
+    name: go
+  as_user: root
+  when: pacman_available
+  tags: [dev, golang]
+
+- name: Install Java JDK (apt)
+  pkg:
+    name: openjdk-21-jdk
+  as_user: root
+  when: apt_available
+  tags: [dev, java]
+
+- name: Install Java JDK (brew)
+  pkg:
+    name: openjdk@21
+  when: brew_available
+  tags: [dev, java]
+
+- name: Install Java JDK (pacman)
+  pkg:
+    name: jdk21-openjdk
+  as_user: root
+  when: pacman_available
+  tags: [dev, java]

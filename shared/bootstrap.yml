@@ -1,0 +1,46 @@
+---
+# One-time setup that every machine wants up-front: pull the mooncake
+# preset library into the local search path, and fix the home directory
+# capitalisation on Linux hosts (~/Projects → ~/projects).
+
+# SSH URL — the mooncake repo may be private; HTTPS would require a
+# token. Each machine is expected to have an SSH key registered on
+# GitHub (the same one used to push from this dotfiles repo).
+- name: Clone or update mooncake source for preset library
+  git.clone:
+    repo: git@github.com:alehatsman/mooncake.git
+    dest: ~/.mooncake-src
+    depth: 1
+    update: true
+  tags: [core, presets]
+
+- name: Ensure ~/.mooncake exists
+  file.write:
+    path: ~/.mooncake
+    state: directory
+  tags: [core, presets]
+
+- name: Link mooncake presets into per-user search path
+  file.write:
+    path: ~/.mooncake/presets
+    src: ~/.mooncake-src/presets
+    state: link
+    force: true
+  tags: [core, presets]
+
+# Use `mise/preset.yml` as the marker — the current mooncake presets/
+# dir ships a small library (mise, docker, fzf, jq, k8s-tools…). Older
+# presets moved to presets-archive upstream; toolchain installs come
+# from components/languages or platform packages instead.
+- name: Verify preset library is populated
+  assert:
+    file:
+      path: ~/.mooncake/presets/mise/preset.yml
+      exists: true
+  tags: [core, presets]
+
+- name: Rename ~/Projects to ~/projects (lowercase convention)
+  shell: mv "$HOME/Projects" "$HOME/projects"
+  when: os == "linux"
+  unless_command: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
+  tags: [core, home]

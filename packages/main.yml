@@ -1,6 +1,0 @@
----
-- import: ./ubuntu.yml
-  when: os == "linux" and distribution in ["ubuntu", "debian"]
-
-- import: ./darwin.yml
-  when: os == "darwin"
