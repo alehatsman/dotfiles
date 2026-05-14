@@ -1,0 +1,238 @@
+---
+# x1 thermal + power tuning. Targets ThinkPad X1 Carbon Gen 13 (Ultra 7
+# 255U, Xe2 iGPU). Values come from vars.yml.
+#
+# Re-apply just this slice with:
+#   ./scripts/run.sh --machine x1 --tags thermal
+
+- name: Set TLP platform_profile from vars
+  file.write:
+    path: /etc/tlp.d/01-platform-profile.conf
+    state: file
+    content: |
+      # Hold the firmware ACPI profile across boots and TLP restarts.
+      # Value sourced from machines/x1/vars.yml → thermal_platform_profile.
+      PLATFORM_PROFILE_ON_AC={{ thermal_platform_profile }}
+      PLATFORM_PROFILE_ON_BAT={{ thermal_platform_profile }}
+    mode: '0644'
+  as_user: root
+  tags: [thermal]
+
+- name: Drop TLP cooling tweaks (capped turbo, deeper EPP, ASPM, runtime PM)
+  file.write:
+    path: /etc/tlp.d/02-cool.conf
+    state: file
+    content: |
+      # Cooling tweaks for X1 Carbon Gen 13 / Ultra 7 255U.
+      # Goal: cold + quiet, perf not a priority. Combine with the
+      # RAPL PL1/PL2 caps from the intel-rapl-cap.service unit.
+
+      # Cap clock ceiling — turbo still works but bounded.
+      CPU_MIN_PERF_ON_AC=0
+      CPU_MAX_PERF_ON_AC={{ thermal_cpu_max_perf_ac }}
+      CPU_MIN_PERF_ON_BAT=0
+      CPU_MAX_PERF_ON_BAT={{ thermal_cpu_max_perf_bat }}
+
+      # Tell HWP to prefer power over performance at every decision.
+      CPU_ENERGY_PERF_POLICY_ON_AC=power
+      CPU_ENERGY_PERF_POLICY_ON_BAT=power
+
+      # Disable HWP's autonomous opportunistic boost.
+      CPU_HWP_DYN_BOOST_ON_AC=0
+      CPU_HWP_DYN_BOOST_ON_BAT=0
+
+      # Aggressive PCIe ASPM — biggest idle-watt reduction.
+      PCIE_ASPM_ON_AC=powersupersave
+      PCIE_ASPM_ON_BAT=powersupersave
+
+      # Runtime PM + USB autosuspend on everywhere.
+      RUNTIME_PM_ON_AC=auto
+      RUNTIME_PM_ON_BAT=auto
+      USB_AUTOSUSPEND=1
+
+      # WiFi power-save always on (free idle wattage).
+      WIFI_PWR_ON_AC=on
+      WIFI_PWR_ON_BAT=on
+
+      # Let the scheduler park work on LP-E cores.
+      SCHED_POWERSAVE_ON_AC=1
+      SCHED_POWERSAVE_ON_BAT=1
+
+      # Stop NMI watchdog from waking every CPU constantly.
+      NMI_WATCHDOG=0
+    mode: '0644'
+  as_user: root
+  tags: [thermal]
+
+- name: Apply TLP config
+  shell: tlp start
+  as_user: root
+  tags: [thermal]
+
+- name: Enable Intel HDA audio runtime power-save
+  file.write:
+    path: /etc/modprobe.d/snd_hda_intel-powersave.conf
+    state: file
+    content: |
+      # Let the HDA audio chip enter D3 when idle (~0.5 W).
+      options snd_hda_intel power_save=1 power_save_controller=Y
+    mode: '0644'
+  as_user: root
+  tags: [thermal]
+
+- name: Apply HDA powersave now (no reboot needed)
+  shell: |
+    echo 1 > /sys/module/snd_hda_intel/parameters/power_save 2>/dev/null || true
+    echo Y > /sys/module/snd_hda_intel/parameters/power_save_controller 2>/dev/null || true
+  as_user: root
+  tags: [thermal]
+
+- name: Append i915 power-save params to systemd-boot cmdline
+  shell: |
+    ENTRY=/boot/loader/entries/arch.conf
+    PARAMS="i915.enable_fbc=1 i915.enable_psr=1 i915.enable_dc=4 nmi_watchdog=0"
+    [ -f "$ENTRY" ] || { echo "boot entry not found, skipping"; exit 0; }
+    if ! grep -q 'i915.enable_fbc' "$ENTRY"; then
+      sed -i "s|^options |options $PARAMS |" "$ENTRY"
+      echo "added: $PARAMS"
+    else
+      echo "already present"
+    fi
+  as_user: root
+  tags: [thermal, bootloader]
+
+- name: Deploy intel-rapl-cap script
+  file.write:
+    path: /usr/local/bin/intel-rapl-cap
+    state: file
+    content: |
+      #!/bin/sh
+      # Cap Intel RAPL power limits — PL1 sustained, PL2 brief burst.
+      # Values come from machines/x1/vars.yml at deploy time; firmware
+      # default ceiling on Ultra 7 255U is ~57W.
+      PL1_UW=$(({{ thermal_rapl_pl1_w }} * 1000000))
+      PL2_UW=$(({{ thermal_rapl_pl2_w }} * 1000000))
+      RAPL=/sys/class/powercap/intel-rapl/intel-rapl:0
+      [ -d "$RAPL" ] || exit 0
+      echo "$PL1_UW" > "$RAPL/constraint_0_power_limit_uw" 2>/dev/null || true
+      echo "$PL2_UW" > "$RAPL/constraint_1_power_limit_uw" 2>/dev/null || true
+    mode: '0755'
+  as_user: root
+  tags: [thermal, rapl]
+
+- name: Deploy intel-rapl-cap.service (apply at boot)
+  file.write:
+    path: /etc/systemd/system/intel-rapl-cap.service
+    state: file
+    content: |
+      [Unit]
+      Description=Cap Intel RAPL power limits (PL1/PL2) for thermals
+      After=multi-user.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/intel-rapl-cap
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  as_user: root
+  tags: [thermal, rapl]
+
+- name: Deploy intel-rapl-cap-resume.service (re-apply after suspend)
+  file.write:
+    path: /etc/systemd/system/intel-rapl-cap-resume.service
+    state: file
+    content: |
+      [Unit]
+      Description=Re-apply Intel RAPL caps after resume
+      After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/intel-rapl-cap
+
+      [Install]
+      WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+    mode: '0644'
+  as_user: root
+  tags: [thermal, rapl]
+
+- name: Enable and start intel-rapl-cap services
+  shell: |
+    systemctl daemon-reload
+    systemctl enable --now intel-rapl-cap.service
+    systemctl enable intel-rapl-cap-resume.service
+  as_user: root
+  tags: [thermal, rapl]
+
+- name: Deploy intel-gt-freq-cap script
+  file.write:
+    path: /usr/local/bin/intel-gt-freq-cap
+    state: file
+    content: |
+      #!/bin/sh
+      # Cap Intel iGPU max frequency for thermals. Value is templated from
+      # machines/x1/vars.yml; on Lunar Lake Xe2 the hardware range is
+      # RPn=800..RP0=2100 MHz. Cap boost too — left uncapped, boost paths
+      # still spike to RP0.
+      CAP_MHZ={{ thermal_igpu_max_mhz }}
+      for card in /sys/class/drm/card*; do
+          [ -f "$card/gt_max_freq_mhz" ] || continue
+          echo "$CAP_MHZ" > "$card/gt_max_freq_mhz" 2>/dev/null || true
+          [ -f "$card/gt_boost_freq_mhz" ] && \
+              echo "$CAP_MHZ" > "$card/gt_boost_freq_mhz" 2>/dev/null || true
+          for gt in "$card"/gt/gt*; do
+              [ -f "$gt/rps_max_freq_mhz" ] || continue
+              echo "$CAP_MHZ" > "$gt/rps_max_freq_mhz" 2>/dev/null || true
+          done
+      done
+    mode: '0755'
+  as_user: root
+  tags: [thermal, igpu]
+
+- name: Deploy intel-gt-freq-cap.service (apply at boot)
+  file.write:
+    path: /etc/systemd/system/intel-gt-freq-cap.service
+    state: file
+    content: |
+      [Unit]
+      Description=Cap Intel iGPU max frequency for thermals
+      After=multi-user.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/intel-gt-freq-cap
+
+      [Install]
+      WantedBy=multi-user.target
+    mode: '0644'
+  as_user: root
+  tags: [thermal, igpu]
+
+- name: Deploy intel-gt-freq-cap-resume.service (re-apply after suspend)
+  file.write:
+    path: /etc/systemd/system/intel-gt-freq-cap-resume.service
+    state: file
+    content: |
+      [Unit]
+      Description=Re-apply Intel iGPU freq cap after resume
+      After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/intel-gt-freq-cap
+
+      [Install]
+      WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
+    mode: '0644'
+  as_user: root
+  tags: [thermal, igpu]
+
+- name: Enable and start intel-gt-freq-cap services
+  shell: |
+    systemctl daemon-reload
+    systemctl enable --now intel-gt-freq-cap.service
+    systemctl enable intel-gt-freq-cap-resume.service
+  as_user: root
+  tags: [thermal, igpu]
