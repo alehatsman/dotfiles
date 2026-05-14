@@ -95,3 +95,22 @@ mods  = "Alt"
 chars = "\u001b."
 key   = "Period"
 mods  = "Alt"
+
+# Ctrl+C / Ctrl+V copy & paste. Cost: Ctrl+C no longer sends SIGINT —
+# use Super+C (below) to interrupt the foreground process instead.
+[[keyboard.bindings]]
+action = "Copy"
+key    = "C"
+mods   = "Control"
+
+[[keyboard.bindings]]
+action = "Paste"
+key    = "V"
+mods   = "Control"
+
+# Super+C sends ETX (0x03), the byte Ctrl+C normally sends. The kernel
+# turns it into SIGINT for the foreground process.
+[[keyboard.bindings]]
+chars = "\u0003"
+key   = "C"
+mods  = "Super"
