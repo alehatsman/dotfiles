@@ -8,10 +8,13 @@
 # mooncake's git.clone update:true (which refuses divergent local commits)
 # trips on accidents, not on intentional dev work.
 mcsearch_src_url: "git@github.com:alehatsman/mcsearch.git"
-# Fully-resolved path (not "~/...") — shell heredocs quote the var and
-# bash won't expand tilde inside quotes; the resulting `cd "~/..."` fails.
-mcsearch_src_dir: "{{ user_home }}/.local/share/mcsearch-src"
-mcsearch_bin_path: "/usr/local/bin/mcsearch"
+# Both paths are user-relative. Mooncake's git.clone dest: expands ~ via
+# PathUtil; shell heredocs reference the vars UNQUOTED (`cd {{ var }}`,
+# not `cd "{{ var }}"`) so bash also expands the tilde at run time —
+# `cd "~/..."` inside double-quotes fails. Install runs as the user
+# (no as_user: root) so ~ resolves to the same home consistently.
+mcsearch_src_dir: "~/.local/share/mcsearch-src"
+mcsearch_bin_path: "~/.local/bin/mcsearch"
 
 # Server-side container image tag for the embedding engine. The vLLM
 # image bundles its own CUDA runtime; bumping this gets you newer
