@@ -31,6 +31,51 @@
         wsl --install -d {{ wsl_distro }}
       }
 
+# Fast Startup ("hybrid shutdown") hibernates the kernel on shutdown
+# instead of doing a clean boot next time. It's a known source of WSL2
+# instability — the virtual switch state survives across "boots" and
+# WSL ends up in a weird partial-init state. Disabling it makes Windows
+# do a real cold boot every time, which is what WSL expects.
+# HiberbootEnabled=0 disables Fast Startup but keeps hibernate (S4)
+# available for manual use.
+- name: Disable Windows Fast Startup (HiberbootEnabled=0) for stable WSL boot
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power'
+      $cur = (Get-ItemProperty -Path $key -Name HiberbootEnabled -ErrorAction SilentlyContinue).HiberbootEnabled
+      if ($cur -eq 0) {
+        Write-Host "Fast Startup already disabled"
+      } else {
+        Write-Host "Disabling Fast Startup (was: $cur)"
+        Set-ItemProperty -Path $key -Name HiberbootEnabled -Value 0 -Type DWord
+      }
+
+# Default OpenSSH server shell on Windows is cmd.exe, which makes any
+# remote PowerShell call go through a layer of cmd quoting hell. Set it
+# to powershell.exe so SSH lands directly in PowerShell — friendlier for
+# both interactive recovery and automation (e.g. driving mooncake over
+# the :22 channel when WSL is down).
+- name: Set Windows OpenSSH default shell to PowerShell
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $key = 'HKLM:\SOFTWARE\OpenSSH'
+      $want = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+      if (-not (Test-Path $key)) {
+        Write-Host "OpenSSH registry key missing — install Windows OpenSSH server first; skipping"
+      } else {
+        $cur = (Get-ItemProperty -Path $key -Name DefaultShell -ErrorAction SilentlyContinue).DefaultShell
+        if ($cur -eq $want) {
+          Write-Host "OpenSSH DefaultShell already set to PowerShell"
+        } else {
+          Write-Host "Setting OpenSSH DefaultShell (was: '$cur')"
+          New-ItemProperty -Path $key -Name DefaultShell -Value $want -PropertyType String -Force | Out-Null
+        }
+      }
+
 - name: Deploy .wslconfig to the Windows user home
   file.template:
     src: ./templates/wslconfig.j2
@@ -123,35 +168,23 @@
         Write-Host "Hyper-V firewall rule '$ruleName' already exists"
       }
 
-- name: Register Task Scheduler entry to start WSL SSH at boot (if not already present)
+# The old WSL2-SSH-Autostart task ran as SYSTEM and called `wsl --exec
+# sudo service ssh start` with no -d flag. WSL distros are registered
+# per-user — SYSTEM never had Ubuntu-24.04 — so the task always failed
+# at boot (Task Scheduler reported it as "could not start"). The
+# WSL2-SSH-Keepalive task below covers both boot and runtime, so the
+# old task is now strictly worse than nothing. Unregister it if found.
+- name: Unregister deprecated WSL2-SSH-Autostart task (replaced by WSL2-SSH-Keepalive)
   shell:
     interpreter: powershell
     run_as_admin: true
     cmd: |
       $taskName = "WSL2-SSH-Autostart"
       if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-        Write-Host "Scheduled task '$taskName' already exists"
+        Write-Host "Unregistering deprecated task '$taskName'..."
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
       } else {
-        Write-Host "Registering scheduled task '$taskName'..."
-        $action = New-ScheduledTaskAction `
-          -Execute "C:\Windows\System32\wsl.exe" `
-          -Argument "--exec sudo service ssh start"
-        $trigger = New-ScheduledTaskTrigger -AtStartup
-        $principal = New-ScheduledTaskPrincipal `
-          -UserId "SYSTEM" `
-          -LogonType ServiceAccount `
-          -RunLevel Highest
-        $settings = New-ScheduledTaskSettingsSet `
-          -ExecutionTimeLimit (New-TimeSpan -Minutes 2) `
-          -RestartCount 3 `
-          -RestartInterval (New-TimeSpan -Minutes 1)
-        Register-ScheduledTask `
-          -TaskName $taskName `
-          -Action $action `
-          -Trigger $trigger `
-          -Principal $principal `
-          -Settings $settings `
-          -Force | Out-Null
+        Write-Host "Task '$taskName' not present — nothing to remove"
       }
 
 # ---- Mooncake agentd on the Windows host ---------------------------------
@@ -189,20 +222,21 @@
   shell:
     interpreter: powershell
     cmd: |
+      # NOTE: avoid PowerShell here-strings (@"..."@) here — their closing
+      # marker must sit at column 0, which collides with YAML's block-scalar
+      # indentation rules and makes the playbook unparseable.
       $exe = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
       if (Test-Path $exe) {
         Write-Host "Found $exe"
       } else {
-        Write-Error @"
-mooncake.exe is not deployed at $exe.
-Copy it there before running bootstrap, e.g. from a cross-compile:
-
-    GOOS=windows GOARCH=amd64 go build -o ``"$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe``" ./cmd
-
-…or from any existing copy of mooncake.exe:
-
-    Copy-Item .\mooncake.exe ``"$env:LOCALAPPDATA\Mooncake\bin\``"
-"@
+        Write-Error "mooncake.exe is not deployed at $exe."
+        Write-Host 'Copy it there before running bootstrap, e.g. from a cross-compile:'
+        Write-Host ''
+        Write-Host '    GOOS=windows GOARCH=amd64 go build -o "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe" ./cmd'
+        Write-Host ''
+        Write-Host '…or from any existing copy of mooncake.exe:'
+        Write-Host ''
+        Write-Host '    Copy-Item .\mooncake.exe "$env:LOCALAPPDATA\Mooncake\bin\"'
         exit 1
       }
 
