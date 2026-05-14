@@ -23,3 +23,15 @@ thermal_igpu_max_mhz: 1100
 # HWP max P-state percent (0–100). Caps turbo ceiling without disabling it.
 thermal_cpu_max_perf_ac: 80
 thermal_cpu_max_perf_bat: 60
+
+# ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
+# x1 is a client; the embedding service runs on main_pc.
+#
+# To turn on (one-time prep):
+#   1. Add a `Host main_pc-wsl` entry to ~/.ssh/config that points at
+#      <main_pc-lan-ip>:2222 with your key — `ssh main_pc-wsl true` must
+#      succeed non-interactively before mcsearch-tunnel.service can start.
+#   2. Set the var below to `client`, then:
+#        ./scripts/run.sh --machine x1 --tags mcsearch
+#
+# mcsearch_role: client

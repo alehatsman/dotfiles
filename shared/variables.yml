@@ -9,3 +9,29 @@
 FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
 use_win32yank: false
+
+# ─── mcsearch — local semantic-search MCP helper ───────────────────────────
+# Per-machine override of mcsearch_role enables the component:
+#   server  — run the embedding service on this host's GPU (main_pc only)
+#   client  — install the MCP binary + SSH tunnel to the GPU host
+#   skip    — no-op (default)
+mcsearch_role: skip
+
+# Inference engine running on the GPU host. vllm (default) supports
+# Qwen3-Embedding cleanly; tei is the simpler-but-narrower alternative.
+mcsearch_engine: vllm
+
+# Embedding model. Code-retrieval quality vs VRAM trade-off documented in
+# components/mcsearch/README.md.
+mcsearch_embed_model: "Qwen/Qwen3-Embedding-4B"
+
+# Port the embedding service listens on inside WSL (always bound to
+# 127.0.0.1; reached by clients through an SSH tunnel — see
+# components/mcsearch/templates/mcsearch-tunnel.service.j2).
+mcsearch_remote_port: "8082"
+mcsearch_local_port: "8082"
+
+# SSH alias for the GPU host. Resolved via ~/.ssh/config — the user is
+# expected to have a `Host main_pc-wsl` entry that points at the WSL SSH
+# port (typically <main_pc-lan-ip>:2222 with the appropriate key).
+mcsearch_remote_host: "main_pc-wsl"

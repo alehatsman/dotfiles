@@ -1,3 +1,9 @@
 ---
 # mac-specific variables.
 is_wsl: false
+
+# ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
+# The mac is a client; the embedding service runs on main_pc over the LAN.
+# Activation: add a `Host main_pc-wsl` ssh alias, then set
+# mcsearch_role: client and re-run mooncake with --tags mcsearch.
+# mcsearch_role: client

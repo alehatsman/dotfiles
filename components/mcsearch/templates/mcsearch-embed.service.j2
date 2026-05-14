@@ -1,0 +1,33 @@
+# mcsearch embedding service — systemd unit inside WSL.
+#
+# Drives docker-compose for the vLLM/TEI container that serves
+# /v1/embeddings on 127.0.0.1:{{ mcsearch_remote_port }}.
+#
+# The Windows WSL2-SSH-Keepalive scheduled task (see
+# platforms/windows/bootstrap.yml) keeps the WSL VM running; once the VM
+# is up, this unit comes up alongside ssh.service.
+#
+# Type=oneshot + RemainAfterExit=yes is the canonical pattern for
+# docker-compose wrappers — the compose `up -d` returns immediately but
+# the service is "active" until ExecStop tears the container down.
+
+[Unit]
+Description=mcsearch embedding service ({{ mcsearch_engine }} on NVIDIA GPU)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/mcsearch
+ExecStart=/usr/bin/docker compose -f embed.compose.yml up -d
+ExecStop=/usr/bin/docker compose -f embed.compose.yml down
+Restart=on-failure
+RestartSec=10s
+# `docker compose up` can take a while on cold pulls; don't fight the
+# pull by tripping a timeout.
+TimeoutStartSec=20min
+
+[Install]
+WantedBy=multi-user.target

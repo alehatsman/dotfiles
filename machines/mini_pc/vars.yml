@@ -7,3 +7,8 @@ wsl_ssh_port: "2222"
 # Windows host listens on the same port; firewall + Hyper-V firewall
 # rules in platforms/windows/bootstrap.yml open it inbound.
 wsl_agentd_port: "7878"
+
+# ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
+# mini_pc has no discrete GPU; it's a client of the embedding service that
+# runs on main_pc. Same activation steps as x1.
+# mcsearch_role: client
