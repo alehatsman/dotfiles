@@ -7,43 +7,50 @@
 
 # Make sure mooncake's preset library is available locally. Subsequent
 # `use:` steps need ~/.mooncake/presets populated; mooncake's binary
-# doesn't bundle them today. Clone-or-pull the mooncake source and
+# doesn't bundle them today. Clone-or-update the mooncake source and
 # symlink its presets/ dir into the per-user search path. Idempotent.
-- name: Ensure mooncake preset library is installed
-  shell: |
-    set -e
-    SRC=$HOME/.mooncake-src
-    LINK=$HOME/.mooncake/presets
-    # Fail fast instead of hanging on a credential prompt when run from a
-    # non-interactive context (mooncake's shell action has no TTY).
-    export GIT_TERMINAL_PROMPT=0
-    # Use `mise/preset.yml` as the marker — the current mooncake presets/
-    # dir only ships a small library (mise, docker, fzf, jq, k8s-tools…).
-    # Older presets (python, rust, go, java) moved to presets-archive
-    # upstream; this dotfile installs language toolchains directly via
-    # the package manager / mise instead of via `use:` on those.
-    if [ ! -e "$SRC/presets/mise/preset.yml" ]; then
-      rm -rf "$SRC"
-      mkdir -p "$(dirname "$SRC")"
-      # SSH URL — the mooncake repo may be private; HTTPS would require
-      # a token. Each machine is expected to have an SSH key registered
-      # on GitHub (the same one used to push from this dotfiles repo).
-      git clone --depth=1 git@github.com:alehatsman/mooncake.git "$SRC"
-    else
-      git -C "$SRC" pull --ff-only --quiet || true
-    fi
-    mkdir -p "$(dirname "$LINK")"
-    # ln -sfn replaces dangling/old symlinks atomically.
-    ln -sfn "$SRC/presets" "$LINK"
-    test -e "$LINK/mise/preset.yml" || { echo "preset library missing mise/"; exit 1; }
+#
+# SSH URL — the mooncake repo may be private; HTTPS would require a
+# token. Each machine is expected to have an SSH key registered on
+# GitHub (the same one used to push from this dotfiles repo).
+- name: Clone or update mooncake source for preset library
+  git.clone:
+    repo: git@github.com:alehatsman/mooncake.git
+    dest: ~/.mooncake-src
+    depth: 1
+    update: true
+  tags: [core, presets]
+
+- name: Ensure ~/.mooncake exists
+  file.write:
+    path: ~/.mooncake
+    state: directory
+  tags: [core, presets]
+
+- name: Link mooncake presets into per-user search path
+  file.write:
+    path: ~/.mooncake/presets
+    src: ~/.mooncake-src/presets
+    state: link
+    force: true
+  tags: [core, presets]
+
+# Use `mise/preset.yml` as the marker — the current mooncake presets/
+# dir only ships a small library (mise, docker, fzf, jq, k8s-tools…).
+# Older presets (python, rust, go, java) moved to presets-archive
+# upstream; this dotfile installs language toolchains directly via
+# the package manager / mise instead of via `use:` on those.
+- name: Verify preset library is populated
+  assert:
+    file:
+      path: ~/.mooncake/presets/mise/preset.yml
+      exists: true
   tags: [core, presets]
 
 - name: Rename ~/Projects to ~/projects (lowercase convention)
-  shell: |
-    if [ -d "$HOME/Projects" ] && [ ! -e "$HOME/projects" ]; then
-      mv "$HOME/Projects" "$HOME/projects"
-    fi
+  shell: mv "$HOME/Projects" "$HOME/projects"
   when: os == "linux"
+  unless_command: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
   tags: [core, home]
 
 - import: ./claude/main.yml
@@ -63,70 +70,73 @@
 # `python` preset (pyenv-based version pinning), now archived upstream.
 # For pinned-version workflows on top of this, use mise (Install mise
 # elsewhere in this stack) and `mise install python@<version>`.
-- name: Install Python 3
-  shell: |
-    set -e
-    # Already provisioned?
-    if command -v python3 >/dev/null 2>&1 \
-       && command -v pip3 >/dev/null 2>&1 \
-       && python3 -c "import venv" >/dev/null 2>&1; then
-      exit 0
-    fi
-    if command -v apt-get >/dev/null 2>&1; then
-      sudo apt-get update -qq
-      sudo apt-get install -y python3 python3-pip python3-venv
-    elif command -v brew >/dev/null 2>&1; then
-      brew install python
-    elif command -v pacman >/dev/null 2>&1; then
-      sudo pacman -S --noconfirm --needed python python-pip
-    else
-      echo "no supported package manager (apt/brew/pacman)" >&2
-      exit 1
-    fi
+- name: Install Python 3 (apt)
+  pkg:
+    names: [python3, python3-pip, python3-venv]
+  as_user: root
+  when: apt_available
+  tags: [dev, python]
+
+- name: Install Python 3 (brew)
+  pkg:
+    name: python
+  when: brew_available
+  tags: [dev, python]
+
+- name: Install Python 3 (pacman)
+  pkg:
+    names: [python, python-pip]
+  as_user: root
+  when: pacman_available
   tags: [dev, python]
 
 # Rust via rustup (the canonical installer). The `--no-modify-path` keeps
 # our shell init untouched — the cargo bin dir is added by zsh config.
-- name: Install Rust toolchain
+- name: Install Rust toolchain via rustup
   shell: |
-    set -e
-    if command -v rustup >/dev/null 2>&1; then
-      rustup show >/dev/null && exit 0
-    fi
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
       sh -s -- -y --default-toolchain stable --profile default --no-modify-path
+  unless_command: command -v rustup >/dev/null 2>&1 && rustup show >/dev/null 2>&1
   tags: [dev, rust]
 
-- name: Install Go toolchain
-  shell: |
-    set -e
-    if command -v go >/dev/null 2>&1; then exit 0; fi
-    if command -v apt-get >/dev/null 2>&1; then
-      sudo apt-get update -qq
-      sudo apt-get install -y golang-go
-    elif command -v brew >/dev/null 2>&1; then
-      brew install go
-    elif command -v pacman >/dev/null 2>&1; then
-      sudo pacman -S --noconfirm --needed go
-    else
-      echo "no supported package manager" >&2; exit 1
-    fi
+- name: Install Go toolchain (apt)
+  pkg:
+    name: golang-go
+  as_user: root
+  when: apt_available
   tags: [dev, golang]
 
-- name: Install Java JDK
-  shell: |
-    set -e
-    if command -v javac >/dev/null 2>&1; then exit 0; fi
-    if command -v apt-get >/dev/null 2>&1; then
-      sudo apt-get update -qq
-      sudo apt-get install -y openjdk-21-jdk
-    elif command -v brew >/dev/null 2>&1; then
-      brew install openjdk@21
-    elif command -v pacman >/dev/null 2>&1; then
-      sudo pacman -S --noconfirm --needed jdk21-openjdk
-    else
-      echo "no supported package manager" >&2; exit 1
-    fi
+- name: Install Go toolchain (brew)
+  pkg:
+    name: go
+  when: brew_available
+  tags: [dev, golang]
+
+- name: Install Go toolchain (pacman)
+  pkg:
+    name: go
+  as_user: root
+  when: pacman_available
+  tags: [dev, golang]
+
+- name: Install Java JDK (apt)
+  pkg:
+    name: openjdk-21-jdk
+  as_user: root
+  when: apt_available
+  tags: [dev, java]
+
+- name: Install Java JDK (brew)
+  pkg:
+    name: openjdk@21
+  when: brew_available
+  tags: [dev, java]
+
+- name: Install Java JDK (pacman)
+  pkg:
+    name: jdk21-openjdk
+  as_user: root
+  when: pacman_available
   tags: [dev, java]
 
 # Clojure and fzf are listed in packages/ubuntu_packages.yml / darwin_packages.yml

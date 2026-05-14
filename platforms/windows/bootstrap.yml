@@ -154,15 +154,186 @@
           -Force | Out-Null
       }
 
+# ---- Mooncake agentd on the Windows host ---------------------------------
+#
+# The next four steps stand up a Windows-side mooncake agentd alongside the
+# WSL one, so `mooncake fleet apply main_pc-win` can drive Windows from any
+# controller. Two daemons, two peers, one physical box. Spec-49 in the
+# mooncake repo has the design rationale.
+#
+# Layout under %LOCALAPPDATA%\Mooncake\:
+#   bin\mooncake.exe       — the agentd binary (deployed by the next step)
+#   agentd.token           — bearer token, generated on first run
+#   agentd\runs\…          — run history
+#   agentd\synced\…        — synced plan trees (from `fleet apply`)
+#
+# The scheduled task runs at user logon as the current user (not SYSTEM)
+# so the daemon's state lives under the user's %LOCALAPPDATA% rather than
+# the SYSTEM profile dir. For a personal box where you auto-login or stay
+# logged in this is the right trade-off; for an unattended/server scenario
+# revisit with a Windows Service install.
+
+- name: Ensure %LOCALAPPDATA%\Mooncake\bin directory exists
+  shell:
+    interpreter: powershell
+    cmd: |
+      $bin = "$env:LOCALAPPDATA\Mooncake\bin"
+      if (-not (Test-Path $bin)) {
+        Write-Host "Creating $bin"
+        New-Item -ItemType Directory -Path $bin -Force | Out-Null
+      } else {
+        Write-Host "$bin already exists"
+      }
+
+- name: Verify mooncake.exe is deployed under %LOCALAPPDATA%\Mooncake\bin
+  shell:
+    interpreter: powershell
+    cmd: |
+      $exe = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
+      if (Test-Path $exe) {
+        Write-Host "Found $exe"
+      } else {
+        Write-Error @"
+mooncake.exe is not deployed at $exe.
+Copy it there before running bootstrap, e.g. from a cross-compile:
+
+    GOOS=windows GOARCH=amd64 go build -o ``"$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe``" ./cmd
+
+…or from any existing copy of mooncake.exe:
+
+    Copy-Item .\mooncake.exe ``"$env:LOCALAPPDATA\Mooncake\bin\``"
+"@
+        exit 1
+      }
+
+- name: Add firewall rule for Windows mooncake agentd (if not already present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $ruleName = "Mooncake Agentd"
+      if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
+        Write-Host "Adding firewall rule for port {{ windows_agentd_port }}..."
+        New-NetFirewallRule `
+          -DisplayName $ruleName `
+          -Direction Inbound `
+          -Protocol TCP `
+          -LocalPort {{ windows_agentd_port }} `
+          -Action Allow `
+          -Profile Domain,Private | Out-Null
+      } else {
+        Write-Host "Firewall rule '$ruleName' already exists"
+      }
+# Note: no Hyper-V firewall rule needed here — this daemon binds the
+# Windows host's NICs directly, not a WSL VM. Hyper-V FW only matters for
+# WSL-side listeners (see the wsl_agentd_port block above).
+
+- name: Register Task Scheduler entry to start mooncake agentd at logon (if not already present)
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $taskName = "Mooncake-Agentd-Autostart"
+      if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
+        Write-Host "Scheduled task '$taskName' already exists"
+      } else {
+        Write-Host "Registering scheduled task '$taskName'..."
+        $exe       = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
+        $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
+        $taskArgs  = 'agentd --bind 0.0.0.0:{{ windows_agentd_port }} --token-file "' + $tokenFile + '"'
+        $action    = New-ScheduledTaskAction -Execute $exe -Argument $taskArgs
+        $trigger   = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+        $principal = New-ScheduledTaskPrincipal `
+          -UserId "$env:USERDOMAIN\$env:USERNAME" `
+          -LogonType Interactive `
+          -RunLevel Limited
+        $settings  = New-ScheduledTaskSettingsSet `
+          -RestartCount 3 `
+          -RestartInterval (New-TimeSpan -Minutes 1) `
+          -StartWhenAvailable `
+          -AllowStartIfOnBatteries `
+          -DontStopIfGoingOnBatteries
+        Register-ScheduledTask `
+          -TaskName $taskName `
+          -Action $action `
+          -Trigger $trigger `
+          -Principal $principal `
+          -Settings $settings `
+          -Force | Out-Null
+      }
+
+- name: Start mooncake agentd now if nothing is listening yet
+  shell:
+    interpreter: powershell
+    cmd: |
+      $port = {{ windows_agentd_port }}
+      $listening = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
+      if ($listening) {
+        Write-Host "Port $port already has a listener — assuming agentd is up. Skipping kick-start."
+      } else {
+        $exe       = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
+        $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
+        Write-Host "Starting mooncake agentd in the background on :$port..."
+        Start-Process -FilePath $exe `
+          -ArgumentList @('agentd','--bind',"0.0.0.0:$port",'--token-file',$tokenFile) `
+          -WindowStyle Hidden
+        # Wait up to 5s for the listener to come up.
+        $deadline = (Get-Date).AddSeconds(5)
+        while ((Get-Date) -lt $deadline) {
+          $listening = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
+          if ($listening) { break }
+          Start-Sleep -Milliseconds 250
+        }
+        if (-not $listening) {
+          Write-Error "agentd failed to start on port $port. Run it manually to see the error:`n  & $exe agentd --bind 0.0.0.0:$port --token-file `"$tokenFile`""
+          exit 1
+        }
+        Write-Host "agentd listening on :$port"
+      }
+
+- name: Print the agentd bearer token for peers.toml
+  shell:
+    interpreter: powershell
+    cmd: |
+      $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
+      if (Test-Path $tokenFile) {
+        $tok = (Get-Content $tokenFile -Raw).Trim()
+        Write-Host ""
+        Write-Host "================================================================"
+        Write-Host "  Mooncake agentd (Windows side) bootstrap complete."
+        Write-Host "  Add this peer entry to ~/.config/mooncake/peers.toml on your"
+        Write-Host "  controller:"
+        Write-Host ""
+        Write-Host "    [[peers]]"
+        Write-Host "    name      = `"main_pc-win`""
+        $ip = (Get-NetIPAddress -AddressFamily IPv4 |
+               Where-Object { $_.PrefixOrigin -ne 'WellKnown' -and $_.IPAddress -notlike '169.*' } |
+               Select-Object -First 1 -ExpandProperty IPAddress)
+        if (-not $ip) { $ip = '<this-pc-ip>' }
+        Write-Host "    addr      = `"${ip}:{{ windows_agentd_port }}`""
+        Write-Host "    transport = `"agentd`""
+        Write-Host "    token     = `"$tok`""
+        Write-Host "    tags      = [`"host=main_pc`", `"windows`"]"
+        Write-Host "================================================================"
+        Write-Host ""
+      } else {
+        Write-Warning "Token file not at $tokenFile — agentd may not have started yet"
+      }
+
 - name: Print next steps
   log:
     msg: |
       Windows host bootstrap complete. Next steps:
-        1. Reboot the machine
+        1. Reboot the machine (picks up scheduled tasks + WSL changes cleanly)
         2. Finish Ubuntu first-run setup (set username + password)
         3. Inside WSL, run:
              git clone https://github.com/alehatsman/dotfiles ~/dotfiles
              cd ~/dotfiles && bash scripts/install_mooncake.sh
-             mooncake apply -c main.yml -v variables.yml
+             mooncake apply -c entries/main_pc.yml -v variables.yml -v vars/main_pc.yml -K
         4. Add your SSH public key to ~/.ssh/authorized_keys
         5. wsl --shutdown, then verify: ssh <this-pc-ip> -p {{ wsl_ssh_port }}
+        6. From the controller (WSL inside this PC or another box), add both
+           agentd peers to ~/.config/mooncake/peers.toml:
+             - main_pc      → <this-pc-ip>:{{ wsl_agentd_port }}    (WSL Linux)
+             - main_pc-win  → <this-pc-ip>:{{ windows_agentd_port }}    (Windows host)
+           Then: mooncake fleet apply main_pc-win <plan.yml>
