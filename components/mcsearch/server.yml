@@ -53,6 +53,10 @@
   file.template:
     src: ./templates/embed.compose.yml.j2
     dest: /opt/mcsearch/embed.compose.yml
+  # Path under /opt trips mooncake's static sudo predictor even though
+  # the dir is now owned by {{ username }}; declaring as_user: root keeps
+  # the planner happy.
+  as_user: root
   tags: [mcsearch, server]
 
 - name: "Deploy mcsearch-embed systemd unit"
@@ -62,10 +66,14 @@
   as_user: root
   tags: [mcsearch, server]
 
-- name: "Enable and start mcsearch-embed.service"
+- name: "Enable and (re)start mcsearch-embed.service"
+  # `restart` rather than `start` so a changed embed.compose.yml or unit
+  # file actually propagates. docker compose up -d is a no-op when the
+  # spec hasn't changed, so this is cheap even on unchanged applies.
   shell: |
     systemctl daemon-reload
-    systemctl enable --now mcsearch-embed.service
+    systemctl enable mcsearch-embed.service
+    systemctl restart mcsearch-embed.service
   as_user: root
   tags: [mcsearch, server]
 

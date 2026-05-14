@@ -35,17 +35,22 @@
   when: mcsearch_role != 'skip'
   tags: [mcsearch, build]
 
+# {{ mcsearch_src_dir }} is `~/.mcsearch-src` and mooncake expands `~` for
+# its own action paths (above), but bash inside a quoted shell scalar does
+# not expand a literal `~`. Use $HOME inside shell steps to stay portable.
 - name: "Build mcsearch binary"
   shell: |
-    cd "{{ mcsearch_src_dir }}"
+    cd "$HOME/.mcsearch-src"
     go build -trimpath -ldflags "-s -w" -o ./mcsearch ./cmd/mcsearch
   when: mcsearch_role != 'skip'
   tags: [mcsearch, build]
 
 - name: "Install mcsearch to {{ mcsearch_bin_path }}"
+  # User-context shell so $HOME resolves to the calling user; sudo is
+  # invoked just for the install step. Matches components/claude's
+  # claude-autoapprove pattern.
   shell: |
-    install -m 0755 "{{ mcsearch_src_dir }}/mcsearch" "{{ mcsearch_bin_path }}"
-  as_user: root
+    sudo install -m 0755 "$HOME/.mcsearch-src/mcsearch" "{{ mcsearch_bin_path }}"
   when: mcsearch_role != 'skip'
   tags: [mcsearch, build]
 
