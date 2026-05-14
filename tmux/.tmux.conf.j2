@@ -44,6 +44,7 @@ set -g default-terminal "screen-256color" # colors!
 # tell Tmux that outside terminal supports true color
 set -ga terminal-overrides ",xterm-256color*:Tc"
 
+# decrease command delay (increases vim responsiveness)
 set-option -sg escape-time 0
 
 # use vim key bindings
@@ -51,9 +52,6 @@ setw -g mode-keys vi
 
 # disable mouse
 set -g mouse off
-
-# decrease command delay (increases vim responsiveness)
-set -sg escape-time 1
 
 # start windows at 1, not 0
 set -g base-index 1
@@ -113,14 +111,10 @@ bind c new-window -c '#{pane_current_path}'
 bind C-[ copy-mode
 bind -T copy-mode-vi 'v' send -X begin-selection
 
-# Pick the clipboard tool per OS: pbcopy on macOS, wl-copy on Wayland (Hyprland / WSLg).
-if-shell "uname | grep -q Darwin" \
-    "set -g @copy_cmd 'pbcopy'" \
-    "set -g @copy_cmd 'wl-copy'"
-
-# copy with 'y' or 'Enter' and send to system clipboard
-bind -T copy-mode-vi 'y'     send -X copy-pipe-and-cancel "#{@copy_cmd}"
-bind -T copy-mode-vi 'Enter' send -X copy-pipe-and-cancel "#{@copy_cmd}"
+# 'y' is bound by tmux-yank (auto-detects pbcopy / wl-copy / xclip). Mirror it
+# on 'Enter'. tmux-sensible enables set-clipboard, so the OSC52 escape sequence
+# also reaches the terminal's clipboard.
+bind -T copy-mode-vi 'Enter' send -X copy-pipe-and-cancel
 
 # paste
 bind p paste-buffer
