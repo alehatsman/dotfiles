@@ -1,0 +1,16 @@
+# spotifyd — headless Spotify Connect daemon.
+#
+# Discovery-only: no credentials in config. The daemon advertises itself
+# over zeroconf on the LAN; pair it from the official Spotify app on
+# phone/desktop (Spotify Connect → pick this device).
+
+[global]
+device_name = "{{ spotifyd_device_name }}"
+device_type = "computer"
+backend = "pulseaudio"
+bitrate = 320
+volume_normalisation = true
+normalisation_pregain = -10
+autoplay = false
+cache_path = "~/.cache/spotifyd"
+max_cache_size = 1000000000
