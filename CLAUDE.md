@@ -54,6 +54,28 @@ mooncake.exe apply -c platforms\windows\bootstrap.yml -v variables.yml -v vars\m
 
 Then proceed with the WSL-side entry as above.
 
+## Fleet peers: bootstrap from the controller
+
+The Windows bootstrap above stands up agentd on the **Windows host**
+(port 7879 — the daemon that needs to register scheduled tasks /
+firewall rules / etc.). The **WSL-side agentd** (port 7878 — the
+fleet peer that runs Linux plans) is bootstrapped *from your
+controller machine* using mooncake's canonical SSH-based installer.
+From x1, after `bootstrap.yml` finishes on the Windows side:
+
+```
+mooncake fleet bootstrap aleh@192.168.1.68 --port 2222 \
+  --agentd-port 7878 --name main_pc --tag main_pc --upgrade
+```
+
+That SCPs the linux mooncake binary into the WSL distro, installs
+`/etc/systemd/system/mooncake-agentd.service`, `systemctl enable --now`'s
+it, and updates `~/.config/mooncake/peers.toml` with the rotated
+token. Once spec-56 lands in mooncake (`mooncake fleet bootstrap`
+with a Windows target), the Windows-side daemon's autostart step in
+`platforms/windows/bootstrap.yml` can move there too and this block
+collapses to one command per peer.
+
 ## Tags
 
 Tags filter which steps run. Apply tags propagate from `import` steps down
