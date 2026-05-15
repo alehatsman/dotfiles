@@ -18,11 +18,10 @@
   tags: [tmux, install]
 
 - name: Clone tmux plugin manager (tpm)
-  shell: |
-    if [ ! -d ~/.config/tmux/plugins/tpm ]; then
-      mkdir -p ~/.config/tmux/plugins
-      git clone --depth 1 https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
-    fi
+  git.clone:
+    repo: https://github.com/tmux-plugins/tpm
+    dest: ~/.config/tmux/plugins/tpm
+    depth: 1
   timeout: 5m
   retries: 3
   retry_delay: 5s

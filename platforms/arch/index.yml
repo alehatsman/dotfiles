@@ -65,27 +65,42 @@
   tags: [arch, system, packages]
 
 - name: Enable NetworkManager
-  shell: systemctl enable --now NetworkManager
+  os.service:
+    name: NetworkManager
+    state: started
+    enabled: true
   as_user: root
   tags: [arch, system, packages]
 
 - name: Enable TLP for battery management
-  shell: systemctl enable --now tlp
+  os.service:
+    name: tlp
+    state: started
+    enabled: true
   as_user: root
   tags: [arch, system, packages]
 
 - name: Enable bluetooth
-  shell: systemctl enable --now bluetooth
+  os.service:
+    name: bluetooth
+    state: started
+    enabled: true
   as_user: root
   tags: [arch, system, packages]
 
 - name: Enable SSH daemon
-  shell: systemctl enable --now sshd
+  os.service:
+    name: sshd
+    state: started
+    enabled: true
   as_user: root
   tags: [arch, system, packages]
 
 - name: Enable firmware update timer
-  shell: systemctl enable --now fwupd-refresh.timer
+  os.service:
+    name: fwupd-refresh.timer
+    state: started
+    enabled: true
   as_user: root
   tags: [arch, system, packages]
 
