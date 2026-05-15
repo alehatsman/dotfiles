@@ -54,8 +54,9 @@
 - name: Make sure plugins are installed
   shell: nvim --headless "+Lazy! sync" +qa
   timeout: 15m
-  retries: 2
-  retry_delay: 10s
+  retry:
+    attempts: 2
+    delay: 10s
   tags: [nvim, plugins]
 
 # vim-go is lazy-loaded on Go filetype, so it prompts to run :GoInstallBinaries

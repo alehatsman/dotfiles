@@ -23,8 +23,9 @@
     apt-get update && apt-get install -y openssh-server
   as_user: root
   timeout: 10m
-  retries: 3
-  retry_delay: 10s
+  retry:
+    attempts: 3
+    delay: 10s
 
 # Drop-in config avoids clobbering the base sshd_config
 - name: Configure SSH server

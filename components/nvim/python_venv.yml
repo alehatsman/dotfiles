@@ -2,13 +2,11 @@
 - name: Check if python_venv is present
   stat:
     path: '{{ python_venv_path }}'
-  register: python_venv_present
-
+  as: python_venv_present
 - name: Check if the python3_venv is present
   stat:
     path: '{{ python3_venv_path }}'
-  register: python3_venv_present
-
+  as: python3_venv_present
 - name: Make sure venvs are created for python2 and python3
   shell: |
     virtualenv -p python {{ python_venv_path }}
