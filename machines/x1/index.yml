@@ -39,6 +39,10 @@
 # - import: ../../components/mcsearch/index.yml
 #   tags: [tools, mcsearch]
 
+# spotifyd — headless Spotify Connect daemon (control from phone).
+- import: ../../components/spotifyd/index.yml
+  tags: [tools, spotifyd]
+
 # Desktop — Hyprland install + config (component is now self-contained).
 - import: ../../components/hyprland/index.yml
   tags: [gui, hyprland]
