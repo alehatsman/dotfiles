@@ -56,20 +56,20 @@
   tags: [zsh, config]
 
 - name: Clone zplug
-  shell: |
-    if [ ! -d ~/.zplug ]; then
-      git clone --depth 1 https://github.com/zplug/zplug.git ~/.zplug
-    fi
+  git.clone:
+    repo: https://github.com/zplug/zplug.git
+    dest: ~/.zplug
+    depth: 1
   timeout: 5m
   retries: 3
   retry_delay: 5s
   tags: [zsh, plugins]
 
 - name: Clone oh-my-zsh
-  shell: |
-    if [ ! -d ~/.zplug/repos/ohmyzsh/ohmyzsh ]; then
-      git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git ~/.zplug/repos/ohmyzsh/ohmyzsh
-    fi
+  git.clone:
+    repo: https://github.com/ohmyzsh/ohmyzsh.git
+    dest: ~/.zplug/repos/ohmyzsh/ohmyzsh
+    depth: 1
   timeout: 5m
   retries: 3
   retry_delay: 5s
