@@ -79,10 +79,9 @@
   tags: [zsh, plugins]
 
 - name: Set zsh as default shell
-  shell: |
-    if ! echo "$SHELL" | grep -q zsh; then
-      chsh -s $(which zsh) {{ username }}
-    fi
+  os.user:
+    name: "{{ username }}"
+    shell: "{{ zsh_shell_path }}"
   as_user: root
   tags: [zsh, shell]
 

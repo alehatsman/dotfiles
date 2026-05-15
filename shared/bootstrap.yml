@@ -6,7 +6,8 @@
 # spec-65) lands and these can become `use: github.com/...` refs.
 
 - name: Rename ~/Projects to ~/projects (lowercase convention)
-  shell: mv "$HOME/Projects" "$HOME/projects"
+  cmd:
+    argv: [mv, '{{ "~/Projects" | expanduser }}', '{{ "~/projects" | expanduser }}']
   when: os == "linux"
   unless_command: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
   tags: [core, home]
