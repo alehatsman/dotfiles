@@ -69,7 +69,10 @@
   tags: [thermal]
 
 - name: Apply TLP config
-  shell: tlp start
+  os.service:
+    name: tlp
+    state: restarted
+    enabled: true
   as_user: root
   tags: [thermal]
 
