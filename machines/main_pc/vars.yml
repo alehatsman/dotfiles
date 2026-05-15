@@ -20,3 +20,9 @@ windows_agentd_port: "7879"
 # Overrides the shared default of `client`. First provision pulls CUDA +
 # the embedding container; confirm `nvidia-smi` works inside WSL first.
 mcsearch_role: server
+
+# Long-lived project roots to keep auto-reindexed via mcsearch-watch@.
+# Adding a path here = enabled at next apply; removing it = disabled.
+# Ad-hoc worktrees come and go through the zsh gwc/gwd helpers; only
+# durable checkouts belong in this list.
+mcsearch_watch_paths: "/home/aleh/projects/dotfiles /home/aleh/projects/mooncake"

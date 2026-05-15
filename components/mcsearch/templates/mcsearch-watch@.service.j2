@@ -1,0 +1,42 @@
+# mcsearch auto-reindex — systemd template unit (user scope).
+#
+# Instance name is the project root, systemd-escape'd. Enable per project:
+#
+#   systemctl --user enable --now \
+#     mcsearch-watch@$(systemd-escape /home/aleh/projects/dotfiles).service
+#
+# Disable:
+#
+#   systemctl --user disable --now \
+#     mcsearch-watch@$(systemd-escape /home/aleh/projects/dotfiles).service
+#
+# The watcher does a debounced incremental re-index on each save burst.
+# It depends on the embedding endpoint being reachable (locally via the
+# tunnel on clients, or 127.0.0.1 on the server). Restart=always covers
+# the brief windows when the tunnel re-connects.
+
+[Unit]
+Description=mcsearch watch %I
+# Linux path escape: %I is the unescaped instance name (the project path).
+# Wants/After mcsearch-tunnel only on clients — harmless on the server
+# where the unit doesn't exist (systemd ignores missing Wants).
+Wants=mcsearch-tunnel.service
+After=mcsearch-tunnel.service
+# StartLimit* moved to [Unit] in systemd 230+ — [Service] is the legacy
+# placement and is ignored with a warning. Tolerate a few restarts in
+# 60 s, then back off.
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# `%h` is systemd's user-home specifier (expanded at unit-load time).
+# We can't use {{ mcsearch_bin_path }} directly because it now resolves
+# to the tilde-prefixed form (`~/.local/bin/mcsearch`), and systemd does
+# NOT expand `~` in ExecStart= — the unit would load with bad-setting.
+ExecStart=%h/.local/bin/mcsearch watch -v %I
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=default.target
