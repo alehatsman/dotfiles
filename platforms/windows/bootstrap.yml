@@ -84,7 +84,7 @@
 - name: Add firewall rule for WSL SSH
   windows.firewall_rule:
     name: "WSL2 SSH"
-    description: "WSL guest SSH (mirrored networking → Windows host NIC)"
+    description: "WSL guest SSH (mirrored networking exposes the port on the host NIC)"
     direction: inbound
     protocol: tcp
     local_port: ["{{ wsl_ssh_port }}"]
