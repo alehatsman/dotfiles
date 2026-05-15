@@ -34,7 +34,6 @@
 - import: ../../components/nvim/index.yml
   tags: [editor, nvim]
 
-# Semantic-search MCP helper. No-op until mcsearch_role is flipped from
-# `skip` (the shared default) to `client` in vars.yml.
-- import: ../../components/mcsearch/index.yml
-  tags: [tools, mcsearch]
+# Semantic-search MCP helper. Disabled — uncomment to re-enable.
+# - import: ../../components/mcsearch/index.yml
+#   tags: [tools, mcsearch]
