@@ -1,0 +1,81 @@
+#!/bin/sh
+# Read Intel RAPL package energy counter, diff against last sample, emit watts as waybar JSON.
+# Requires /sys/class/powercap/intel-rapl:0/energy_uj to be readable (udev rule in platforms/arch).
+
+cache=/tmp/waybar-cpu-power.cache
+pkg=/sys/class/powercap/intel-rapl:0/energy_uj
+psys=/sys/class/powercap/intel-rapl:1/energy_uj
+
+read_uj() {
+    [ -r "$1" ] && cat "$1" 2>/dev/null || echo ""
+}
+
+now_ns=$(date +%s%N)
+uj_pkg=$(read_uj "$pkg")
+uj_psys=$(read_uj "$psys")
+
+if [ -z "$uj_pkg" ]; then
+    printf '{"text":"?W","tooltip":"RAPL package energy unreadable (need udev rule)","class":"unavailable"}\n'
+    exit 0
+fi
+
+# PL2 (brief burst limit) is the absolute cap we paint red when approaching.
+pl2_uw=$(cat /sys/class/powercap/intel-rapl:0/constraint_1_power_limit_uw 2>/dev/null)
+: "${pl2_uw:=0}"
+
+max_pkg=$(cat /sys/class/powercap/intel-rapl:0/max_energy_range_uj 2>/dev/null)
+: "${max_pkg:=0}"
+
+if [ -f "$cache" ]; then
+    # shellcheck disable=SC2046
+    set -- $(cat "$cache")
+    last_ns=$1; last_pkg=$2; last_psys=$3
+else
+    last_ns=""; last_pkg=""; last_psys=""
+fi
+
+printf '%s %s %s\n' "$now_ns" "$uj_pkg" "$uj_psys" > "$cache"
+
+watts_pkg="?"; watts_psys=""
+if [ -n "$last_ns" ] && [ -n "$last_pkg" ]; then
+    dt_ns=$(( now_ns - last_ns ))
+    if [ "$dt_ns" -gt 0 ]; then
+        d_pkg=$(( uj_pkg - last_pkg ))
+        [ "$d_pkg" -lt 0 ] && [ "$max_pkg" -gt 0 ] && d_pkg=$(( d_pkg + max_pkg ))
+        # watts = (uJ / 1e6) / (ns / 1e9) = uJ * 1000 / ns
+        watts_pkg=$(awk -v d="$d_pkg" -v t="$dt_ns" 'BEGIN { printf "%.1f", (d * 1000.0) / t }')
+        if [ -n "$last_psys" ] && [ -n "$uj_psys" ]; then
+            d_psys=$(( uj_psys - last_psys ))
+            [ "$d_psys" -lt 0 ] && d_psys=0
+            watts_psys=$(awk -v d="$d_psys" -v t="$dt_ns" 'BEGIN { printf "%.1f", (d * 1000.0) / t }')
+        fi
+    fi
+fi
+
+# Integer display in the bar, one decimal in the tooltip.
+if [ "$watts_pkg" = "?" ]; then
+    text_w="?"
+else
+    text_w=$(awk -v w="$watts_pkg" 'BEGIN { printf "%d", w + 0.5 }')
+fi
+
+if [ -n "$watts_psys" ]; then
+    tooltip="CPU package: ${watts_pkg} W\nPlatform (psys): ${watts_psys} W"
+else
+    tooltip="CPU package: ${watts_pkg} W"
+fi
+
+# Trip "critical" at 85% of PL2 so the module flashes red when bursting near the cap.
+class=normal
+if [ "$watts_pkg" != "?" ] && [ "$pl2_uw" -gt 0 ]; then
+    if awk -v w="$watts_pkg" -v cap_uw="$pl2_uw" 'BEGIN { exit !(w >= 0.85 * (cap_uw / 1000000.0)) }'; then
+        class=critical
+    fi
+fi
+
+if [ "$pl2_uw" -gt 0 ]; then
+    cap_w=$(awk -v u="$pl2_uw" 'BEGIN { printf "%.0f", u / 1000000.0 }')
+    tooltip="${tooltip}\nPL2 cap: ${cap_w} W"
+fi
+
+printf '{"text":" / %sW","tooltip":"%s","class":"%s"}\n' "$text_w" "$tooltip" "$class"
