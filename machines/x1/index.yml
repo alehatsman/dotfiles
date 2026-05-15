@@ -39,11 +39,6 @@
 # - import: ../../components/mcsearch/index.yml
 #   tags: [tools, mcsearch]
 
-# Desktop
-- name: Install Hyprland desktop
-  use:
-    name: hyprland
-  tags: [gui, hyprland]
-
+# Desktop — Hyprland install + config (component is now self-contained).
 - import: ../../components/hyprland/index.yml
-  tags: [gui, hyprland, config]
+  tags: [gui, hyprland]
