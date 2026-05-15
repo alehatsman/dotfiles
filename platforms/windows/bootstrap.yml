@@ -111,11 +111,23 @@
     run_as_admin: true
     cmd: |
       $ruleName = "WSL2 SSH"
-      $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
+      # Discover the WSL VMCreatorId at runtime rather than hardcoding it
+      # ({40E0AC32-46A5-438A-A0B2-2B479E8F2E90} is the well-known WSL2
+      # value as of 2026, but Microsoft has rotated similar IDs in past
+      # Windows releases). Prefer Get-NetFirewallHyperVVMCreator; fall
+      # back to the constant if the cmdlet hasn't seen WSL register yet
+      # (can happen on a fresh box before first VM boot).
+      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match 'WSL' } |
+        Select-Object -First 1 -ExpandProperty VMCreatorId)
+      if (-not $wslId) {
+        $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
+        Write-Host "WSL VMCreator not registered yet — falling back to constant $wslId"
+      }
       $existing = Get-NetFirewallHyperVRule -VMCreatorId $wslId -ErrorAction SilentlyContinue |
         Where-Object { $_.DisplayName -eq $ruleName }
       if (-not $existing) {
-        Write-Host "Adding Hyper-V firewall rule for port {{ wsl_ssh_port }}..."
+        Write-Host "Adding Hyper-V firewall rule for port {{ wsl_ssh_port }} (creator $wslId)..."
         New-NetFirewallHyperVRule `
           -DisplayName $ruleName `
           -VMCreatorId $wslId `
@@ -152,11 +164,19 @@
     run_as_admin: true
     cmd: |
       $ruleName = "WSL2 Mooncake Agentd"
-      $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
+      # Detect at runtime; see the same block for "WSL2 SSH" above for
+      # the rationale on falling back to the constant.
+      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match 'WSL' } |
+        Select-Object -First 1 -ExpandProperty VMCreatorId)
+      if (-not $wslId) {
+        $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
+        Write-Host "WSL VMCreator not registered yet — falling back to constant $wslId"
+      }
       $existing = Get-NetFirewallHyperVRule -VMCreatorId $wslId -ErrorAction SilentlyContinue |
         Where-Object { $_.DisplayName -eq $ruleName }
       if (-not $existing) {
-        Write-Host "Adding Hyper-V firewall rule for port {{ wsl_agentd_port }}..."
+        Write-Host "Adding Hyper-V firewall rule for port {{ wsl_agentd_port }} (creator $wslId)..."
         New-NetFirewallHyperVRule `
           -DisplayName $ruleName `
           -VMCreatorId $wslId `
@@ -166,25 +186,6 @@
           -Action Allow | Out-Null
       } else {
         Write-Host "Hyper-V firewall rule '$ruleName' already exists"
-      }
-
-# The old WSL2-SSH-Autostart task ran as SYSTEM and called `wsl --exec
-# sudo service ssh start` with no -d flag. WSL distros are registered
-# per-user — SYSTEM never had Ubuntu-24.04 — so the task always failed
-# at boot (Task Scheduler reported it as "could not start"). The
-# WSL2-SSH-Keepalive task below covers both boot and runtime, so the
-# old task is now strictly worse than nothing. Unregister it if found.
-- name: Unregister deprecated WSL2-SSH-Autostart task (replaced by WSL2-SSH-Keepalive)
-  shell:
-    interpreter: powershell
-    run_as_admin: true
-    cmd: |
-      $taskName = "WSL2-SSH-Autostart"
-      if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-        Write-Host "Unregistering deprecated task '$taskName'..."
-        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-      } else {
-        Write-Host "Task '$taskName' not present — nothing to remove"
       }
 
 # ---- Mooncake agentd on the Windows host ---------------------------------
@@ -262,40 +263,57 @@
 # Windows host's NICs directly, not a WSL VM. Hyper-V FW only matters for
 # WSL-side listeners (see the wsl_agentd_port block above).
 
-- name: Register Task Scheduler entry to start mooncake agentd at logon (if not already present)
+# Register the autostart task with a *survivable* principal:
+#   - Trigger:   AtStartup (fires at boot — no interactive logon needed)
+#   - LogonType: S4U      (runs as the configured user without a stored
+#                          password and without an interactive session;
+#                          %LOCALAPPDATA% still resolves to that user's
+#                          profile so token + state paths stay correct)
+#   - Always (re-)registers so changes to the principal/trigger above
+#     propagate on a re-apply. The previous "skip if exists" guard meant
+#     fleet-broken-on-logout fixes never landed on machines that had
+#     the old definition already.
+# History: the original definition used AtLogOn + Interactive, which
+# made agentd a child of the user's interactive Windows session — it
+# died the moment the user signed out, leaving SSH-only sessions with
+# no daemon. spec-56 will eventually push this entire block into
+# `mooncake fleet bootstrap` for Windows targets; until that lands,
+# this is the right shape for the dotfiles-owned scheduled task.
+- name: Register Task Scheduler entry to start mooncake agentd at boot
   shell:
     interpreter: powershell
     run_as_admin: true
     cmd: |
-      $taskName = "Mooncake-Agentd-Autostart"
-      if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-        Write-Host "Scheduled task '$taskName' already exists"
-      } else {
-        Write-Host "Registering scheduled task '$taskName'..."
-        $exe       = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
-        $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
-        $taskArgs  = 'agentd --bind 0.0.0.0:{{ windows_agentd_port }} --token-file "' + $tokenFile + '"'
-        $action    = New-ScheduledTaskAction -Execute $exe -Argument $taskArgs
-        $trigger   = New-ScheduledTaskTrigger -AtLogOn -User "$env:COMPUTERNAME\$env:USERNAME"
-        $principal = New-ScheduledTaskPrincipal `
-          -UserId "$env:COMPUTERNAME\$env:USERNAME" `
-          -LogonType Interactive `
-          -RunLevel Limited
-        $settings  = New-ScheduledTaskSettingsSet `
-          -RestartCount 3 `
-          -RestartInterval (New-TimeSpan -Minutes 1) `
-          -StartWhenAvailable `
-          -AllowStartIfOnBatteries `
-          -DontStopIfGoingOnBatteries
-        Register-ScheduledTask `
-          -TaskName $taskName `
-          -Action $action `
-          -Trigger $trigger `
-          -Principal $principal `
-          -Settings $settings `
-          -Force | Out-Null
-      }
+      $taskName  = "Mooncake-Agentd-Autostart"
+      $exe       = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
+      $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
+      $taskArgs  = 'agentd --bind 0.0.0.0:{{ windows_agentd_port }} --token-file "' + $tokenFile + '"'
+      $action    = New-ScheduledTaskAction -Execute $exe -Argument $taskArgs
+      $trigger   = New-ScheduledTaskTrigger -AtStartup
+      $principal = New-ScheduledTaskPrincipal `
+        -UserId "$env:COMPUTERNAME\$env:USERNAME" `
+        -LogonType S4U `
+        -RunLevel Highest
+      $settings  = New-ScheduledTaskSettingsSet `
+        -RestartCount 3 `
+        -RestartInterval (New-TimeSpan -Minutes 1) `
+        -StartWhenAvailable `
+        -AllowStartIfOnBatteries `
+        -DontStopIfGoingOnBatteries
+      Register-ScheduledTask `
+        -TaskName $taskName `
+        -Action $action `
+        -Trigger $trigger `
+        -Principal $principal `
+        -Settings $settings `
+        -Force | Out-Null
+      Write-Host "Registered $taskName (AtStartup, S4U)"
 
+# Kick-start: start the task *now* via Start-ScheduledTask so the
+# daemon runs under the same survivable S4U principal as a real boot.
+# Using Start-Process here (the previous behavior) would launch agentd
+# in the calling SSH session — which dies the moment that session
+# disconnects, defeating the whole point of fixing the principal.
 - name: Start mooncake agentd now if nothing is listening yet
   shell:
     interpreter: powershell
@@ -305,21 +323,22 @@
       if ($listening) {
         Write-Host "Port $port already has a listener — assuming agentd is up. Skipping kick-start."
       } else {
-        $exe       = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
-        $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
-        Write-Host "Starting mooncake agentd in the background on :$port..."
-        Start-Process -FilePath $exe `
-          -ArgumentList @('agentd','--bind',"0.0.0.0:$port",'--token-file',$tokenFile) `
-          -WindowStyle Hidden
-        # Wait up to 5s for the listener to come up.
-        $deadline = (Get-Date).AddSeconds(5)
+        Write-Host "Triggering Mooncake-Agentd-Autostart..."
+        Start-ScheduledTask -TaskName 'Mooncake-Agentd-Autostart'
+        # Wait up to 8s for the listener to come up. S4U startup is
+        # slightly slower than Start-Process because the scheduler
+        # has to instantiate a user token first.
+        $deadline = (Get-Date).AddSeconds(8)
         while ((Get-Date) -lt $deadline) {
           $listening = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
           if ($listening) { break }
           Start-Sleep -Milliseconds 250
         }
         if (-not $listening) {
-          Write-Error "agentd failed to start on port $port. Run it manually to see the error:`n  & $exe agentd --bind 0.0.0.0:$port --token-file `"$tokenFile`""
+          $info = Get-ScheduledTaskInfo -TaskName 'Mooncake-Agentd-Autostart'
+          $exe       = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
+          $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
+          Write-Error "agentd failed to start on port $port (task LastTaskResult=$($info.LastTaskResult)). Run it manually to see the error:`n  & $exe agentd --bind 0.0.0.0:$port --token-file `"$tokenFile`""
           exit 1
         }
         Write-Host "agentd listening on :$port"
@@ -408,8 +427,16 @@
              mooncake apply -c entries/main_pc.yml -v variables.yml -v vars/main_pc.yml -K
         4. Add your SSH public key to ~/.ssh/authorized_keys
         5. wsl --shutdown, then verify: ssh <this-pc-ip> -p {{ wsl_ssh_port }}
-        6. From the controller (WSL inside this PC or another box), add both
-           agentd peers to ~/.config/mooncake/peers.toml:
-             - main_pc      → <this-pc-ip>:{{ wsl_agentd_port }}    (WSL Linux)
-             - main_pc-win  → <this-pc-ip>:{{ windows_agentd_port }}    (Windows host)
-           Then: mooncake fleet apply main_pc-win <plan.yml>
+        6. From your controller machine (e.g. x1), bootstrap the WSL-side
+           agentd — this SCPs the linux mooncake binary, installs the
+           systemd unit, and writes the peer entry to peers.toml:
+             mooncake fleet bootstrap <user>@<this-pc-ip> --port {{ wsl_ssh_port }} \
+                 --agentd-port {{ wsl_agentd_port }} --name main_pc --tag main_pc --upgrade
+        7. Pair the Windows-side agentd (it's already running per the
+           steps above; we just need to teach the controller about its
+           token + addr):
+             mooncake fleet pair main_pc-win --addr <this-pc-ip>:{{ windows_agentd_port }} \
+                 --token-via ssh <user>@<this-pc-ip>
+        8. Confirm both peers green:
+             mooncake fleet status
+           Expect: 2/2 accessible, main_pc (linux) + main_pc-win (windows).
