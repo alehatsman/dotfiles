@@ -1,4 +1,26 @@
 ---
+# Package install — inlined when the mooncake in-tree presets/ library
+# was retired. The Hyprland ecosystem comes from Arch's pacman repos;
+# this step replaces what `use: { name: hyprland }` used to do.
+- name: Install Hyprland ecosystem packages
+  shell: |
+    pacman -S --noconfirm --needed \
+      hyprland waybar wofi dunst \
+      hyprpaper hyprlock hypridle \
+      xdg-desktop-portal-hyprland xdg-desktop-portal-gtk \
+      qt5-wayland qt6-wayland \
+      polkit-gnome \
+      grim slurp \
+      brightnessctl playerctl \
+      pavucontrol \
+      alacritty \
+      yazi \
+      ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
+  as_user: root
+  when: pacman_available
+  timeout: 10m
+  tags: [hyprland, install]
+
 - name: Create Hyprland config directory
   file.write:
     path: ~/.config/hypr
