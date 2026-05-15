@@ -81,24 +81,14 @@
     src: ./templates/wslconfig.j2
     dest: "{{ user_home }}/.wslconfig"
 
-- name: Add firewall rule for WSL SSH (if not already present)
-  shell:
-    interpreter: powershell
-    run_as_admin: true
-    cmd: |
-      $ruleName = "WSL2 SSH"
-      if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
-        Write-Host "Adding firewall rule for port {{ wsl_ssh_port }}..."
-        New-NetFirewallRule `
-          -DisplayName $ruleName `
-          -Direction Inbound `
-          -Protocol TCP `
-          -LocalPort {{ wsl_ssh_port }} `
-          -Action Allow `
-          -Profile Domain,Private | Out-Null
-      } else {
-        Write-Host "Firewall rule '$ruleName' already exists"
-      }
+- name: Add firewall rule for WSL SSH
+  windows.firewall_rule:
+    name: "WSL2 SSH"
+    description: "WSL guest SSH (mirrored networking → Windows host NIC)"
+    direction: inbound
+    protocol: tcp
+    local_port: ["{{ wsl_ssh_port }}"]
+    profile: [domain, private]
 
 # With networkingMode=mirrored + firewall=true in .wslconfig, the WSL VM
 # sits behind the Hyper-V Firewall — a separate stack from the regular
@@ -139,24 +129,14 @@
         Write-Host "Hyper-V firewall rule '$ruleName' already exists"
       }
 
-- name: Add firewall rule for WSL mooncake agentd (if not already present)
-  shell:
-    interpreter: powershell
-    run_as_admin: true
-    cmd: |
-      $ruleName = "WSL2 Mooncake Agentd"
-      if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
-        Write-Host "Adding firewall rule for port {{ wsl_agentd_port }}..."
-        New-NetFirewallRule `
-          -DisplayName $ruleName `
-          -Direction Inbound `
-          -Protocol TCP `
-          -LocalPort {{ wsl_agentd_port }} `
-          -Action Allow `
-          -Profile Domain,Private | Out-Null
-      } else {
-        Write-Host "Firewall rule '$ruleName' already exists"
-      }
+- name: Add firewall rule for WSL mooncake agentd
+  windows.firewall_rule:
+    name: "WSL2 Mooncake Agentd"
+    description: "WSL Linux agentd (port exposed via mirrored networking)"
+    direction: inbound
+    protocol: tcp
+    local_port: ["{{ wsl_agentd_port }}"]
+    profile: [domain, private]
 
 - name: Add Hyper-V firewall rule for WSL mooncake agentd (if not already present)
   shell:
@@ -188,190 +168,28 @@
         Write-Host "Hyper-V firewall rule '$ruleName' already exists"
       }
 
-# ---- Mooncake agentd on the Windows host ---------------------------------
+# ---- Mooncake agentd on the Windows host: HANDLED BY THE CONTROLLER ------
 #
-# The next four steps stand up a Windows-side mooncake agentd alongside the
-# WSL one, so `mooncake fleet apply main_pc-win` can drive Windows from any
-# controller. Two daemons, two peers, one physical box. Spec-49 in the
-# mooncake repo has the design rationale.
+# Earlier versions of this file deployed mooncake.exe to
+# %LOCALAPPDATA%\Mooncake\bin, opened the agentd port in the Windows
+# Firewall, registered a Mooncake-Agentd-Autostart scheduled task, and
+# kick-started agentd. All of that is now done by:
 #
-# Layout under %LOCALAPPDATA%\Mooncake\:
-#   bin\mooncake.exe       — the agentd binary (deployed by the next step)
-#   agentd.token           — bearer token, generated on first run
-#   agentd\runs\…          — run history
-#   agentd\synced\…        — synced plan trees (from `fleet apply`)
+#   mooncake fleet bootstrap aleh@<this-pc-ip> --port 22 \
+#       --agentd-port {{ windows_agentd_port }} --name <machine>-win --tag windows
 #
-# The scheduled task runs at user logon as the current user (not SYSTEM)
-# so the daemon's state lives under the user's %LOCALAPPDATA% rather than
-# the SYSTEM profile dir. For a personal box where you auto-login or stay
-# logged in this is the right trade-off; for an unattended/server scenario
-# revisit with a Windows Service install.
-
-- name: Ensure %LOCALAPPDATA%\Mooncake\bin directory exists
-  shell:
-    interpreter: powershell
-    cmd: |
-      $bin = "$env:LOCALAPPDATA\Mooncake\bin"
-      if (-not (Test-Path $bin)) {
-        Write-Host "Creating $bin"
-        New-Item -ItemType Directory -Path $bin -Force | Out-Null
-      } else {
-        Write-Host "$bin already exists"
-      }
-
-- name: Verify mooncake.exe is deployed under %LOCALAPPDATA%\Mooncake\bin
-  shell:
-    interpreter: powershell
-    cmd: |
-      # NOTE: avoid PowerShell here-strings (@"..."@) here — their closing
-      # marker must sit at column 0, which collides with YAML's block-scalar
-      # indentation rules and makes the playbook unparseable.
-      $exe = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
-      if (Test-Path $exe) {
-        Write-Host "Found $exe"
-      } else {
-        Write-Error "mooncake.exe is not deployed at $exe."
-        Write-Host 'Copy it there before running bootstrap, e.g. from a cross-compile:'
-        Write-Host ''
-        Write-Host '    GOOS=windows GOARCH=amd64 go build -o "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe" ./cmd'
-        Write-Host ''
-        Write-Host '…or from any existing copy of mooncake.exe:'
-        Write-Host ''
-        Write-Host '    Copy-Item .\mooncake.exe "$env:LOCALAPPDATA\Mooncake\bin\"'
-        exit 1
-      }
-
-- name: Add firewall rule for Windows mooncake agentd (if not already present)
-  shell:
-    interpreter: powershell
-    run_as_admin: true
-    cmd: |
-      $ruleName = "Mooncake Agentd"
-      if (-not (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue)) {
-        Write-Host "Adding firewall rule for port {{ windows_agentd_port }}..."
-        New-NetFirewallRule `
-          -DisplayName $ruleName `
-          -Direction Inbound `
-          -Protocol TCP `
-          -LocalPort {{ windows_agentd_port }} `
-          -Action Allow `
-          -Profile Domain,Private | Out-Null
-      } else {
-        Write-Host "Firewall rule '$ruleName' already exists"
-      }
-# Note: no Hyper-V firewall rule needed here — this daemon binds the
-# Windows host's NICs directly, not a WSL VM. Hyper-V FW only matters for
-# WSL-side listeners (see the wsl_agentd_port block above).
-
-# Register the autostart task with a *survivable* principal:
-#   - Trigger:   AtStartup (fires at boot — no interactive logon needed)
-#   - LogonType: S4U      (runs as the configured user without a stored
-#                          password and without an interactive session;
-#                          %LOCALAPPDATA% still resolves to that user's
-#                          profile so token + state paths stay correct)
-#   - Always (re-)registers so changes to the principal/trigger above
-#     propagate on a re-apply. The previous "skip if exists" guard meant
-#     fleet-broken-on-logout fixes never landed on machines that had
-#     the old definition already.
-# History: the original definition used AtLogOn + Interactive, which
-# made agentd a child of the user's interactive Windows session — it
-# died the moment the user signed out, leaving SSH-only sessions with
-# no daemon. spec-56 will eventually push this entire block into
-# `mooncake fleet bootstrap` for Windows targets; until that lands,
-# this is the right shape for the dotfiles-owned scheduled task.
-- name: Register Task Scheduler entry to start mooncake agentd at boot
-  shell:
-    interpreter: powershell
-    run_as_admin: true
-    cmd: |
-      $taskName  = "Mooncake-Agentd-Autostart"
-      $exe       = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
-      $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
-      $taskArgs  = 'agentd --bind 0.0.0.0:{{ windows_agentd_port }} --token-file "' + $tokenFile + '"'
-      $action    = New-ScheduledTaskAction -Execute $exe -Argument $taskArgs
-      $trigger   = New-ScheduledTaskTrigger -AtStartup
-      $principal = New-ScheduledTaskPrincipal `
-        -UserId "$env:COMPUTERNAME\$env:USERNAME" `
-        -LogonType S4U `
-        -RunLevel Highest
-      $settings  = New-ScheduledTaskSettingsSet `
-        -RestartCount 3 `
-        -RestartInterval (New-TimeSpan -Minutes 1) `
-        -StartWhenAvailable `
-        -AllowStartIfOnBatteries `
-        -DontStopIfGoingOnBatteries
-      Register-ScheduledTask `
-        -TaskName $taskName `
-        -Action $action `
-        -Trigger $trigger `
-        -Principal $principal `
-        -Settings $settings `
-        -Force | Out-Null
-      Write-Host "Registered $taskName (AtStartup, S4U)"
-
-# Kick-start: start the task *now* via Start-ScheduledTask so the
-# daemon runs under the same survivable S4U principal as a real boot.
-# Using Start-Process here (the previous behavior) would launch agentd
-# in the calling SSH session — which dies the moment that session
-# disconnects, defeating the whole point of fixing the principal.
-- name: Start mooncake agentd now if nothing is listening yet
-  shell:
-    interpreter: powershell
-    cmd: |
-      $port = {{ windows_agentd_port }}
-      $listening = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
-      if ($listening) {
-        Write-Host "Port $port already has a listener — assuming agentd is up. Skipping kick-start."
-      } else {
-        Write-Host "Triggering Mooncake-Agentd-Autostart..."
-        Start-ScheduledTask -TaskName 'Mooncake-Agentd-Autostart'
-        # Wait up to 8s for the listener to come up. S4U startup is
-        # slightly slower than Start-Process because the scheduler
-        # has to instantiate a user token first.
-        $deadline = (Get-Date).AddSeconds(8)
-        while ((Get-Date) -lt $deadline) {
-          $listening = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue
-          if ($listening) { break }
-          Start-Sleep -Milliseconds 250
-        }
-        if (-not $listening) {
-          $info = Get-ScheduledTaskInfo -TaskName 'Mooncake-Agentd-Autostart'
-          $exe       = "$env:LOCALAPPDATA\Mooncake\bin\mooncake.exe"
-          $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
-          Write-Error "agentd failed to start on port $port (task LastTaskResult=$($info.LastTaskResult)). Run it manually to see the error:`n  & $exe agentd --bind 0.0.0.0:$port --token-file `"$tokenFile`""
-          exit 1
-        }
-        Write-Host "agentd listening on :$port"
-      }
-
-- name: Print the agentd bearer token for peers.toml
-  shell:
-    interpreter: powershell
-    cmd: |
-      $tokenFile = "$env:LOCALAPPDATA\Mooncake\agentd.token"
-      if (Test-Path $tokenFile) {
-        $tok = (Get-Content $tokenFile -Raw).Trim()
-        Write-Host ""
-        Write-Host "================================================================"
-        Write-Host "  Mooncake agentd (Windows side) bootstrap complete."
-        Write-Host "  Add this peer entry to ~/.config/mooncake/peers.toml on your"
-        Write-Host "  controller:"
-        Write-Host ""
-        Write-Host "    [[peers]]"
-        Write-Host "    name      = `"main_pc-win`""
-        $ip = (Get-NetIPAddress -AddressFamily IPv4 |
-               Where-Object { $_.PrefixOrigin -ne 'WellKnown' -and $_.IPAddress -notlike '169.*' } |
-               Select-Object -First 1 -ExpandProperty IPAddress)
-        if (-not $ip) { $ip = '<this-pc-ip>' }
-        Write-Host "    addr      = `"${ip}:{{ windows_agentd_port }}`""
-        Write-Host "    transport = `"agentd`""
-        Write-Host "    token     = `"$tok`""
-        Write-Host "    tags      = [`"host=main_pc`", `"windows`"]"
-        Write-Host "================================================================"
-        Write-Host ""
-      } else {
-        Write-Warning "Token file not at $tokenFile — agentd may not have started yet"
-      }
+# Run from any controller (x1 / mac / mini_pc) that has mooncake
+# installed. spec-56 added the Windows branch to fleet bootstrap; the
+# rendered scheduled task uses the same `Mooncake-Agentd-Autostart`
+# name + S4U principal as the old dotfiles step, so a peer
+# bootstrapped pre-spec-56 looks identical to one bootstrapped after.
+# The peer's token + addr land in ~/.config/mooncake/peers.toml
+# directly on the controller — no copy-paste hint here.
+#
+# Why move it out: keeping the install path in one place across
+# linux/darwin/windows targets means a single bug-fix (e.g. token
+# rotation, idempotent re-register) touches mooncake, not every
+# consumer's dotfiles. See spec-56 §"Motivation" for the full case.
 
 # Belt-and-suspenders to vmIdleTimeout=-1 in .wslconfig: a repeating
 # scheduled task that re-runs `systemctl start ssh` every 5 minutes. It's
@@ -379,41 +197,29 @@
 # itself wakes a stopped VM. Runs as the current user (not SYSTEM) so the
 # user's registered WSL distros are visible. S4U logon means the task
 # fires even when the user isn't logged in.
-- name: Register Task Scheduler entry to keep WSL SSH alive (if not already present)
-  shell:
-    interpreter: powershell
-    run_as_admin: true
-    cmd: |
-      $taskName = "WSL2-SSH-Keepalive"
-      if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-        Write-Host "Scheduled task '$taskName' already exists"
-      } else {
-        Write-Host "Registering scheduled task '$taskName'..."
-        $action = New-ScheduledTaskAction `
-          -Execute "C:\Windows\System32\wsl.exe" `
-          -Argument "-d {{ wsl_distro }} -u root -- systemctl start ssh"
-        $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
-          -RepetitionInterval (New-TimeSpan -Minutes 5)
-        # $env:USERDOMAIN is sometimes unset in mooncake's elevated shell;
-        # $env:COMPUTERNAME\$env:USERNAME is the canonical local-account
-        # form and matches the agentd registration above.
-        $principal = New-ScheduledTaskPrincipal `
-          -UserId "$env:COMPUTERNAME\$env:USERNAME" `
-          -LogonType S4U `
-          -RunLevel Highest
-        $settings = New-ScheduledTaskSettingsSet `
-          -ExecutionTimeLimit (New-TimeSpan -Minutes 2) `
-          -AllowStartIfOnBatteries `
-          -DontStopIfGoingOnBatteries `
-          -StartWhenAvailable
-        Register-ScheduledTask `
-          -TaskName $taskName `
-          -Action $action `
-          -Trigger $trigger `
-          -Principal $principal `
-          -Settings $settings `
-          -Force | Out-Null
-      }
+- name: Register Task Scheduler entry to keep WSL SSH alive
+  windows.scheduled_task:
+    name: WSL2-SSH-Keepalive
+    description: "Wake WSL VM + ensure ssh service is up (5-minute repetition)"
+    triggers:
+      - type: repetition
+        interval: 5m
+    actions:
+      - execute: 'C:\Windows\System32\wsl.exe'
+        arguments: '-d {{ wsl_distro }} -u root -- systemctl start ssh'
+    principal:
+      # {{ username }} on Windows resolves to DOMAIN\USER from
+      # user.Current() — matches the COMPUTERNAME\USERNAME form the
+      # old PowerShell version used and the agentd autostart task
+      # mooncake fleet bootstrap registers.
+      user: "{{ username }}"
+      logon_type: s4u
+      run_level: highest
+    settings:
+      execution_time_limit: 2m
+      allow_start_if_on_batteries: true
+      dont_stop_if_going_on_batteries: true
+      start_when_available: true
 
 - name: Print next steps
   log:
@@ -421,22 +227,29 @@
       Windows host bootstrap complete. Next steps:
         1. Reboot the machine (picks up scheduled tasks + WSL changes cleanly)
         2. Finish Ubuntu first-run setup (set username + password)
-        3. Inside WSL, run:
+        3. Inside WSL, clone dotfiles + apply the per-machine entry:
              git clone https://github.com/alehatsman/dotfiles ~/dotfiles
              cd ~/dotfiles && bash scripts/install_mooncake.sh
-             mooncake apply -c entries/main_pc.yml -v variables.yml -v vars/main_pc.yml -K
-        4. Add your SSH public key to ~/.ssh/authorized_keys
+             ./scripts/run.sh --machine <this-machine>
+        4. Add your SSH public key to ~/.ssh/authorized_keys (WSL side)
         5. wsl --shutdown, then verify: ssh <this-pc-ip> -p {{ wsl_ssh_port }}
-        6. From your controller machine (e.g. x1), bootstrap the WSL-side
-           agentd — this SCPs the linux mooncake binary, installs the
-           systemd unit, and writes the peer entry to peers.toml:
-             mooncake fleet bootstrap <user>@<this-pc-ip> --port {{ wsl_ssh_port }} \
-                 --agentd-port {{ wsl_agentd_port }} --name main_pc --tag main_pc --upgrade
-        7. Pair the Windows-side agentd (it's already running per the
-           steps above; we just need to teach the controller about its
-           token + addr):
-             mooncake fleet pair main_pc-win --addr <this-pc-ip>:{{ windows_agentd_port }} \
-                 --token-via ssh <user>@<this-pc-ip>
-        8. Confirm both peers green:
+        6. From your controller machine (e.g. x1), bootstrap BOTH agentd
+           daemons — one inside the WSL distro, one on the Windows host.
+           Each command SCPs the right mooncake binary, installs the
+           OS-native autostart (systemd unit on Linux, Task Scheduler
+           entry on Windows), opens the firewall, and writes the peer
+           entry to peers.toml.
+
+           # WSL (Linux) peer — goes through WSL's OpenSSH on :{{ wsl_ssh_port }}
+             mooncake fleet bootstrap <user>@<this-pc-ip> \
+                 --port {{ wsl_ssh_port }} --agentd-port {{ wsl_agentd_port }} \
+                 --name <machine> --tag <machine> --upgrade
+
+           # Windows-host peer — goes through Windows OpenSSH on :22
+             mooncake fleet bootstrap <user>@<this-pc-ip> \
+                 --port 22 --agentd-port {{ windows_agentd_port }} \
+                 --name <machine>-win --tag windows --upgrade
+
+        7. Confirm both peers green:
              mooncake fleet status
-           Expect: 2/2 accessible, main_pc (linux) + main_pc-win (windows).
+           Expect: 2/2 accessible, <machine> (linux) + <machine>-win (windows).
