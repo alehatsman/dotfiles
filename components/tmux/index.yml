@@ -13,8 +13,9 @@
   shell: brew install tmux 2>&1 | grep -v "already installed" || true
   when: os == 'darwin'
   timeout: 5m
-  retries: 3
-  retry_delay: 5s
+  retry:
+    attempts: 3
+    delay: 5s
   tags: [tmux, install]
 
 - name: Clone tmux plugin manager (tpm)
@@ -23,8 +24,9 @@
     dest: ~/.config/tmux/plugins/tpm
     depth: 1
   timeout: 5m
-  retries: 3
-  retry_delay: 5s
+  retry:
+    attempts: 3
+    delay: 5s
   tags: [tmux, plugins]
 
 - name: Verify tmux installation

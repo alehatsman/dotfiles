@@ -5,8 +5,9 @@
     upgrade: true
   as_user: root
   timeout: 15m
-  retries: 3
-  retry_delay: 10s
+  retry:
+    attempts: 3
+    delay: 10s
   tags: [arch, system, packages]
 
 - name: Enable multilib repository

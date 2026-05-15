@@ -41,6 +41,10 @@
       CPU_HWP_DYN_BOOST_ON_AC=0
       CPU_HWP_DYN_BOOST_ON_BAT=0
 
+      # Kill turbo entirely on battery — keep it on AC for bursty work.
+      CPU_BOOST_ON_AC=1
+      CPU_BOOST_ON_BAT=0
+
       # Aggressive PCIe ASPM — biggest idle-watt reduction.
       PCIE_ASPM_ON_AC=powersupersave
       PCIE_ASPM_ON_BAT=powersupersave
@@ -90,9 +94,12 @@
 - name: Append i915 power-save params to systemd-boot cmdline
   shell: |
     ENTRY=/boot/loader/entries/arch.conf
-    PARAMS="i915.enable_fbc=1 i915.enable_psr=1 i915.enable_dc=4 nmi_watchdog=0"
+    PARAMS="i915.enable_fbc=1 i915.enable_psr=2 i915.enable_dc=4 nmi_watchdog=0"
     [ -f "$ENTRY" ] || { echo "boot entry not found, skipping"; exit 0; }
-    if ! grep -q 'i915.enable_fbc' "$ENTRY"; then
+    if grep -q 'i915.enable_psr=1' "$ENTRY"; then
+      sed -i 's|i915.enable_psr=1|i915.enable_psr=2|' "$ENTRY"
+      echo "upgraded psr 1 -> 2"
+    elif ! grep -q 'i915.enable_fbc' "$ENTRY"; then
       sed -i "s|^options |options $PARAMS |" "$ENTRY"
       echo "added: $PARAMS"
     else

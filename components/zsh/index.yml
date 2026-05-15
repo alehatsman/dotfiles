@@ -11,8 +11,9 @@
   shell: brew install zsh 2>&1 | grep -v "already installed" || true
   when: os == "darwin"
   timeout: 5m
-  retries: 3
-  retry_delay: 5s
+  retry:
+    attempts: 3
+    delay: 5s
   tags: [zsh, install]
 
 - name: Make sure zsh config directory is present
@@ -61,8 +62,9 @@
     dest: ~/.zplug
     depth: 1
   timeout: 5m
-  retries: 3
-  retry_delay: 5s
+  retry:
+    attempts: 3
+    delay: 5s
   tags: [zsh, plugins]
 
 - name: Clone oh-my-zsh
@@ -71,8 +73,9 @@
     dest: ~/.zplug/repos/ohmyzsh/ohmyzsh
     depth: 1
   timeout: 5m
-  retries: 3
-  retry_delay: 5s
+  retry:
+    attempts: 3
+    delay: 5s
   tags: [zsh, plugins]
 
 - name: Set zsh as default shell

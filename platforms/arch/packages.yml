@@ -162,8 +162,9 @@
       - noto-fonts-emoji
   as_user: root
   timeout: 20m
-  retries: 3
-  retry_delay: 10s
+  retry:
+    attempts: 3
+    delay: 10s
   tags: [arch, system, packages]
 
 # AUR packages — kept as shell because mooncake's package action
@@ -188,6 +189,7 @@
       bluetuith \
       wlogout
   timeout: 15m
-  retries: 2
-  retry_delay: 10s
+  retry:
+    attempts: 2
+    delay: 10s
   tags: [arch, system, packages]

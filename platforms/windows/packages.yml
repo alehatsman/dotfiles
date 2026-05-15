@@ -6,8 +6,9 @@
     apt-get upgrade -y;
   as_user: root
   timeout: 15m
-  retries: 3
-  retry_delay: 10s
+  retry:
+    attempts: 3
+    delay: 10s
 
 - name: Define basic + app packages
   vars:
@@ -62,8 +63,9 @@
     apt-get install -y {{  basic_packages | join: " " }}
   as_user: root
   timeout: 10m
-  retries: 3
-  retry_delay: 10s
+  retry:
+    attempts: 3
+    delay: 10s
 
 - name: Make sure keyserver is updated
   shell: |
@@ -78,13 +80,15 @@
     apt-get update
   as_user: root
   timeout: 5m
-  retries: 2
-  retry_delay: 5s
+  retry:
+    attempts: 2
+    delay: 5s
 
 - name: Make sure apps are installed
   shell: |
     apt-get install -y {{  apps | join: " " }}
   as_user: root
   timeout: 20m
-  retries: 3
-  retry_delay: 10s
+  retry:
+    attempts: 3
+    delay: 10s

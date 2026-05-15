@@ -29,6 +29,6 @@
 
 - name: Verify git config
   shell: git config --get user.name
-  register: git_user_check
+  as: git_user_check
   changed_when: false
   tags: [git, verify]
