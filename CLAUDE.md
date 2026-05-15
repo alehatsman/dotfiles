@@ -56,25 +56,34 @@ Then proceed with the WSL-side entry as above.
 
 ## Fleet peers: bootstrap from the controller
 
-The Windows bootstrap above stands up agentd on the **Windows host**
-(port 7879 — the daemon that needs to register scheduled tasks /
-firewall rules / etc.). The **WSL-side agentd** (port 7878 — the
-fleet peer that runs Linux plans) is bootstrapped *from your
-controller machine* using mooncake's canonical SSH-based installer.
-From x1, after `bootstrap.yml` finishes on the Windows side:
+`platforms/windows/bootstrap.yml` *preps* the Windows host (WSL
+install, .wslconfig, OpenSSH default shell, firewall rules,
+WSL2-SSH-Keepalive task). It **does not install agentd** anywhere
+— that's the controller's job, on both sides. Two
+`mooncake fleet bootstrap` calls from x1 stand up both peers:
 
 ```
-mooncake fleet bootstrap aleh@192.168.1.68 --port 2222 \
-  --agentd-port 7878 --name main_pc --tag main_pc --upgrade
+# WSL (Linux) peer — goes through WSL's OpenSSH on :2222
+mooncake fleet bootstrap aleh@192.168.1.68 \
+    --port 2222 --agentd-port 7878 \
+    --name <machine> --tag <machine> --upgrade
+
+# Windows-host peer — goes through Windows OpenSSH on :22 (spec-56)
+mooncake fleet bootstrap aleh@192.168.1.68 \
+    --port 22 --agentd-port 7879 \
+    --name <machine>-win --tag windows --upgrade
 ```
 
-That SCPs the linux mooncake binary into the WSL distro, installs
-`/etc/systemd/system/mooncake-agentd.service`, `systemctl enable --now`'s
-it, and updates `~/.config/mooncake/peers.toml` with the rotated
-token. Once spec-56 lands in mooncake (`mooncake fleet bootstrap`
-with a Windows target), the Windows-side daemon's autostart step in
-`platforms/windows/bootstrap.yml` can move there too and this block
-collapses to one command per peer.
+Each command SCPs the right binary, installs the OS-native
+autostart (systemd unit on Linux, Task Scheduler entry with S4U
+principal on Windows), opens the firewall, and writes the peer
+entry to peers.toml.
+
+History: an earlier version of `bootstrap.yml` registered the
+Windows-side `Mooncake-Agentd-Autostart` scheduled task itself.
+spec-56 (in mooncake) moved that flow into `fleet bootstrap` so a
+single bug-fix (token rotation, idempotent re-register, upgrade
+path) lives in one place across linux/darwin/windows targets.
 
 ## Tags
 

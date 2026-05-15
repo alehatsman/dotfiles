@@ -3,10 +3,20 @@
 is_wsl: true
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
-# Mooncake agentd TCP port (inside WSL). Mirrored networking means the
-# Windows host listens on the same port; firewall + Hyper-V firewall
-# rules in platforms/windows/bootstrap.yml open it inbound.
+# Mooncake agentd TCP ports.
+#   wsl_agentd_port (7878)     — Linux daemon inside the Ubuntu VM.
+#                                Mirrored networking exposes it on the
+#                                Windows host's LAN IP. Needs BOTH a
+#                                Windows Firewall rule AND a Hyper-V
+#                                Firewall rule (see bootstrap.yml).
+#   windows_agentd_port (7879) — Windows-host daemon. Bootstrapped from
+#                                the controller via `mooncake fleet
+#                                bootstrap`; the port number lives here
+#                                because the diagnostic / fleet-pair
+#                                hint in `Print next steps` references it.
+# Both daemons appear as separate peers in peers.toml for fleet apply.
 wsl_agentd_port: "7878"
+windows_agentd_port: "7879"
 
 # ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
 # No discrete GPU here — inherits mcsearch_role=client from shared. Same
