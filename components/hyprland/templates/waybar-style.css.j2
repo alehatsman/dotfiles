@@ -69,6 +69,7 @@ tooltip label {
 
 #custom-cpu-temp,
 #cpu,
+#custom-cpu-power,
 #memory,
 #backlight,
 #pulseaudio,
@@ -80,15 +81,20 @@ tooltip label {
     padding: 0 8px;
 }
 
-/* Pair cpu-temp + cpu-util visually so "47°C / 25%" reads as one block */
+/* Group cpu-temp + cpu-util + cpu-power so "47°C / 25% / 3W" reads as one block */
 #custom-cpu-temp {
     padding-right: 0;
 }
 #cpu {
     padding-left: 0;
+    padding-right: 0;
+}
+#custom-cpu-power {
+    padding-left: 0;
 }
 
-#custom-cpu-temp.critical {
+#custom-cpu-temp.critical,
+#custom-cpu-power.critical {
     color: #f92672;
 }
 

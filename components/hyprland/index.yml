@@ -139,6 +139,13 @@
     mode: '0755'
   tags: [hyprland, waybar, config]
 
+- name: Deploy waybar-cpu-power helper (RAPL package watts)
+  file.template:
+    src: ./templates/waybar-cpu-power.sh.j2
+    dest: ~/.local/bin/waybar-cpu-power
+    mode: '0755'
+  tags: [hyprland, waybar, config]
+
 - name: Deploy wm-clip system-wide copy/paste dispatcher
   file.template:
     src: ./templates/wm-clip.sh.j2

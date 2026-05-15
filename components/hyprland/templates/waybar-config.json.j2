@@ -5,7 +5,7 @@
     "spacing": 4,
     "modules-left": ["hyprland/workspaces"],
     "modules-center": [],
-    "modules-right": ["custom/cpu-temp", "cpu", "memory", "backlight", "pulseaudio", "battery", "bluetooth", "network", "clock", "custom/power"],
+    "modules-right": ["custom/cpu-temp", "cpu", "custom/cpu-power", "memory", "backlight", "pulseaudio", "battery", "bluetooth", "network", "clock", "custom/power"],
 
     "hyprland/workspaces": {
         "format": "{id}",
@@ -24,6 +24,12 @@
         "interval": 3,
         "format": " / {usage}%",
         "tooltip-format": "CPU util: {usage}%"
+    },
+
+    "custom/cpu-power": {
+        "exec": "~/.local/bin/waybar-cpu-power",
+        "interval": 3,
+        "return-type": "json"
     },
 
     "memory": {

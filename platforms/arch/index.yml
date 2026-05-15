@@ -109,6 +109,18 @@
   as_user: root
   tags: [arch, system, packages]
 
+- name: Make Intel RAPL energy_uj readable by non-root (waybar power module)
+  shell: |
+    cat > /etc/udev/rules.d/99-rapl-readable.rules <<'EOF'
+    ACTION=="add", SUBSYSTEM=="powercap", KERNEL=="intel-rapl:*", RUN+="/usr/bin/chmod 0444 /sys%p/energy_uj"
+    EOF
+    # Apply now for already-loaded RAPL domains (udev only fires on add).
+    for f in /sys/class/powercap/intel-rapl:*/energy_uj; do
+      [ -e "$f" ] && chmod 0444 "$f" || true
+    done
+  as_user: root
+  tags: [arch, system, packages, rapl]
+
 - name: Remap CapsLock to Ctrl and keep in lowercase mode
   shell: |
     mkdir -p /usr/local/share/kbd/keymaps
