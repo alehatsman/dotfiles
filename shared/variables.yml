@@ -35,3 +35,12 @@ mcsearch_local_port: "8082"
 # expected to have a `Host main_pc-wsl` entry that points at the WSL SSH
 # port (typically <main_pc-lan-ip>:2222 with the appropriate key).
 mcsearch_remote_host: "main_pc-wsl"
+
+# Space-separated list of absolute project roots to auto-watch via
+# mcsearch-watch@.service. The apply step enables one user systemd
+# instance per path and disables any orphaned instance no longer in the
+# list. Empty = additive mode (leave existing instances alone). Paths
+# must not contain spaces. Ad-hoc worktrees pick up their own watch
+# instance through the zsh gwc/gwd helpers — only long-lived project
+# roots belong here.
+mcsearch_watch_paths: ""

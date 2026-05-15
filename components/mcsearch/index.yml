@@ -131,6 +131,81 @@
   when: mcsearch_role == 'client' and os == 'darwin'
   tags: [mcsearch, tunnel]
 
+# ───────────────── AUTO-REINDEX (mcsearch watch) ───────────────────────────
+#
+# A templated user systemd unit so each indexed project gets its own
+# fsnotify-driven watcher. Long-lived projects opt in declaratively via
+# mcsearch_watch_paths in machine vars; ad-hoc worktrees pick up watches
+# automatically through the zsh gwc helper (components/zsh).
+
+- name: "Deploy mcsearch-watch@ templated systemd unit"
+  file.template:
+    src: ./templates/mcsearch-watch@.service.j2
+    dest: "~/.config/systemd/user/mcsearch-watch@.service"
+  when: os == 'linux'
+  tags: [mcsearch, watch]
+
+- name: "Reload user systemd so mcsearch-watch@ is discoverable"
+  shell: systemctl --user daemon-reload
+  when: os == 'linux'
+  changed_when: false
+  tags: [mcsearch, watch]
+
+# Empty mcsearch_watch_paths = additive mode (leave existing instances
+# alone). Listing one or more paths flips into declarative mode: enable
+# each, disable any other mcsearch-watch@* instance.
+# Existing watch instances cache their ExecStart from when they were
+# started, so a template change (e.g. mcsearch_bin_path moves) doesn't
+# propagate until the instance is restarted. try-restart only acts on
+# running units, so this is a no-op when nothing's enabled.
+- name: "Restart any running mcsearch-watch@* to pick up new template"
+  shell: |
+    set -euo pipefail
+    instances=$(systemctl --user list-units --type=service --no-legend 'mcsearch-watch@*' 2>/dev/null | awk '{print $1}')
+    for u in $instances; do
+      systemctl --user try-restart "$u" || true
+    done
+  when: os == 'linux'
+  changed_when: false
+  tags: [mcsearch, watch]
+
+- name: "Sync mcsearch-watch instances against mcsearch_watch_paths"
+  # Pongo2 (mooncake's templater) treats `{#` as a block-comment opener,
+  # so any literal `${#paths[@]}` blows up at parse time. Check the input
+  # variable instead — same effect, no `{#` bigram.
+  shell: |
+    set -euo pipefail
+    declared='{{ mcsearch_watch_paths }}'
+    if [[ -z "${declared// /}" ]]; then
+      echo "mcsearch_watch_paths empty — leaving existing watch instances alone"
+      exit 0
+    fi
+    declare -a paths
+    read -ra paths <<<"$declared"
+    for p in "${paths[@]}"; do
+      esc=$(systemd-escape "$p")
+      systemctl --user enable --now "mcsearch-watch@${esc}.service"
+    done
+    wants_dir="$HOME/.config/systemd/user/default.target.wants"
+    [[ -d "$wants_dir" ]] || exit 0
+    shopt -s nullglob
+    for f in "$wants_dir"/mcsearch-watch@*.service; do
+      unit=$(basename "$f")
+      inst=${unit#mcsearch-watch@}
+      inst=${inst%.service}
+      path=$(systemd-escape --unescape "$inst")
+      found=0
+      for p in "${paths[@]}"; do
+        [[ "$p" == "$path" ]] && { found=1; break; }
+      done
+      if [[ "$found" -eq 0 ]]; then
+        echo "disabling stale: $unit ($path)"
+        systemctl --user disable --now "$unit"
+      fi
+    done
+  when: os == 'linux'
+  tags: [mcsearch, watch]
+
 # ───────────────── SERVER (main_pc) ────────────────────────────────────────
 
 - import: ./server.yml
