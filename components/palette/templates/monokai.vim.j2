@@ -423,6 +423,88 @@ if has('nvim')
 
   " Namespaces / modules
   call s:h('@namespace',                { 'fg': s:aqua })
+  call s:h('@module',                   { 'fg': s:aqua })
+
+  " Decorators (Python @decorator, TS @Component) — same hue as
+  " @constant since they're metaprogramming markers, not control flow.
+  call s:h('@decorator',                { 'fg': s:purple })
+
+  " Function macros (Rust println!, Lisp defmacro) — same green as
+  " regular functions so call sites scan uniformly.
+  call s:h('@function.macro',           { 'fg': s:green })
+
+  " String specials — regex captures, file paths inside strings, URLs.
+  call s:h('@string.special',           { 'fg': s:purple })
+  call s:h('@string.special.path',      { 'fg': s:aqua, 'format': 'underline' })
+  call s:h('@string.special.url',       { 'fg': s:aqua, 'format': 'underline,italic' })
+
+  " Markup (markdown, asciidoc, rst, org). Headings get a yellow+bold
+  " treatment uniformly — Sublime ST2 doesn't differentiate by level.
+  " Italic/bold/strikethrough are format-only via plain :hi so the
+  " underlying token color shows through (s:h's helper forces fg=NONE
+  " when fg is unset, which would clear inline color).
+  call s:h('@markup',                   { 'fg': s:white })
+  call s:h('@markup.heading',           { 'fg': s:yellow, 'format': 'bold' })
+  call s:h('@markup.heading.1',         { 'fg': s:yellow, 'format': 'bold' })
+  call s:h('@markup.heading.2',         { 'fg': s:yellow, 'format': 'bold' })
+  call s:h('@markup.heading.3',         { 'fg': s:yellow, 'format': 'bold' })
+  call s:h('@markup.heading.4',         { 'fg': s:yellow, 'format': 'bold' })
+  call s:h('@markup.heading.5',         { 'fg': s:yellow, 'format': 'bold' })
+  call s:h('@markup.heading.6',         { 'fg': s:yellow, 'format': 'bold' })
+  exec 'highlight @markup.italic        gui=italic         cterm=italic'
+  exec 'highlight @markup.bold          gui=bold           cterm=bold'
+  exec 'highlight @markup.strikethrough gui=strikethrough  cterm=strikethrough'
+  call s:h('@markup.quote',             { 'fg': s:warmgrey, 'format': 'italic' })
+  call s:h('@markup.raw',               { 'fg': s:purple })
+  call s:h('@markup.raw.block',         { 'fg': s:white })
+  call s:h('@markup.link',              { 'fg': s:aqua })
+  call s:h('@markup.link.label',        { 'fg': s:aqua, 'format': 'underline' })
+  call s:h('@markup.link.url',          { 'fg': s:aqua, 'format': 'underline,italic' })
+  call s:h('@markup.list',              { 'fg': s:pink })
+  call s:h('@markup.list.checked',      { 'fg': s:green })
+  call s:h('@markup.list.unchecked',    { 'fg': s:orange })
+  call s:h('@markup.environment',       { 'fg': s:green })
+  call s:h('@markup.environment.name',  { 'fg': s:aqua })
+  call s:h('@markup.math',              { 'fg': s:purple })
+
+  " Diff filetype captures — distinct from DiffAdd/Delete/Change which
+  " are Vim's display layer (used by :diff*, gitsigns, etc.).
+  call s:h('@diff.plus',                { 'fg': s:diff_add_fg,    'bg': s:diff_add_bg })
+  call s:h('@diff.minus',               { 'fg': s:diff_delete_fg, 'bg': s:diff_delete_bg })
+  call s:h('@diff.delta',               { 'fg': s:diff_change_fg, 'bg': s:diff_change_bg })
+
+  " TODO / NOTE / FIXME / WARN inside comments (modern @comment.* — newer
+  " spec replaces the older @text.todo / @text.note / @text.warning).
+  call s:h('@comment.todo',             { 'fg': s:orange, 'format': 'bold,italic' })
+  call s:h('@comment.note',             { 'fg': s:aqua,   'format': 'bold,italic' })
+  call s:h('@comment.warning',          { 'fg': s:yellow, 'format': 'bold,italic' })
+  call s:h('@comment.error',            { 'fg': s:red,    'format': 'bold,italic' })
+
+  " LSP semantic tokens — when an LSP attaches it emits semantic tokens
+  " that take precedence over treesitter captures. Linking them to the
+  " canonical @captures keeps highlighting consistent regardless of
+  " which layer is the source.
+  hi def link @lsp.type.namespace       @namespace
+  hi def link @lsp.type.class           @type
+  hi def link @lsp.type.enum            @type
+  hi def link @lsp.type.interface       @type
+  hi def link @lsp.type.struct          @type
+  hi def link @lsp.type.typeParameter   @type
+  hi def link @lsp.type.parameter       @variable.parameter
+  hi def link @lsp.type.variable        @variable
+  hi def link @lsp.type.property        @property
+  hi def link @lsp.type.enumMember      @constant
+  hi def link @lsp.type.function        @function
+  hi def link @lsp.type.method          @function.method
+  hi def link @lsp.type.macro           @function.macro
+  hi def link @lsp.type.decorator       @decorator
+  hi def link @lsp.type.keyword         @keyword
+  hi def link @lsp.type.modifier        @keyword
+  hi def link @lsp.type.comment         @comment
+  hi def link @lsp.type.string          @string
+  hi def link @lsp.type.number          @number
+  hi def link @lsp.type.regexp          @string.regex
+  hi def link @lsp.type.operator        @operator
 endif
 
 " ============================================================================

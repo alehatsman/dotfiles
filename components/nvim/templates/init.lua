@@ -215,6 +215,24 @@ require('lazy').setup({
 })
 
 ---------------------------------------------
+-- Tree-sitter — enable highlighting
+---------------------------------------------
+-- nvim-treesitter (main branch) doesn't auto-enable highlight; we have
+-- to call vim.treesitter.start() per buffer. This autocmd does that
+-- for any filetype with an installed parser, falling back silently
+-- otherwise so unsupported filetypes don't error out. Without this,
+-- the @capture-aware Monokai colorscheme has nothing to bind to.
+vim.api.nvim_create_autocmd('FileType', {
+  group = vim.api.nvim_create_augroup('user_treesitter_start', { clear = true }),
+  callback = function(args)
+    local lang = vim.treesitter.language.get_lang(args.match)
+    if lang and pcall(vim.treesitter.language.add, lang) then
+      pcall(vim.treesitter.start, args.buf, lang)
+    end
+  end,
+})
+
+---------------------------------------------
 -- General configuration
 ---------------------------------------------
 vim.o.fileformat       = 'unix'
