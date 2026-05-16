@@ -69,11 +69,13 @@ setw -g pane-base-index 1
 set -g renumber-windows on
 
 #---------------------------------------------
-# Status bar
+# Status bar (bottom — just the window tabs, no left/right widgets)
 #---------------------------------------------
-# Off — the green active-pane border alone signals focus. choose-tree
-# (prefix+w) still works for window/session switching.
-set -g status off
+setw -g status-left ""
+setw -g status-right ""
+
+setw -g window-status-format " #I: #W "
+setw -g window-status-current-format " #I: #W "
 
 #---------------------------------------------
 # Bindings
@@ -180,6 +182,20 @@ bind-key -n 'M-l' if-shell "$is_vim" 'send-keys M-l'  'resize-pane -R 3'
 # ladder used here is sidebar < bg < panel < selection — UI chrome
 # differentiates active state by brightness, not hue (Sublime ST2 way).
 # The only hued accent in the chrome is orange on window activity.
+
+# Window activity is signalled only by the orange fg on the current-window
+# tab — no bell, no visual flash. monitor-activity stays on so the orange
+# fg can fire when a non-current window emits output.
+set-window-option -g monitor-activity on
+setw -g window-status-activity none
+
+# Status bar style: same bg as the sidebar (so the bar reads as a thin
+# letterbox under the panes). Current window indicated by green fg only —
+# no bold, no panel-bg highlight, no "tab button" feel.
+set -g status-style bg='{{ palette.sidebar }}',fg='{{ palette.muted }}'
+set -g window-status-style bg='{{ palette.sidebar }}',fg='{{ palette.muted }}'
+set -g window-status-current-style bg='{{ palette.sidebar }}',fg='{{ palette.green }}'
+set -g window-status-activity-style bg='{{ palette.sidebar }}',fg='{{ palette.orange }}'
 
 # Sublime/Monokai-style active-pane emphasis: dim inactive pane contents so
 # the active pane lights up. The bright green border seals the deal.
