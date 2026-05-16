@@ -374,67 +374,71 @@ if has('nvim')
   hi def link @float                    Float
   hi def link @boolean                  Boolean
 
+  " Captures that mirror a legacy group's color are linked, so a single
+  " edit to Constant / Function / Keyword / etc. propagates to every
+  " corresponding @capture. Only captures that need a distinct shade or
+  " format keep an explicit s:h call.
+
   " Constants
-  call s:h('@constant',                 { 'fg': s:purple })
+  hi def link @constant                 Constant
   call s:h('@constant.builtin',         { 'fg': s:aqua })
-  call s:h('@constant.macro',           { 'fg': s:green })
+  hi def link @constant.macro           Macro
 
   " Types
   call s:h('@type',                     { 'fg': s:aqua, 'format': 'italic' })
   call s:h('@type.builtin',             { 'fg': s:aqua })
-  call s:h('@type.qualifier',           { 'fg': s:pink })
-  call s:h('@attribute',                { 'fg': s:purple })
-  call s:h('@attribute.builtin',        { 'fg': s:purple })
+  hi def link @type.qualifier           Keyword
+  hi def link @attribute                Constant
+  hi def link @attribute.builtin        Constant
 
   " Identifiers
-  call s:h('@variable',                 { 'fg': s:white })
-  call s:h('@variable.builtin',         { 'fg': s:purple })
+  hi def link @variable                 Identifier
+  hi def link @variable.builtin         Constant
   call s:h('@variable.parameter',       { 'fg': s:orange })
-  call s:h('@variable.parameter.builtin',{ 'fg': s:orange })
+  hi def link @variable.parameter.builtin @variable.parameter
   call s:h('@variable.member',          { 'fg': s:white2 })
-  call s:h('@field',                    { 'fg': s:white2 })
-  call s:h('@property',                 { 'fg': s:white2 })
+  hi def link @field                    @variable.member
+  hi def link @property                 @variable.member
 
   " Functions
-  call s:h('@function',                 { 'fg': s:green })
+  hi def link @function                 Function
   call s:h('@function.builtin',         { 'fg': s:aqua })
-  call s:h('@function.call',            { 'fg': s:green })
-  call s:h('@function.method',          { 'fg': s:green })
-  call s:h('@function.method.call',     { 'fg': s:green })
+  hi def link @function.call            Function
+  hi def link @function.method          Function
+  hi def link @function.method.call     Function
   call s:h('@constructor',              { 'fg': s:aqua, 'format': 'italic' })
 
   " Keywords / operators
-  call s:h('@keyword',                  { 'fg': s:pink })
-  call s:h('@keyword.function',         { 'fg': s:pink })
-  call s:h('@keyword.operator',         { 'fg': s:pink })
-  call s:h('@keyword.return',           { 'fg': s:pink })
-  call s:h('@operator',                 { 'fg': s:pink })
+  hi def link @keyword                  Keyword
+  hi def link @keyword.function         Keyword
+  hi def link @keyword.operator         Keyword
+  hi def link @keyword.return           Keyword
+  hi def link @operator                 Operator
 
   " Punctuation
-  call s:h('@punctuation.delimiter',    { 'fg': s:pink })
+  hi def link @punctuation.delimiter    Delimiter
   call s:h('@punctuation.bracket',      { 'fg': s:white })
-  call s:h('@punctuation.special',      { 'fg': s:purple })
+  hi def link @punctuation.special      Special
 
   " Tags (HTML/JSX)
-  call s:h('@tag',                      { 'fg': s:pink })
-  call s:h('@tag.builtin',              { 'fg': s:pink })
+  hi def link @tag                      Tag
+  hi def link @tag.builtin              Tag
   call s:h('@tag.attribute',            { 'fg': s:green })
   call s:h('@tag.delimiter',            { 'fg': s:white })
 
   " Namespaces / modules
   call s:h('@namespace',                { 'fg': s:aqua })
-  call s:h('@module',                   { 'fg': s:aqua })
+  hi def link @module                   @namespace
 
-  " Decorators (Python @decorator, TS @Component) — same hue as
-  " @constant since they're metaprogramming markers, not control flow.
-  call s:h('@decorator',                { 'fg': s:purple })
+  " Decorators (Python @decorator, TS @Component) — metaprogramming
+  " markers, same hue as Constant.
+  hi def link @decorator                Constant
 
-  " Function macros (Rust println!, Lisp defmacro) — same green as
-  " regular functions so call sites scan uniformly.
-  call s:h('@function.macro',           { 'fg': s:green })
+  " Function macros (Rust println!, Lisp defmacro) — same green as Macro.
+  hi def link @function.macro           Macro
 
   " String specials — regex captures, file paths inside strings, URLs.
-  call s:h('@string.special',           { 'fg': s:purple })
+  hi def link @string.special           Special
   call s:h('@string.special.path',      { 'fg': s:aqua, 'format': 'underline' })
   call s:h('@string.special.url',       { 'fg': s:aqua, 'format': 'underline,italic' })
 
