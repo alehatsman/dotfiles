@@ -61,6 +61,22 @@
     dest: ~/.tmux.conf
   tags: [tmux, config]
 
+- name: Ensure ~/.local/bin exists
+  file.write:
+    path: ~/.local/bin
+    state: directory
+  tags: [tmux, scripts]
+
+- name: Deploy tmux-claude-jump
+  file.copy:
+    src: ./scripts/tmux-claude-jump.sh
+    dest: ~/.local/bin/tmux-claude-jump
+  tags: [tmux, scripts]
+
+- name: Mark tmux-claude-jump executable
+  shell: chmod +x ~/.local/bin/tmux-claude-jump
+  tags: [tmux, scripts]
+
 - name: Verify tmux config
   assert:
     command:
