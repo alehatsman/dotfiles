@@ -10,9 +10,6 @@ set -g @plugin 'tmux-plugins/tpm'
 # predefined settings
 set -g @plugin 'tmux-plugins/tmux-sensible'
 
-# copy to system clipboard
-set -g @plugin 'tmux-plugins/tmux-yank'
-
 # regex search
 set -g @plugin 'tmux-plugins/tmux-copycat'
 
@@ -120,9 +117,11 @@ bind c new-window -c '#{pane_current_path}'
 bind C-[ copy-mode
 bind -T copy-mode-vi 'v' send -X begin-selection
 
-# 'y' is bound by tmux-yank (auto-detects pbcopy / wl-copy / xclip). Mirror it
-# on 'Enter'. tmux-sensible enables set-clipboard, so the OSC52 escape sequence
-# also reaches the terminal's clipboard.
+# Copy with 'y' or 'Enter'. No pipe command — set-clipboard on (above) makes
+# tmux emit OSC 52 to the outer terminal, which then writes the system
+# clipboard (alacritty → wl-clipboard on x1, Windows Terminal → Windows
+# clipboard in WSL, alacritty on x1 → wl-clipboard over SSH to WSL tmux).
+bind -T copy-mode-vi 'y'     send -X copy-pipe-and-cancel
 bind -T copy-mode-vi 'Enter' send -X copy-pipe-and-cancel
 
 # paste
