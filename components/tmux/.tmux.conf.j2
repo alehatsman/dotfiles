@@ -98,6 +98,12 @@ unbind %
 
 bind w choose-session -Z -O name
 
+# Fuzzy-jump across Claude Code panes anywhere in the server. Lists panes
+# whose running command contains "claude", shows their pane_title (the
+# session description Claude advertises via OSC 2), and switches the
+# client to the chosen pane. Script: components/tmux/scripts/tmux-claude-jump.sh
+bind C-j display-popup -E -w 80% -h 60% "~/.local/bin/tmux-claude-jump"
+
 #---------------------------------------------
 # Panes
 #---------------------------------------------
