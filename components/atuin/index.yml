@@ -1,0 +1,32 @@
+---
+# Atuin — searchable shell history with optional cross-machine sync.
+# Bound to Ctrl-R only; Up arrow keeps zsh-history-substring-search.
+# Init is wired in components/zsh/templates/.zshrc.j2 (atuin block).
+#
+# After install, run once to backfill old history into atuin's db:
+#   atuin import auto
+# Then optionally enable sync:
+#   atuin register -u <name> -e <email>   # or `atuin login`
+
+- name: Install atuin (linux)
+  pkg:
+    name: atuin
+    state: present
+  as_user: root
+  when: os == 'linux'
+  tags: [atuin, install]
+
+- name: Install atuin (macos)
+  shell: brew install atuin 2>&1 | grep -v "already installed" || true
+  when: os == 'darwin'
+  timeout: 5m
+  retry:
+    attempts: 3
+    delay: 5s
+  tags: [atuin, install]
+
+- name: Verify atuin installation
+  assert:
+    command:
+      cmd: which atuin
+  tags: [atuin, verify]

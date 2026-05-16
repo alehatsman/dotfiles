@@ -638,6 +638,12 @@ if command -v zoxide &>/dev/null; then
   eval "$(zoxide init zsh --cmd j)"
 fi
 
+# atuin — Ctrl-R history search. --disable-up-arrow keeps Up bound to
+# zsh-history-substring-search (set above), so atuin only owns Ctrl-R.
+if command -v atuin &>/dev/null; then
+  eval "$(atuin init zsh --disable-up-arrow)"
+fi
+
 # vi mode
 bindkey -v
 
