@@ -10,6 +10,15 @@ FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
 use_win32yank: false
 
+# ─── Color palette ──────────────────────────────────────────────────────────
+# Selects which Monokai variant gets loaded by components/palette/index.yml.
+# Every templated config across this repo (alacritty, waybar, wofi, dunst,
+# hyprlock, hyprland, tmux, zsh fzf, vim) reads palette.* / editor.* from
+# the chosen variant. Override per-machine in machines/<m>/vars.yml.
+#   monokai_dark   — canonical Sublime ST2 Monokai (default)
+#   monokai_light  — Sublime Monokai Light companion variant
+palette_variant: monokai_dark
+
 # ─── mcsearch — local semantic-search MCP helper ───────────────────────────
 # Default role is client (install the binary + tunnel + MCP registration).
 # main_pc overrides to `server` to additionally run the embedding service

@@ -1,0 +1,521 @@
+" monokai.vim (extended, opinionated, Tree-sitter aware)
+
+if !has('gui_running') && &t_Co < 256
+  finish
+endif
+
+if !exists('g:monokai_italics')
+  let g:monokai_italics = 1
+endif
+
+if !exists('g:monokai_gui_italic')
+  let g:monokai_gui_italic = g:monokai_italics
+endif
+
+if !exists('g:monokai_term_italic')
+  let g:monokai_term_italic = g:monokai_italics
+endif
+
+if !exists('g:monokai_transparent')
+  let g:monokai_transparent = 0
+endif
+
+if !exists('g:monokai_dim_inactive')
+  let g:monokai_dim_inactive = 0
+endif
+
+set background=dark
+hi clear
+
+if exists('syntax_on')
+  syntax reset
+endif
+
+let colors_name = 'monokai'
+
+" ============================================================================
+" Utils
+" ============================================================================
+
+function! s:parse_format(raw, allow_italic) abort
+  if a:raw ==# '' || a:raw ==# 'NONE'
+    return 'NONE'
+  endif
+  let l:parts = split(a:raw, ',')
+  let l:out = []
+  for l:p in l:parts
+    if l:p ==# 'italic' && !a:allow_italic
+      continue
+    endif
+    if l:p !=# ''
+      call add(l:out, l:p)
+    endif
+  endfor
+  return empty(l:out) ? 'NONE' : join(l:out, ',')
+endfunction
+
+function! s:h(group, style) abort
+  let l:rawfmt     = get(a:style, 'format', 'NONE')
+  let l:ctermfmt   = s:parse_format(l:rawfmt, g:monokai_term_italic)
+  let l:guifmt     = s:parse_format(l:rawfmt, g:monokai_gui_italic)
+  let l:ctermfg    = has_key(a:style, 'fg') ? a:style.fg.cterm : 'NONE'
+  let l:ctermbg    = has_key(a:style, 'bg') ? a:style.bg.cterm : 'NONE'
+  execute 'highlight' a:group
+        \ 'guifg='   . (has_key(a:style, 'fg') ? a:style.fg.gui : 'NONE')
+        \ 'guibg='   . (has_key(a:style, 'bg') ? a:style.bg.gui : 'NONE')
+        \ 'guisp='   . (has_key(a:style, 'sp') ? a:style.sp.gui : 'NONE')
+        \ 'gui='     . (l:guifmt  ==# '' ? 'NONE' : l:guifmt)
+        \ 'ctermfg=' . l:ctermfg
+        \ 'ctermbg=' . l:ctermbg
+        \ 'cterm='   . (l:ctermfmt ==# '' ? 'NONE' : l:ctermfmt)
+endfunction
+
+" ============================================================================
+" Palette
+" ============================================================================
+
+
+" Palette body — generated from components/palette/vars/{{ palette_variant }}.yml
+" Single source of truth for the Monokai look across alacritty, waybar, wofi,
+" dunst, hyprlock, tmux, zsh fzf, and this colorscheme. Edit the vars file,
+" not this generated header.
+"
+" Three typo fixes vs the original alehatsman/vim-monokai fork:
+"   pink   #F92772 → #F92672   green #A6E22D → #A6E22E   orange #FD9720 → #FD971F
+
+let s:white       = { 'gui': '{{ editor.fg_dim }}',      'cterm': '252' }
+let s:white2      = { 'gui': '{{ editor.fg_dim2 }}',     'cterm': '250' }
+let s:black       = { 'gui': '{{ palette.bg }}',         'cterm': '234' }
+let s:lightblack  = { 'gui': '{{ editor.bg_alt }}',      'cterm': '235' }
+let s:lightblack2 = { 'gui': '{{ editor.bg_alt2 }}',     'cterm': '236' }
+let s:lightblack3 = { 'gui': '{{ editor.bg_alt3 }}',     'cterm': '237' }
+let s:darkblack   = { 'gui': '{{ editor.bg_dim }}',      'cterm': '233' }
+let s:br_grey     = { 'gui': '{{ editor.grey_bright }}', 'cterm': '243' }
+let s:grey        = { 'gui': '{{ editor.grey }}',        'cterm': '243' }
+let s:lightgrey   = { 'gui': '{{ editor.grey_dim }}',    'cterm': '237' }
+let s:darkgrey    = { 'gui': '{{ editor.grey_dark }}',   'cterm': '239' }
+let s:warmgrey    = { 'gui': '{{ palette.muted }}',      'cterm': '59' }
+
+let s:pink        = { 'gui': '{{ palette.red }}',        'cterm': '197' }
+let s:green       = { 'gui': '{{ palette.green }}',      'cterm': '148' }
+let s:aqua        = { 'gui': '{{ palette.cyan }}',       'cterm': '81' }
+let s:yellow      = { 'gui': '{{ palette.yellow }}',     'cterm': '186' }
+let s:orange      = { 'gui': '{{ palette.orange }}',     'cterm': '208' }
+let s:purple      = { 'gui': '{{ palette.magenta }}',    'cterm': '141' }
+let s:red         = { 'gui': '{{ editor.red_dim }}',     'cterm': '196' }
+let s:purered     = { 'gui': '{{ editor.pure_red }}',    'cterm': '196' }
+let s:darkred     = { 'gui': '#5f0000',                  'cterm': '52' }
+
+let s:cyan        = { 'gui': '{{ palette.bright_cyan }}','cterm': '159' }
+let s:br_green    = { 'gui': '{{ editor.br_green }}',    'cterm': '148' }
+let s:br_yellow   = { 'gui': '{{ editor.br_yellow }}',   'cterm': '221' }
+let s:br_blue     = { 'gui': '{{ editor.br_blue }}',     'cterm': '110' }
+let s:br_purple   = { 'gui': '{{ editor.br_magenta }}',  'cterm': '140' }
+let s:br_cyan     = { 'gui': '{{ editor.br_cyan }}',     'cterm': '80' }
+let s:br_white    = { 'gui': '#FFFFFF',                  'cterm': '231' }
+
+" Diff palette
+let s:diff_add_bg     = { 'gui': '{{ editor.diff_add_bg }}',    'cterm': '22' }
+let s:diff_add_fg     = s:green
+let s:diff_delete_bg  = { 'gui': '{{ editor.diff_delete_bg }}', 'cterm': '52' }
+let s:diff_delete_fg  = s:pink
+let s:diff_change_bg  = { 'gui': '{{ editor.diff_change_bg }}', 'cterm': '94' }
+let s:diff_change_fg  = s:yellow
+
+
+" ============================================================================
+" Core editor
+" ============================================================================
+
+if g:monokai_transparent
+  call s:h('Normal',       { 'fg': s:white })
+else
+  call s:h('Normal',       { 'fg': s:white, 'bg': s:black })
+endif
+
+call s:h('ColorColumn',    {                    'bg': s:lightblack })
+call s:h('Conceal',        { 'fg': s:grey })
+call s:h('Cursor',         { 'fg': s:black,     'bg': s:white })
+call s:h('CursorColumn',   {                    'bg': s:lightblack2 })
+call s:h('CursorLine',     {                    'bg': s:lightblack2 })
+call s:h('NonText',        { 'fg': s:lightgrey })
+call s:h('Visual',         {                    'bg': s:lightgrey })
+call s:h('Search',         { 'fg': s:black,     'bg': s:yellow })
+call s:h('MatchParen',     { 'fg': s:purple,                     'format': 'bold' })
+call s:h('Question',       { 'fg': s:yellow })
+call s:h('ModeMsg',        { 'fg': s:yellow })
+call s:h('MoreMsg',        { 'fg': s:yellow })
+call s:h('ErrorMsg',       { 'fg': s:black,     'bg': s:red,     'format': 'standout' })
+call s:h('WarningMsg',     { 'fg': s:red })
+call s:h('VertSplit',      { 'fg': s:darkgrey,  'bg': s:darkblack })
+call s:h('WinSeparator',   { 'fg': s:darkgrey,  'bg': s:darkblack })
+call s:h('LineNr',         { 'fg': s:grey,      'bg': s:lightblack })
+call s:h('CursorLineNr',   { 'fg': s:orange,    'bg': s:lightblack })
+
+if g:monokai_transparent
+  call s:h('SignColumn',   { })
+else
+  call s:h('SignColumn',   {                    'bg': s:lightblack })
+endif
+
+if g:monokai_dim_inactive
+  if g:monokai_transparent
+    call s:h('NormalNC',   { 'fg': s:grey })
+  else
+    call s:h('NormalNC',   { 'fg': s:grey,     'bg': s:lightblack })
+  endif
+endif
+
+" ============================================================================
+" Statusline / Tabline
+" ============================================================================
+
+call s:h('StatusLine',     { 'fg': s:black,     'bg': s:lightgrey })
+call s:h('StatusLineNC',   { 'fg': s:lightgrey, 'bg': s:darkblack })
+call s:h('TabLine',        { 'fg': s:lightgrey, 'bg': s:lightblack })
+call s:h('TabLineSel',     { 'fg': s:darkblack, 'bg': s:warmgrey, 'format': 'bold' })
+call s:h('TabLineFill',    {                    'bg': s:lightblack })
+call s:h('User1',          { 'fg': s:yellow,    'bg': s:lightgrey, 'format': 'bold' })
+call s:h('User2',          { 'fg': s:orange,    'bg': s:lightgrey, 'format': 'bold' })
+call s:h('User3',          { 'fg': s:purple,    'bg': s:lightgrey, 'format': 'bold' })
+call s:h('User4',          { 'fg': s:aqua,      'bg': s:lightgrey, 'format': 'bold' })
+
+" ============================================================================
+" Spell / Misc / UI
+" ============================================================================
+
+call s:h('SpellBad',       { 'fg': s:red,    'format': 'undercurl' })
+call s:h('SpellCap',       { 'fg': s:purple, 'format': 'underline' })
+call s:h('SpellRare',      { 'fg': s:aqua,   'format': 'underline' })
+call s:h('SpellLocal',     { 'fg': s:pink,   'format': 'underline' })
+
+call s:h('SpecialKey',     { 'fg': s:pink })
+call s:h('Title',          { 'fg': s:yellow })
+call s:h('Directory',      { 'fg': s:aqua })
+
+call s:h('Folded',         { 'fg': s:warmgrey, 'bg': s:darkblack })
+call s:h('FoldColumn',     {                    'bg': s:darkblack })
+
+call s:h('Pmenu',          { 'fg': s:white2,    'bg': s:darkblack })
+call s:h('PmenuSel',       { 'fg': s:aqua,      'bg': s:darkblack, 'format': 'reverse,bold' })
+call s:h('PmenuThumb',     { 'fg': s:lightblack,'bg': s:grey })
+
+call s:h('NormalFloat',    { 'fg': s:white2,    'bg': s:darkblack })
+
+" ============================================================================
+" Generic syntax
+" ============================================================================
+
+call s:h('Constant',       { 'fg': s:purple })
+call s:h('Number',         { 'fg': s:purple })
+call s:h('Float',          { 'fg': s:purple })
+call s:h('Boolean',        { 'fg': s:purple })
+call s:h('Character',      { 'fg': s:yellow })
+call s:h('String',         { 'fg': s:yellow })
+
+call s:h('Type',           { 'fg': s:white })
+call s:h('Structure',      { 'fg': s:aqua })
+call s:h('StorageClass',   { 'fg': s:aqua })
+call s:h('Typedef',        { 'fg': s:aqua })
+
+call s:h('Identifier',     { 'fg': s:white })
+call s:h('Function',       { 'fg': s:green })
+
+call s:h('Statement',      { 'fg': s:pink })
+call s:h('Operator',       { 'fg': s:pink })
+call s:h('Label',          { 'fg': s:pink })
+call s:h('Keyword',        { 'fg': s:pink })
+
+call s:h('PreProc',        { 'fg': s:green })
+call s:h('Include',        { 'fg': s:pink })
+call s:h('Define',         { 'fg': s:pink })
+call s:h('Macro',          { 'fg': s:green })
+call s:h('PreCondit',      { 'fg': s:green })
+
+call s:h('Special',        { 'fg': s:purple })
+call s:h('SpecialChar',    { 'fg': s:pink })
+call s:h('Delimiter',      { 'fg': s:pink })
+call s:h('SpecialComment', { 'fg': s:aqua })
+call s:h('Tag',            { 'fg': s:pink })
+
+call s:h('Todo',           { 'fg': s:orange, 'format': 'bold,italic' })
+call s:h('Comment',        { 'fg': s:warmgrey, 'format': 'italic' })
+
+call s:h('Underlined',     { 'fg': s:green })
+call s:h('Ignore',         { })
+call s:h('Error',          { 'fg': s:purered, 'bg': s:lightblack3 })
+
+" ============================================================================
+" Diff / Git
+" ============================================================================
+
+call s:h('DiffAdd',        { 'fg': s:diff_add_fg,    'bg': s:diff_add_bg })
+call s:h('DiffDelete',     { 'fg': s:diff_delete_fg, 'bg': s:diff_delete_bg })
+call s:h('DiffChange',     { 'fg': s:diff_change_fg, 'bg': s:diff_change_bg })
+call s:h('DiffText',       { 'fg': s:white,          'bg': s:diff_change_bg, 'format': 'bold' })
+
+call s:h('GitSignsAdd',    { 'fg': { 'gui': '#8FCF4A', 'cterm': '113' } })
+call s:h('GitSignsChange', { 'fg': { 'gui': '#7AA6DA', 'cterm': '110' } })
+call s:h('GitSignsDelete', { 'fg': { 'gui': '#FF6FA3', 'cterm': '205' } })
+
+" ============================================================================
+" Diagnostics
+" ============================================================================
+
+call s:h('DiagnosticError',           { 'fg': s:red })
+call s:h('DiagnosticWarn',            { 'fg': s:orange })
+call s:h('DiagnosticInfo',            { 'fg': s:yellow })
+call s:h('DiagnosticHint',            { 'fg': s:grey })
+
+call s:h('DiagnosticUnderlineError',  { 'sp': s:red,    'format': 'undercurl' })
+call s:h('DiagnosticUnderlineWarn',   { 'sp': s:orange, 'format': 'undercurl' })
+call s:h('DiagnosticUnderlineInfo',   { 'sp': s:aqua,   'format': 'undercurl' })
+call s:h('DiagnosticUnderlineHint',   { 'sp': s:grey,   'format': 'undercurl' })
+
+" ============================================================================
+" Language-specific accents
+" ============================================================================
+
+" Markdown
+call s:h('markdownCode',              { 'fg': s:purple, 'format': 'italic' })
+call s:h('markdownListMarker',        { 'fg': s:purple })
+
+" Vim
+call s:h('vimCommand',                { 'fg': s:pink })
+
+" HTML / XML / JSX
+call s:h('htmlTag',                   { 'fg': s:pink })
+call s:h('htmlEndTag',                { 'fg': s:white })
+call s:h('htmlTagName',               { 'fg': s:pink })
+call s:h('htmlArg',                   { 'fg': s:green })
+call s:h('htmlSpecialChar',           { 'fg': s:purple })
+
+call s:h('xmlTag',                    { 'fg': s:pink })
+call s:h('xmlEndTag',                 { 'fg': s:pink })
+call s:h('xmlTagName',                { 'fg': s:orange })
+call s:h('xmlAttrib',                 { 'fg': s:green })
+
+call s:h('jsxTag',                    { 'fg': s:white })
+call s:h('jsxCloseTag',               { 'fg': s:white })
+call s:h('jsxTagName',                { 'fg': s:pink })
+call s:h('jsxComponentName',          { 'fg': s:pink })
+call s:h('jsxAttrib',                 { 'fg': s:green })
+
+" CSS
+call s:h('cssProp',                   { 'fg': s:yellow })
+call s:h('cssUIAttr',                 { 'fg': s:yellow })
+call s:h('cssFunctionName',           { 'fg': s:aqua })
+call s:h('cssColor',                  { 'fg': s:purple })
+call s:h('cssPseudoClassId',          { 'fg': s:purple })
+call s:h('cssClassName',              { 'fg': s:green })
+call s:h('cssValueLength',            { 'fg': s:purple })
+call s:h('cssCommonAttr',             { 'fg': s:pink })
+call s:h('cssBraces',                 { 'fg': s:white })
+call s:h('cssClassNameDot',           { 'fg': s:pink })
+call s:h('cssURL',                    { 'fg': s:orange, 'format': 'underline,italic' })
+
+" Parameters / constructors
+call s:h('Parameter',                 { 'fg': s:orange })
+call s:h('Constructor',               { 'fg': s:aqua, 'format': 'italic' })
+
+" ============================================================================
+" Plugin groups / links
+" ============================================================================
+
+hi def link NERDTreeDir                 Directory
+hi def link NERDTreeDirSlash            Directory
+hi def link NERDTreeCWD                 Directory
+hi def link NERDTreeOpenable            Directory
+hi def link NERDTreeClosable            Directory
+hi def link NERDTreeUp                  Directory
+hi def link NERDTreeHelp                Comment
+hi def link NERDTreeBookmarksHeader     Title
+hi def link NERDTreeBookmarksLeader     NonText
+hi def link NERDTreeBookmarkName        Directory
+
+call s:h('RootFolder', { 'fg': s:pink })
+hi def link NvimTreeRootFolder RootFolder
+
+hi def link SyntasticErrorSign          DiagnosticError
+hi def link SyntasticWarningSign        DiagnosticWarn
+
+hi def link DapUIVariable               Normal
+hi def link DapUIValue                  Normal
+hi def link DapUIFrameName              Normal
+hi def link DapUILineNumber             LineNr
+hi def link DapUIBreakpointsLine        LineNr
+hi def link DapUIBreakpointsCurrentLine CursorLineNr
+hi def link DapUIBreakpointsPath        Directory
+hi def link DapUIBreakpointsInfo        DiagnosticInfo
+hi def link DapUIWatchesEmpty           DiagnosticHint
+hi def link DapUIWatchesValue           DiagnosticInfo
+hi def link DapUIWatchesError           DiagnosticError
+
+hi def link CocErrorSign                DiagnosticError
+hi def link CocWarningSign              DiagnosticWarn
+hi def link CocInfoSign                 DiagnosticInfo
+hi def link CocHintSign                 DiagnosticHint
+
+" ============================================================================
+" Tree-sitter (opinionated Monokai mapping)
+" ============================================================================
+
+if has('nvim')
+  " Comments / text
+  hi def link @comment                  Comment
+  hi def link @comment.documentation    Comment
+
+  " Literals
+  hi def link @string                   String
+  hi def link @string.regex             String
+  hi def link @string.escape            SpecialChar
+  hi def link @character                Character
+  hi def link @number                   Number
+  hi def link @float                    Float
+  hi def link @boolean                  Boolean
+
+  " Constants
+  call s:h('@constant',                 { 'fg': s:purple })
+  call s:h('@constant.builtin',         { 'fg': s:aqua })
+  call s:h('@constant.macro',           { 'fg': s:green })
+
+  " Types
+  call s:h('@type',                     { 'fg': s:aqua, 'format': 'italic' })
+  call s:h('@type.builtin',             { 'fg': s:aqua })
+  call s:h('@type.qualifier',           { 'fg': s:pink })
+  call s:h('@attribute',                { 'fg': s:purple })
+  call s:h('@attribute.builtin',        { 'fg': s:purple })
+
+  " Identifiers
+  call s:h('@variable',                 { 'fg': s:white })
+  call s:h('@variable.builtin',         { 'fg': s:purple })
+  call s:h('@variable.parameter',       { 'fg': s:orange })
+  call s:h('@variable.parameter.builtin',{ 'fg': s:orange })
+  call s:h('@variable.member',          { 'fg': s:white2 })
+  call s:h('@field',                    { 'fg': s:white2 })
+  call s:h('@property',                 { 'fg': s:white2 })
+
+  " Functions
+  call s:h('@function',                 { 'fg': s:green })
+  call s:h('@function.builtin',         { 'fg': s:aqua })
+  call s:h('@function.call',            { 'fg': s:green })
+  call s:h('@function.method',          { 'fg': s:green })
+  call s:h('@function.method.call',     { 'fg': s:green })
+  call s:h('@constructor',              { 'fg': s:aqua, 'format': 'italic' })
+
+  " Keywords / operators
+  call s:h('@keyword',                  { 'fg': s:pink })
+  call s:h('@keyword.function',         { 'fg': s:pink })
+  call s:h('@keyword.operator',         { 'fg': s:pink })
+  call s:h('@keyword.return',           { 'fg': s:pink })
+  call s:h('@operator',                 { 'fg': s:pink })
+
+  " Punctuation
+  call s:h('@punctuation.delimiter',    { 'fg': s:pink })
+  call s:h('@punctuation.bracket',      { 'fg': s:white })
+  call s:h('@punctuation.special',      { 'fg': s:purple })
+
+  " Tags (HTML/JSX)
+  call s:h('@tag',                      { 'fg': s:pink })
+  call s:h('@tag.builtin',              { 'fg': s:pink })
+  call s:h('@tag.attribute',            { 'fg': s:green })
+  call s:h('@tag.delimiter',            { 'fg': s:white })
+
+  " Namespaces / modules
+  call s:h('@namespace',                { 'fg': s:aqua })
+endif
+
+" ============================================================================
+" Terminal
+" ============================================================================
+
+if has('nvim')
+  let g:terminal_color_0  = s:black.gui
+  let g:terminal_color_1  = s:red.gui
+  let g:terminal_color_2  = s:green.gui
+  let g:terminal_color_3  = s:yellow.gui
+  let g:terminal_color_4  = s:aqua.gui
+  let g:terminal_color_5  = s:purple.gui
+  let g:terminal_color_6  = s:cyan.gui
+  let g:terminal_color_7  = s:white.gui
+  let g:terminal_color_8  = s:darkgrey.gui
+  let g:terminal_color_9  = s:pink.gui
+  let g:terminal_color_10 = s:br_green.gui
+  let g:terminal_color_11 = s:br_yellow.gui
+  let g:terminal_color_12 = s:br_blue.gui
+  let g:terminal_color_13 = s:br_purple.gui
+  let g:terminal_color_14 = s:br_cyan.gui
+  let g:terminal_color_15 = s:br_white.gui
+else
+  let g:terminal_ansi_colors = [
+        \ s:black.gui,
+        \ s:red.gui,
+        \ s:green.gui,
+        \ s:yellow.gui,
+        \ s:aqua.gui,
+        \ s:purple.gui,
+        \ s:cyan.gui,
+        \ s:white.gui,
+        \ s:darkgrey.gui,
+        \ s:pink.gui,
+        \ s:br_green.gui,
+        \ s:br_yellow.gui,
+        \ s:br_blue.gui,
+        \ s:br_purple.gui,
+        \ s:br_cyan.gui,
+        \ s:br_white.gui ]
+endif
+
+" ============================================================================
+" Extras: LSP, references, indent guides, completion, telescope, conflicts
+" ============================================================================
+
+" LSP codelens & references
+call s:h('LspCodeLens',            { 'fg': s:warmgrey })
+call s:h('LspCodeLensSeparator',   { 'fg': s:lightgrey })
+call s:h('LspReferenceText',       { 'bg': s:lightblack2 })
+call s:h('LspReferenceRead',       { 'bg': s:lightblack2 })
+call s:h('LspReferenceWrite',      { 'bg': s:lightblack2 })
+
+" Inlay hints (Neovim 0.10+)
+call s:h('LspInlayHint',           { 'fg': s:warmgrey, 'bg': s:lightblack })
+
+" Illuminate (or built-in highlights)
+hi def link IlluminatedWordText     LspReferenceText
+hi def link IlluminatedWordRead     LspReferenceRead
+hi def link IlluminatedWordWrite    LspReferenceWrite
+
+" Indent guides (indent-blankline.nvim / ibl.nvim)
+call s:h('IndentBlanklineChar',           { 'fg': s:lightblack3 })
+call s:h('IndentBlanklineContextChar',    { 'fg': s:darkgrey })
+hi def link IblIndent                     IndentBlanklineChar
+hi def link IblScope                      IndentBlanklineContextChar
+
+" Msg areas / subtle UI
+call s:h('MsgArea',                { 'fg': s:white2, 'bg': s:darkblack })
+call s:h('MsgSeparator',           { 'fg': s:darkgrey, 'bg': s:darkblack })
+
+" Completion item kinds (nvim-cmp fallback)
+hi def link CmpItemKindFunction    @function
+hi def link CmpItemKindMethod      @function
+hi def link CmpItemKindConstructor @constructor
+hi def link CmpItemKindVariable    @variable
+hi def link CmpItemKindField       @field
+hi def link CmpItemKindProperty    @property
+hi def link CmpItemKindClass       @type
+hi def link CmpItemKindInterface   @type
+hi def link CmpItemKindModule      @namespace
+hi def link CmpItemKindEnum        @type
+hi def link CmpItemKindEnumMember  @constant
+hi def link CmpItemKindConstant    @constant
+hi def link CmpItemKindKeyword     @keyword
+hi def link CmpItemKindSnippet     Special
+hi def link CmpItemKindFile        Directory
+hi def link CmpItemKindFolder      Directory
+
+" Telescope title accent
+call s:h('TelescopeTitle',         { 'fg': s:yellow, 'bg': s:darkblack, 'format': 'bold' })
+
+" Git conflict marker (generic)
+call s:h('DiffConflict',           { 'fg': s:pink, 'bg': s:darkblack, 'format': 'bold' })
+

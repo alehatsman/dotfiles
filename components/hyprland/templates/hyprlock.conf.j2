@@ -2,13 +2,13 @@ background {
     monitor =
     blur_passes = 3
     blur_size = 7
-    color = rgb(272822)
+    color = rgb({{ palette.bg_hex }})
 }
 
 label {
     monitor =
     text = cmd[update:1000] echo "$(date +'%H:%M')"
-    color = rgba(f8f8f2ff)
+    color = rgba({{ palette.fg_hex }}ff)
     font_size = 64
     font_family = JetBrainsMono Nerd Font
     position = 0, 160
@@ -19,7 +19,7 @@ label {
 label {
     monitor =
     text = cmd[update:60000] echo "$(date +'%A, %d %B %Y')"
-    color = rgba(117, 113, 94, 1)
+    color = rgba({{ palette.muted_rgb }}, 1)
     font_size = 18
     font_family = JetBrainsMono Nerd Font
     position = 0, 80
@@ -33,14 +33,18 @@ input-field {
     outline_thickness = 2
     dots_size = 0.25
     dots_spacing = 0.2
-    outer_color = rgb(a6e22e)
-    inner_color = rgb(3e3d32)
-    font_color = rgb(f8f8f2)
+    # Sublime ST2 way: outer ring is neutral chrome, cyan signals
+    # active state (password being checked), red signals failure. The
+    # accent green is reserved for actual success — there's no success
+    # state in hyprlock since correct auth dismisses the lock.
+    outer_color = rgb({{ palette.panel_hex }})
+    inner_color = rgb({{ palette.panel_hex }})
+    font_color = rgb({{ palette.fg_hex }})
     fade_on_empty = true
     placeholder_text = <i>password...</i>
     hide_input = false
-    check_color = rgb(a6e22e)
-    fail_color = rgb(f92672)
+    check_color = rgb({{ palette.cyan_hex }})
+    fail_color = rgb({{ palette.red_hex }})
     fail_text = <i>$FAIL ($ATTEMPTS)</i>
     position = 0, -60
     halign = center

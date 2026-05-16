@@ -164,27 +164,21 @@ bind-key -n 'M-l' if-shell "$is_vim" 'send-keys M-l'  'resize-pane -R 3'
 
 # Adapted from: https://github.com/ZachMassia/dotfiles/blob/master/tmux.conf
 
-# Monokai palette (shared with alacritty, waybar, wofi, dunst, hyprlock):
-#   sidebar   #1e1f1c   (darker than editor bg, Sublime ST2 tab/sidebar tone)
-#   bg        #272822
-#   panel     #3e3d32
-#   selection #49483e   (one step above panel, Sublime line-highlight tone)
-#   fg        #f8f8f2
-#   muted     #75715e
-#   cyan      #66d9ef   (active/focus accent)
-#   green     #a6e22e   (success/healthy)
-#   orange    #fd971f   (warning/attention)
-#   red       #f92672   (error/critical)
+# Colors come from the palette mooncake component
+# (components/palette/vars/{{ palette_variant }}.yml). The brightness
+# ladder used here is sidebar < bg < panel < selection — UI chrome
+# differentiates active state by brightness, not hue (Sublime ST2 way).
+# The only hued accent in the chrome is orange on window activity.
 
 # Denote window activity
 set-window-option -g monitor-activity on
 setw -g window-status-activity none
 
-set -g status-style bg='#1e1f1c',fg='#75715e'
-set -g window-status-style bg='#1e1f1c',fg='#75715e'
-set -g window-status-current-style bg='#3e3d32',fg='#f8f8f2',bold
-set -g window-status-activity-style bg='#1e1f1c',fg='#fd971f'
-set -g pane-active-border-style bg='#272822',fg='#f8f8f2'
-set -g pane-border-style bg='#272822',fg='#3e3d32'
-set -g mode-style bg='#49483e',fg='#f8f8f2'
-set -g message-style bg='#49483e',fg='#f8f8f2'
+set -g status-style bg='{{ palette.sidebar }}',fg='{{ palette.muted }}'
+set -g window-status-style bg='{{ palette.sidebar }}',fg='{{ palette.muted }}'
+set -g window-status-current-style bg='{{ palette.panel }}',fg='{{ palette.fg }}',bold
+set -g window-status-activity-style bg='{{ palette.sidebar }}',fg='{{ palette.orange }}'
+set -g pane-active-border-style bg='{{ palette.bg }}',fg='{{ palette.fg }}'
+set -g pane-border-style bg='{{ palette.bg }}',fg='{{ palette.panel }}'
+set -g mode-style bg='{{ palette.selection }}',fg='{{ palette.fg }}'
+set -g message-style bg='{{ palette.selection }}',fg='{{ palette.fg }}'

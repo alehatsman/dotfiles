@@ -1,7 +1,7 @@
 window {
-    background: rgba(39, 40, 34, 0.85);
+    background: rgba({{ palette.bg_rgb }}, 0.85);
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba({{ palette.overlay_rgb }}, 0.06);
 }
 
 #box {
@@ -9,7 +9,7 @@ window {
 }
 
 #active {
-    border-bottom: 2px solid #66d9ef;
+    border-bottom: 2px solid {{ palette.cyan }};
 }
 
 button, image {
@@ -25,7 +25,7 @@ button {
 }
 
 button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba({{ palette.overlay_rgb }}, 0.1);
     border-radius: 10px;
 }
 

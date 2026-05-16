@@ -7,19 +7,19 @@
 }
 
 window#waybar {
-    background-color: rgba(39, 40, 34, 0.95);
-    color: #f8f8f2;
-    border-bottom: 1px solid #3e3d32;
+    background-color: rgba({{ palette.bg_rgb }}, 0.95);
+    color: {{ palette.fg }};
+    border-bottom: 1px solid {{ palette.panel }};
 }
 
 tooltip {
-    background: #272822;
-    border: 1px solid #3e3d32;
+    background: {{ palette.bg }};
+    border: 1px solid {{ palette.panel }};
     border-radius: 4px;
 }
 
 tooltip label {
-    color: #f8f8f2;
+    color: {{ palette.fg }};
     padding: 6px 10px;
 }
 
@@ -30,40 +30,40 @@ tooltip label {
 #workspaces button {
     padding: 0 10px;
     background: transparent;
-    color: #75715e;
+    color: {{ palette.muted }};
     border-bottom: 2px solid transparent;
     box-shadow: none;
     transition: all 0.15s ease;
 }
 
 #workspaces button.active {
-    color: #f8f8f2;
-    background: #3e3d32;
-    border-bottom: 2px solid #66d9ef;
+    color: {{ palette.fg }};
+    background: {{ palette.panel }};
+    border-bottom: 2px solid {{ palette.cyan }};
     box-shadow: none;
 }
 
 #workspaces button.urgent {
-    color: #f92672;
-    border-bottom: 2px solid #f92672;
+    color: {{ palette.red }};
+    border-bottom: 2px solid {{ palette.red }};
     box-shadow: none;
 }
 
 #workspaces button:hover {
-    color: #f8f8f2;
-    background: rgba(62, 61, 50, 0.6);
+    color: {{ palette.fg }};
+    background: rgba({{ palette.panel_rgb }}, 0.6);
     background-image: none;
     box-shadow: none;
     text-shadow: none;
 }
 
 #window {
-    color: #75715e;
+    color: {{ palette.muted }};
     padding: 0 8px;
 }
 
 #clock {
-    color: #f8f8f2;
+    color: {{ palette.fg }};
     padding: 0 8px;
 }
 
@@ -77,7 +77,7 @@ tooltip label {
 #bluetooth,
 #network,
 #custom-power {
-    color: #f8f8f2;
+    color: {{ palette.fg }};
     padding: 0 8px;
 }
 
@@ -95,11 +95,11 @@ tooltip label {
 
 #custom-cpu-temp.critical,
 #custom-cpu-power.critical {
-    color: #f92672;
+    color: {{ palette.red }};
 }
 
 #temperature.critical {
-    color: #f92672;
+    color: {{ palette.red }};
 }
 
 #custom-power {
@@ -109,36 +109,36 @@ tooltip label {
 
 #battery.charging,
 #battery.plugged {
-    color: #a6e22e;
+    color: {{ palette.green }};
 }
 
 #battery.warning {
-    color: #fd971f;
+    color: {{ palette.orange }};
 }
 
 #battery.critical {
-    color: #f92672;
+    color: {{ palette.red }};
     animation: blink 0.5s infinite alternate;
 }
 
 #network {
-    color: #75715e;
+    color: {{ palette.muted }};
 }
 
 #network.wifi,
 #network.ethernet,
 #network.linked,
 #bluetooth.connected {
-    color: #a6e22e;
+    color: {{ palette.green }};
 }
 
 #bluetooth.disabled,
 #bluetooth.off {
-    color: #75715e;
+    color: {{ palette.muted }};
 }
 
 #pulseaudio.muted {
-    color: #75715e;
+    color: {{ palette.muted }};
 }
 
 #tray {
@@ -147,7 +147,7 @@ tooltip label {
 
 @keyframes blink {
     to {
-        color: #272822;
-        background-color: #f92672;
+        color: {{ palette.bg }};
+        background-color: {{ palette.red }};
     }
 }
