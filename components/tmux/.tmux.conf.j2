@@ -199,8 +199,13 @@ set -g pane-border-style bg='{{ palette.sidebar }}',fg='{{ palette.selection }}'
 set -g pane-border-indicators colour
 set -g pane-border-lines heavy
 
-# No per-pane title strip — pane border alone signals focus.
-set -g pane-border-status off
+# Per-pane title strip on top — just the pane title, no extra styling.
+# Picks up the green active-border / muted inactive-border colors from
+# pane-{active-,}border-style above. For claude panes pane_title carries
+# Claude's session description (set via terminal OSC), so each pane
+# advertises what's running in it.
+set -g pane-border-status top
+set -g pane-border-format ' #{pane_title} '
 
 set -g mode-style bg='{{ palette.selection }}',fg='{{ palette.fg }}'
 set -g message-style bg='{{ palette.selection }}',fg='{{ palette.fg }}'
