@@ -67,8 +67,33 @@
   when: use_win32yank
   tags: [nvim, win32yank]
 
+# tree-sitter CLI is required by nvim-treesitter to compile parsers
+# on first install. Cargo install pulls in libclang via rquickjs-sys,
+# so use the official prebuilt binary instead — single static file,
+# no toolchain dependencies. Linux: GitHub release; macOS: brew.
+- name: Install tree-sitter CLI (linux release binary)
+  shell: |
+    set -e
+    mkdir -p "$HOME/.local/bin"
+    tmp=$(mktemp)
+    curl -fsSL -o "$tmp.gz" https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.8/tree-sitter-linux-x64.gz
+    gunzip -c "$tmp.gz" > "$HOME/.local/bin/tree-sitter"
+    chmod +x "$HOME/.local/bin/tree-sitter"
+    rm -f "$tmp" "$tmp.gz"
+  unless_command: command -v tree-sitter >/dev/null 2>&1 || test -x "$HOME/.local/bin/tree-sitter"
+  when: os == 'linux'
+  tags: [nvim, treesitter]
+
+- name: Install tree-sitter CLI (brew)
+  pkg:
+    name: tree-sitter
+  when: os == 'darwin'
+  tags: [nvim, treesitter]
+
 - name: Make sure plugins are installed
-  shell: nvim --headless "+Lazy! sync" +qa
+  shell: |
+    export PATH="$HOME/.local/bin:$PATH"
+    nvim --headless "+Lazy! sync" +qa
   timeout: 15m
   retry:
     attempts: 2

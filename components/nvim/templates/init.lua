@@ -78,7 +78,6 @@ require('lazy').setup({
   },
 
   'mbbill/undotree',
-  'norcalli/nvim-colorizer.lua',
   'numToStr/Comment.nvim',
   'JoosepAlviste/nvim-ts-context-commentstring',
 
@@ -530,8 +529,6 @@ vim.keymap.set('n', '<leader>hh', ':help<cr>')  -- avoid conflict with window na
 
 require('lspfuzzy').setup()
 require('fzf_lsp').setup()
-
-require 'colorizer'.setup()
 
 -- Splits
 vim.keymap.set('n', '<c-h>', '<c-w>h')
