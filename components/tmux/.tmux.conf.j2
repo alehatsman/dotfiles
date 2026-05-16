@@ -69,13 +69,11 @@ setw -g pane-base-index 1
 set -g renumber-windows on
 
 #---------------------------------------------
-# Status bar styles (tabs)
+# Status bar
 #---------------------------------------------
-setw -g status-left ""
-setw -g status-right ""
-
-setw -g window-status-format " #I: #W "
-setw -g window-status-current-format " #I: #W "
+# Off — the green active-pane border alone signals focus. choose-tree
+# (prefix+w) still works for window/session switching.
+set -g status off
 
 #---------------------------------------------
 # Bindings
@@ -183,15 +181,6 @@ bind-key -n 'M-l' if-shell "$is_vim" 'send-keys M-l'  'resize-pane -R 3'
 # differentiates active state by brightness, not hue (Sublime ST2 way).
 # The only hued accent in the chrome is orange on window activity.
 
-# Denote window activity
-set-window-option -g monitor-activity on
-setw -g window-status-activity none
-
-set -g status-style bg='{{ palette.sidebar }}',fg='{{ palette.muted }}'
-set -g window-status-style bg='{{ palette.sidebar }}',fg='{{ palette.muted }}'
-set -g window-status-current-style bg='{{ palette.panel }}',fg='{{ palette.fg }}',bold
-set -g window-status-activity-style bg='{{ palette.sidebar }}',fg='{{ palette.orange }}'
-
 # Sublime/Monokai-style active-pane emphasis: dim inactive pane contents so
 # the active pane lights up. The bright green border seals the deal.
 set -g window-style 'bg={{ palette.sidebar }}'
@@ -204,10 +193,8 @@ set -g pane-border-style bg='{{ palette.sidebar }}',fg='{{ palette.selection }}'
 set -g pane-border-indicators colour
 set -g pane-border-lines heavy
 
-# Title strip = synthetic top edge so the active pane reads as boxed in
-# even against the terminal edge.
-set -g pane-border-status top
-set -g pane-border-format '#{?pane_active,#[bg={{ palette.green }}#,fg={{ palette.bg }}#,bold] #P  #{b:pane_current_path} ,#[bg={{ palette.sidebar }}#,fg={{ palette.muted }}] #P  #{b:pane_current_path} }'
+# No per-pane title strip — pane border alone signals focus.
+set -g pane-border-status off
 
 set -g mode-style bg='{{ palette.selection }}',fg='{{ palette.fg }}'
 set -g message-style bg='{{ palette.selection }}',fg='{{ palette.fg }}'
