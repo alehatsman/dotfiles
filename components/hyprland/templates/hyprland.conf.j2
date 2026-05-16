@@ -41,8 +41,10 @@ general {
     gaps_in = 1
     gaps_out = 2
     border_size = 2
-    col.active_border = rgba(66d9ef55)
-    col.inactive_border = rgba(3e3d3299)
+    # Hyprland's rgba(NNNNNNAA) takes 8-char hex without #.
+    # palette.*_hex variants are hash-less for this syntax.
+    col.active_border = rgba({{ palette.cyan_hex }}55)
+    col.inactive_border = rgba({{ palette.panel_hex }}99)
     layout = dwindle
     allow_tearing = false
 }

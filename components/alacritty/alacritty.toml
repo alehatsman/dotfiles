@@ -2,28 +2,28 @@
 draw_bold_text_with_bright_colors = false
 
 [colors.bright]
-black = "#75715E"
-blue = "#66D9EF"
-cyan = "#A1EFE4"
-green = "#A6E22E"
-magenta = "#AE81FF"
-red = "#F92672"
-white = "#F9F8F5"
-yellow = "#F4BF75"
+black = "{{ palette.muted }}"
+blue = "{{ palette.cyan }}"
+cyan = "{{ palette.bright_cyan }}"
+green = "{{ palette.green }}"
+magenta = "{{ palette.magenta }}"
+red = "{{ palette.red }}"
+white = "{{ palette.fg }}"
+yellow = "{{ palette.yellow }}"
 
 [colors.normal]
-black = "#272822"
-blue = "#66D9EF"
-cyan = "#A1EFE4"
-green = "#A6E22E"
-magenta = "#AE81FF"
-red = "#F92672"
-white = "#F8F8F2"
-yellow = "#F4BF75"
+black = "{{ palette.bg }}"
+blue = "{{ palette.cyan }}"
+cyan = "{{ palette.bright_cyan }}"
+green = "{{ palette.green }}"
+magenta = "{{ palette.magenta }}"
+red = "{{ palette.red }}"
+white = "{{ palette.fg }}"
+yellow = "{{ palette.yellow }}"
 
 [colors.primary]
-background = "#272822"
-foreground = "#F8F8F2"
+background = "{{ palette.bg }}"
+foreground = "{{ palette.fg }}"
 
 [cursor]
 style = "Block"

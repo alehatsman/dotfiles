@@ -1,0 +1,88 @@
+---
+# Canonical Sublime Text 2 Monokai — the dark variant.
+#
+# Two tiers:
+#   palette.*  — shared across every consumer (terminal, WM, tmux, fzf,
+#                editor). Stick to these for cross-component chrome.
+#   editor.*   — vim/colorscheme-only shades that don't appear elsewhere
+#                (signcolumn, indent guides, diff bgs, bright terminal
+#                slots, etc.). Don't reference editor.* from non-editor
+#                templates.
+
+palette:
+  # ── Sublime ST2 brightness ladder ─────────────────────────────────────────
+  # sidebar (darkest) → bg → panel → selection (lightest). Use these for
+  # UI chrome differentiation; never use hue for active/inactive state.
+  sidebar:     '#1e1f1c'   # tab strip / sidebar (one step below editor bg)
+  bg:          '#272822'   # editor / terminal background
+  panel:       '#3e3d32'   # active-tab / selection box
+  selection:   '#49483e'   # line highlight, transient highlights
+
+  # Decimal RGB triplets for use in rgba(R, G, B, A) overlays (waybar,
+  # nwg-dock). Keep in lockstep with the hex values above.
+  bg_rgb:      '39, 40, 34'
+  panel_rgb:   '62, 61, 50'
+
+  # Neutral overlay tint — white on dark, black on light. Used for soft
+  # borders / hovers where the color should always feel "above the bg",
+  # not be tied to any palette accent.
+  overlay_rgb: '255, 255, 255'
+
+  # Hash-less hex strings for engines that take 6/8-char hex without #
+  # (hyprland's rgba(NNNNNNAA), hyprlock's rgb(NNNNNN)). Keep in lockstep
+  # with the hash-prefixed values above.
+  bg_hex:      '272822'
+  panel_hex:   '3e3d32'
+  fg_hex:      'f8f8f2'
+  muted_hex:   '75715e'
+  cyan_hex:    '66d9ef'
+  red_hex:     'f92672'
+
+  # ── Text ───────────────────────────────────────────────────────────────────
+  fg:          '#f8f8f2'   # primary text
+  muted:       '#75715e'   # comments, secondary text
+  muted_rgb:   '117, 113, 94'
+
+  # ── Semantic accents (reserve for actual semantics, not chrome) ───────────
+  cyan:        '#66d9ef'   # active / focus accent
+  green:       '#a6e22e'   # success, healthy state
+  orange:      '#fd971f'   # warning, attention
+  red:         '#f92672'   # error, critical state
+  yellow:      '#e6db74'   # syntax yellow (strings)
+  magenta:     '#ae81ff'   # syntax purple (constants, numbers)
+  bright_cyan: '#a1efe4'   # alacritty bright cyan slot
+
+editor:
+  # Subtle fg variants used in vim syntax distinction.
+  fg_dim:         '#E8E8E3'   # default Normal text (slight cool tint)
+  fg_dim2:        '#d8d8d3'   # secondary fg (fields, properties)
+
+  # Background layering for editor UI (between bg and panel).
+  bg_alt:         '#2D2E27'   # SignColumn, LineNr, FoldColumn
+  bg_alt2:        '#383a3e'   # CursorLine, LspReference
+  bg_alt3:        '#3f4145'   # IndentBlanklineChar
+  bg_dim:         '#211F1C'   # Pmenu, NormalFloat, MsgArea (slightly darker)
+
+  # Greys used in StatusLineNC, VertSplit, gutter dim states.
+  grey:           '#8F908A'
+  grey_dim:       '#575b61'   # Visual selection bg
+  grey_dark:      '#64645e'
+  grey_bright:    '#a1a29c'
+
+  # Bright terminal slots (vim's terminal_color_10..14 — distinct from
+  # the canonical Monokai accents so 16-color terms have a full ramp).
+  br_green:       '#9EC400'
+  br_yellow:      '#E7C547'
+  br_blue:        '#7AA6DA'
+  br_magenta:     '#B77EE0'
+  br_cyan:        '#54CED6'
+
+  # Diff backgrounds (subtle tints over editor bg).
+  diff_add_bg:    '#2a331d'
+  diff_delete_bg: '#3a2226'
+  diff_change_bg: '#3a3520'
+
+  # Error variants. red_dim is for DiagnosticError text; pure_red is the
+  # in-your-face highlight for the Error syntax group.
+  red_dim:        '#e73c50'
+  pure_red:       '#ff0000'

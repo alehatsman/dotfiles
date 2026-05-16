@@ -582,11 +582,16 @@ apply_theme() {
     molokai)
       # Prompt: green when last cmd OK, red when failed; path; reset
       PROMPT='%(?.%F{green}.%F{red})'"${RUNO_ARROW_ICON}"'%F{red}%B%~%b%f '
-      # fzf (Monokai)
+      # fzf — colors come from the palette mooncake component
+      # (components/palette/vars/{{ palette_variant }}.yml). The
+      # previous literal block had three typos vs canonical Monokai:
+      #   green  #A6E22D → #A6E22E   border #3f4145 → palette.panel
+      #   bg+    #2D2E27 → palette.panel (one shared "selected" tone
+      #                                    instead of an off-palette grey)
       export FZF_DEFAULT_OPTS=$'--reverse \
-        --color=fg:#F8F8F2,bg:#272822,hl:#66D9EF \
-        --color=fg+:#E8E8E3,bg+:#2D2E27,hl+:#66D9EF \
-        --color=info:#A6E22D,prompt:#F92672,spinner:#AE81FF,pointer:#AE81FF,marker:#A6E22D,border:#3f4145,header:#75715E'
+        --color=fg:{{ palette.fg }},bg:{{ palette.bg }},hl:{{ palette.cyan }} \
+        --color=fg+:{{ palette.fg }},bg+:{{ palette.panel }},hl+:{{ palette.cyan }} \
+        --color=info:{{ palette.green }},prompt:{{ palette.red }},spinner:{{ palette.magenta }},pointer:{{ palette.magenta }},marker:{{ palette.green }},border:{{ palette.panel }},header:{{ palette.muted }}'
       export FZF_PREVIEW_COMMAND='bat --theme Monokai\ Extended\ Origin --style=plain --color=always {}'
       export BAT_THEME='Monokai Extended Origin'
       ;;

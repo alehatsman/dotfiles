@@ -8,7 +8,9 @@
     padding = 12
     horizontal_padding = 12
     frame_width = 1
-    frame_color = "#a6e22e"
+    # Neutral frame — Sublime ST2 reserves the green accent for actual
+    # success state. urgency_critical overrides this with red below.
+    frame_color = "{{ palette.panel }}"
     separator_color = frame
     font = JetBrainsMono Nerd Font 11
     line_height = 2
@@ -22,17 +24,17 @@
     show_indicators = false
 
 [urgency_low]
-    background = "#272822"
-    foreground = "#f8f8f2"
+    background = "{{ palette.bg }}"
+    foreground = "{{ palette.fg }}"
     timeout = 4
 
 [urgency_normal]
-    background = "#272822"
-    foreground = "#f8f8f2"
+    background = "{{ palette.bg }}"
+    foreground = "{{ palette.fg }}"
     timeout = 6
 
 [urgency_critical]
-    background = "#272822"
-    foreground = "#f92672"
-    frame_color = "#f92672"
+    background = "{{ palette.bg }}"
+    foreground = "{{ palette.red }}"
+    frame_color = "{{ palette.red }}"
     timeout = 0

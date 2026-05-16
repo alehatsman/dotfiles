@@ -29,3 +29,4 @@ thermal_cpu_max_perf_bat: 60
 # a non-interactive `ssh main_pc-wsl true` must succeed (configure the
 # `Host main_pc-wsl` alias in ~/.ssh/config pointing at the WSL :2222),
 # otherwise mcsearch-tunnel.service won't come up.
+

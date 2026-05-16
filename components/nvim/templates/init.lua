@@ -14,17 +14,18 @@ vim.opt.rtp:prepend(lazypath)
 
 
 ---------------------------------------------
+-- Colorscheme
+---------------------------------------------
+-- Monokai is vendored locally at ~/.config/nvim/colors/monokai.vim and
+-- generated from the palette mooncake component (see components/palette/).
+-- Loaded before plugins so syntax highlighting is correct from frame one.
+vim.cmd.colorscheme('monokai')
+
+
+---------------------------------------------
 -- Plugins
 ---------------------------------------------
 require('lazy').setup({
-  {
-    'alehatsman/vim-monokai',
-    lazy = false,
-    priority = 1000,
-    config = function()
-      vim.cmd.colorscheme('monokai')
-    end,
-  },
   'nvim-lua/plenary.nvim',
 
   {

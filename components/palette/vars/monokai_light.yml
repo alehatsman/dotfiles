@@ -1,0 +1,78 @@
+---
+# Monokai Light — companion variant for the canonical Sublime ST2 Monokai.
+# v0 starting point — iterate the values once dogfooded on real code.
+#
+# Design principles:
+#   • Brightness ladder is inverted (sidebar lighter than bg, panel
+#     darker than bg, selection darker still). UI chrome still uses
+#     brightness contrast, never hue.
+#   • Accent hues are preserved from the dark variant but shifted darker
+#     and slightly more saturated so they read on a near-white background
+#     without losing the Monokai identity.
+#   • Same var names as monokai_dark.yml — consumers don't change.
+
+palette:
+  # ── Inverted Sublime ST2 brightness ladder ────────────────────────────────
+  # sidebar (lightest) → bg → panel → selection (darkest).
+  sidebar:     '#fdfdfa'   # tab strip / sidebar (above editor bg)
+  bg:          '#fafaf5'   # editor / terminal background (cream-white)
+  panel:       '#eeeee8'   # active-tab / selection box
+  selection:   '#e0e0d8'   # line highlight, transient highlights
+
+  # Decimal RGB triplets — keep in lockstep with the hex values above.
+  bg_rgb:      '250, 250, 245'
+  panel_rgb:   '238, 238, 232'
+
+  # Neutral overlay tint — flips to black on light variants so soft
+  # borders/hovers stay "above the bg" instead of disappearing.
+  overlay_rgb: '0, 0, 0'
+
+  # Hash-less hex strings — keep in lockstep with the hash-prefixed
+  # values above.
+  bg_hex:      'fafaf5'
+  panel_hex:   'eeeee8'
+  fg_hex:      '272822'
+  muted_hex:   'a6acb1'
+  cyan_hex:    '0686c2'
+  red_hex:     'd81e5b'
+
+  # ── Text ───────────────────────────────────────────────────────────────────
+  fg:          '#272822'   # primary text (mirrors the dark variant's bg)
+  muted:       '#a6acb1'   # comments, secondary text (cool grey)
+  muted_rgb:   '166, 172, 177'
+
+  # ── Semantic accents (darker, more saturated for light-bg legibility) ─────
+  cyan:        '#0686c2'   # active / focus accent (darker than dark.cyan)
+  green:       '#5b8c00'   # success, healthy
+  orange:      '#d2691e'   # warning, attention
+  red:         '#d81e5b'   # error, critical
+  yellow:      '#a57906'   # syntax yellow
+  magenta:     '#7e4fcf'   # syntax purple
+  bright_cyan: '#3997a8'
+
+editor:
+  fg_dim:         '#3a3a37'
+  fg_dim2:        '#4a4a47'
+
+  bg_alt:         '#f4f4ee'   # SignColumn, LineNr
+  bg_alt2:        '#e8e8e2'   # CursorLine, LspReference
+  bg_alt3:        '#d8d8d2'   # IndentBlanklineChar
+  bg_dim:         '#f0f0ea'   # Pmenu, NormalFloat
+
+  grey:           '#888884'
+  grey_dim:       '#b4b4b0'
+  grey_dark:      '#6a6a64'
+  grey_bright:    '#5e5e5a'
+
+  br_green:       '#7ab300'
+  br_yellow:      '#c49c2e'
+  br_blue:        '#3373b3'
+  br_magenta:     '#9560c3'
+  br_cyan:        '#3997a8'
+
+  diff_add_bg:    '#e8f5d8'
+  diff_delete_bg: '#fce0e4'
+  diff_change_bg: '#fcf3d8'
+
+  red_dim:        '#c03050'
+  pure_red:       '#cc0000'

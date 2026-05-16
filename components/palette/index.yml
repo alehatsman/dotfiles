@@ -1,0 +1,20 @@
+---
+# Color palette component — single source of truth for the Monokai look
+# across every templated config in this repo (alacritty, waybar, wofi,
+# dunst, hyprlock, hyprland, tmux, zsh fzf, and the vendored vim
+# colorscheme).
+#
+# Variant is selected via `palette_variant` (see shared/variables.yml).
+# Override per-machine in machines/<m>/vars.yml.
+#
+# IMPORTANT: import this component BEFORE any consumer in each machine
+# entry, so palette/editor vars are in scope when subsequent components'
+# templates render.
+#
+# This component intentionally has no file.template steps of its own —
+# the vendored vim colorscheme is deployed by the nvim component (it
+# needs {{ config_path }}, which is loaded later by nvim/index.yml). All
+# other consumers just read palette.* / editor.* directly in their
+# existing templates.
+
+- vars.load: ./vars/{{ palette_variant }}.yml

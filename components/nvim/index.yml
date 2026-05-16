@@ -31,6 +31,22 @@
     state: directory
   tags: [nvim, setup]
 
+- name: Create directory colors
+  file.write:
+    path: "{{ config_path }}/colors"
+    state: directory
+  tags: [nvim, setup]
+
+# Vendored Monokai colorscheme — generated from the palette component so
+# the editor's syntax colors stay in lockstep with the rest of the system
+# (alacritty/waybar/wofi/dunst/tmux/zsh fzf). Edit components/palette/vars/
+# to change colors; never edit the generated file under ~/.config/nvim/colors/.
+- name: Deploy vendored Monokai colorscheme (palette-driven)
+  file.template:
+    src: ../palette/templates/monokai.vim.j2
+    dest: "{{ config_path }}/colors/monokai.vim"
+  tags: [nvim, colorscheme, palette]
+
 - name: Backup existing nvim config
   shell: |
     if [ -f "{{ config_path }}/init.lua" ]; then
