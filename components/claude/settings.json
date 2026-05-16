@@ -6,6 +6,7 @@
     "pr": ""
   },
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "skipDangerousModePermissionPrompt": true,
     "allow": [
       "Bash",

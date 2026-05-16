@@ -54,6 +54,7 @@
 - import: ../../components/nvim/index.yml
   tags: [editor, nvim]
 
-# Semantic-search MCP helper. Disabled — uncomment to re-enable.
-# - import: ../../components/mcsearch/index.yml
-#   tags: [tools, mcsearch]
+# Semantic-search MCP helper. Embedding endpoint runs on the local 5090;
+# see machines/main_pc/vars.yml for mcsearch_role and watch paths.
+- import: ../../components/mcsearch/index.yml
+  tags: [tools, mcsearch]
