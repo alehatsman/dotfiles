@@ -29,5 +29,18 @@
     "lua-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v mcsearch >/dev/null 2>&1 && [ -n \"$CLAUDE_PROJECT_DIR\" ] && mcsearch index \"$CLAUDE_PROJECT_DIR\" >/dev/null 2>&1",
+            "async": true
+          }
+        ]
+      }
+    ]
   }
 }
