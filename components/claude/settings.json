@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v mcsearch >/dev/null 2>&1 && [ -n \"$CLAUDE_PROJECT_DIR\" ] && mcsearch index \"$CLAUDE_PROJECT_DIR\" >/dev/null 2>&1",
+            "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && mcsearch index \"$CLAUDE_PROJECT_DIR\" >/dev/null 2>&1",
             "async": true
           }
         ]
