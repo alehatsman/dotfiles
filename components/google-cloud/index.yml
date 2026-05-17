@@ -1,24 +1,40 @@
 ---
-- name: Make sure google gpg key is present
+# Google Cloud SDK install.
+#
+# The Linux path repeats the HashiCorp pattern (keyring + source +
+# apt-get install). Same migration footprint: keyring fetch stays
+# shell until pkg.repo apt driver lands; everything else is native.
+
+- name: Fetch Google Cloud apt keyring
   shell: |
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg -o /usr/share/keyrings/cloud.google.gpg
+    install -d /usr/share/keyrings
+    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
+      -o /usr/share/keyrings/cloud.google.gpg
+  unless_command: test -s /usr/share/keyrings/cloud.google.gpg
   as_user: root
   when: os == 'linux'
 
-- name: Make sure google apt-repository is present
-  shell: |
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-    apt-get update
+- name: Add Google Cloud apt source
+  file.write:
+    path: /etc/apt/sources.list.d/google-cloud-sdk.list
+    state: file
+    content: |
+      deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main
+    mode: '0644'
   as_user: root
   when: os == 'linux'
 
-- name: Make sure google cloud cli is present
-  shell: |
-    apt-get install -y google-cloud-cli
+- name: Install google-cloud-cli (apt)
+  pkg:
+    name: google-cloud-cli
+    state: present
+    update_cache: true
   as_user: root
   when: os == 'linux'
 
-- name: Make sure google cloud cli is present
-  shell: |
-    brew cask install google-cloud-sdk
+# macOS: brew cask. No `pkg.cask` action yet; keep as shell until one
+# lands.
+- name: Install google-cloud-sdk (brew cask, macOS)
+  shell: brew install --cask google-cloud-sdk
   when: os == 'darwin'
+  timeout: 10m
