@@ -22,8 +22,10 @@
     attempts: 3
     delay: 10s
 
-# Neovim PPA — kept as shell until mooncake's apt pkg.repo driver
-# (currently dnf-only) gains PPA support. See dotfiles survey TODO.
+# Neovim PPA — kept as shell because mooncake's pkg.repo apt driver
+# doesn't yet have a `ppa:` shorthand (proposal-22 in mooncake repo).
+# Spelling out the launchpad URI + keyserver fetch via pkg.repo is
+# possible but uglier than this one-liner.
 - name: Add neovim PPA
   shell: |
     add-apt-repository ppa:neovim-ppa/unstable -y

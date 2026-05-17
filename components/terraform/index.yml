@@ -1,37 +1,30 @@
 ---
-# HashiCorp APT repo + terraform install.
+# HashiCorp APT repo + terraform install via mooncake's pkg.repo apt
+# driver. The action handles keyring fetch, DEB822 sources, and
+# apt-get update atomically — replaces the old keyring shell + file.write
+# pair.
 #
-# The gpg-key + sources-list dance is a textbook fit for mooncake's
-# pkg.repo apt driver. Once that lands we can drop the keyring shell
-# AND the manual apt-get update — pkg.repo handles both. For now:
-# the keyring fetch stays shell, but the install itself is pkg.
+# gpg_check: false matches the prior security posture (the curl-based
+# shell did not pin the fingerprint either). Pin
+# `gpg_key_fingerprint: 798AEC654E5C15428C8E42EEAA16FCBCA621E701`
+# and flip `gpg_check: true` to upgrade key trust.
 
-- name: Fetch HashiCorp apt keyring
-  # Replaceable with pkg.repo (apt driver) once it ships — that
-  # action handles the keyring + sources.list + apt-get update
-  # atomically.
-  shell: |
-    install -d /usr/share/keyrings
-    curl -fsSL https://apt.releases.hashicorp.com/gpg \
-      -o /usr/share/keyrings/hashicorp.gpg
-  unless_command: test -s /usr/share/keyrings/hashicorp.gpg
+- name: Register HashiCorp apt repo
+  pkg.repo:
+    name: hashicorp
+    state: present
+    apt:
+      uri: https://apt.releases.hashicorp.com
+      suites: ["{{ ubuntu_codename | default:'jammy' }}"]
+      components: [main]
+      gpg_key_url: https://apt.releases.hashicorp.com/gpg
+      gpg_check: false
   as_user: root
   when: os == 'linux'
 
-- name: Add HashiCorp apt source
-  file.write:
-    path: /etc/apt/sources.list.d/hashicorp.list
-    state: file
-    content: |
-      deb [signed-by=/usr/share/keyrings/hashicorp.gpg] https://apt.releases.hashicorp.com {{ ubuntu_codename | default:"jammy" }} main
-    mode: '0644'
-  as_user: root
-  when: os == 'linux'
-
-- name: Install terraform (apt update + install in one)
+- name: Install terraform
   pkg:
     name: terraform
     state: present
-    update_cache: true
   as_user: root
   when: os == 'linux'
