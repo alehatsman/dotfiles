@@ -93,7 +93,7 @@
 - name: "Verify mcsearch is registered with Claude Code"
   assert:
     command:
-      cmd: claude mcp list | grep -q '^mcsearch'
+      cmd: "claude mcp list | grep -q '^mcsearch: '"
   tags: [mcsearch, verify]
 
 # ───────────────── CLIENT-ONLY TUNNEL (Linux + macOS) ──────────────────────
@@ -137,6 +137,10 @@
 # fsnotify-driven watcher. Long-lived projects opt in declaratively via
 # mcsearch_watch_paths in machine vars; ad-hoc worktrees pick up watches
 # automatically through the zsh gwc helper (components/zsh).
+#
+# Linux-only by design — mac clients have no equivalent watcher, since
+# long-lived projects live on the GPU host (main_pc) and the Mac is a
+# read-only consumer over the tunnel.
 
 - name: "Deploy mcsearch-watch@ templated systemd unit"
   file.template:
@@ -193,7 +197,12 @@
       unit=$(basename "$f")
       inst=${unit#mcsearch-watch@}
       inst=${inst%.service}
-      path=$(systemd-escape --unescape "$inst")
+      # `--` is load-bearing: $inst always starts with `-` (every absolute
+      # path escapes `/` to `-`), so without it systemd-escape misreads the
+      # arg as malformed flags, prints usage to stderr, and emits nothing
+      # on stdout — every entry then looks "stale" and the loop disables
+      # every running watcher.
+      path=$(systemd-escape --unescape -- "$inst")
       found=0
       for p in "${paths[@]}"; do
         [[ "$p" == "$path" ]] && { found=1; break; }
