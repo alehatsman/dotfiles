@@ -47,14 +47,6 @@
     state: directory
   tags: [tmux, config]
 
-- name: Backup existing .tmux.conf
-  shell: |
-    if [ -f ~/.tmux.conf ]; then
-      mkdir -p ~/.dotfiles-backup
-      cp ~/.tmux.conf ~/.dotfiles-backup/.tmux.conf.$(date +%Y%m%d_%H%M%S)
-    fi
-  tags: [tmux, backup]
-
 - name: Deploy .tmux.conf
   file.template:
     src: ./.tmux.conf.j2

@@ -47,14 +47,6 @@
     dest: "{{ config_path }}/colors/monokai.vim"
   tags: [nvim, colorscheme, palette]
 
-- name: Backup existing nvim config
-  shell: |
-    if [ -f "{{ config_path }}/init.lua" ]; then
-      mkdir -p ~/.dotfiles-backup
-      cp -r "{{ config_path }}" ~/.dotfiles-backup/nvim.$(date +%Y%m%d_%H%M%S)
-    fi
-  tags: [nvim, backup]
-
 - name: Deploy config file {{ item.Path }}
   file.template:
     src: "{{ item.Src }}"

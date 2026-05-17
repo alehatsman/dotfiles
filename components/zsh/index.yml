@@ -28,22 +28,6 @@
 - vars.load: ./vars/macos_{{arch}}.yml
   when: os == "darwin"
 
-- name: Backup existing .zshrc
-  shell: |
-    if [ -f ~/.zshrc ]; then
-      mkdir -p ~/.dotfiles-backup
-      cp ~/.zshrc ~/.dotfiles-backup/.zshrc.$(date +%Y%m%d_%H%M%S)
-    fi
-  tags: [zsh, backup]
-
-- name: Backup existing .ignore
-  shell: |
-    if [ -f ~/.ignore ]; then
-      mkdir -p ~/.dotfiles-backup
-      cp ~/.ignore ~/.dotfiles-backup/.ignore.$(date +%Y%m%d_%H%M%S)
-    fi
-  tags: [zsh, backup]
-
 - name: Deploy .zshrc
   file.template:
     src: ./templates/.zshrc.j2
