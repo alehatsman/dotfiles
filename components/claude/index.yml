@@ -27,6 +27,12 @@
     dest: "~/.claude/settings.json"
   tags: [claude]
 
+- name: "Deploy claude system prompt"
+  file.copy:
+    src: "./CLAUDE.md"
+    dest: "~/.claude/CLAUDE.md"
+  tags: [claude]
+
 - name: "Install claude-autoapprove"
   shell: |
     tmpdir=$(mktemp -d)
