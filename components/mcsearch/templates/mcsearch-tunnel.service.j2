@@ -1,8 +1,11 @@
 # mcsearch SSH tunnel — user-level systemd unit on Linux clients.
 #
-# Forwards 127.0.0.1:{{ mcsearch_local_port }} on this machine through the
-# GPU host's WSL SSH listener to 127.0.0.1:{{ mcsearch_remote_port }} on
-# the remote side, where the docker-composed embedding service is bound.
+# Forwards two ports on this machine through the GPU host's WSL SSH
+# listener to their remote counterparts:
+#   - {{ mcsearch_local_port }} → {{ mcsearch_remote_port }}: ollama (embed + chat)
+#   - {{ mcsearch_rerank_local_port }} → {{ mcsearch_rerank_remote_port }}: Cohere-compatible rerank service (TEI/vLLM)
+# ExitOnForwardFailure means either port unbound on the remote takes
+# the tunnel down — both endpoints must be reachable on the server.
 #
 # Why an SSH tunnel rather than plain LAN HTTP:
 #   - reuses existing SSH auth (no new bearer token to issue + rotate)
@@ -30,6 +33,7 @@ ExecStart=/usr/bin/ssh \
   -o ServerAliveCountMax=3 \
   -o StrictHostKeyChecking=accept-new \
   -L 127.0.0.1:{{ mcsearch_local_port }}:127.0.0.1:{{ mcsearch_remote_port }} \
+  -L 127.0.0.1:{{ mcsearch_rerank_local_port }}:127.0.0.1:{{ mcsearch_rerank_remote_port }} \
   {{ mcsearch_remote_host }}
 Restart=always
 RestartSec=10s

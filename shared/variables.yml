@@ -46,6 +46,28 @@ mcsearch_chat_model: "qwen2.5-coder:32b"
 mcsearch_remote_port: "11434"
 mcsearch_local_port: "11434"
 
+# Cross-encoder rerank endpoint. ollama doesn't expose /v1/rerank, so
+# this is a separate Cohere-compatible service on the GPU host (TEI /
+# vLLM-reranker). The SSH tunnel forwards both this port and the
+# ollama port over the same connection — see mcsearch-tunnel.service.j2.
+# Bring up a rerank service on the GPU host on this port before
+# applying on a client; ExitOnForwardFailure will refuse the tunnel
+# otherwise.
+mcsearch_rerank_remote_port: "8082"
+mcsearch_rerank_local_port: "8082"
+
+# Rerank model. HuggingFace ref forwarded to the rerank backend
+# (Infinity / TEI). bge-reranker-v2-m3 is a classic cross-encoder,
+# ~1.2 GB on GPU, strong on code; works out of the box with Infinity.
+# Swap to Qwen/Qwen3-Reranker-4B for higher quality once the backend
+# supports decoder-style rerankers.
+mcsearch_rerank_model: "BAAI/bge-reranker-v2-m3"
+
+# Candidate-pool cap fed to the cross-encoder per query. Larger = better
+# recall, slower rerank call. Binary clamps to [1, 100] and falls back
+# to 40 on parse error.
+mcsearch_rerank_pool: "40"
+
 # SSH alias for the GPU host. Resolved via ~/.ssh/config — the user is
 # expected to have a `Host main_pc-wsl` entry that points at the WSL SSH
 # port (typically <main_pc-lan-ip>:2222 with the appropriate key).
