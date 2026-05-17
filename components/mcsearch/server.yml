@@ -1,100 +1,49 @@
 ---
-# Server-side bring-up: docker + NVIDIA container runtime + the embedding
-# service unit. Runs only on the GPU host (mcsearch_role=server).
+# Server-side bring-up: ensure ollama is installed and the embedding
+# model is pulled. Runs only on the GPU host (mcsearch_role=server).
 #
-# The service binds 127.0.0.1:{{ mcsearch_remote_port }} — never exposed
-# on the LAN. Clients reach it through SSH tunnels (see
-# components/mcsearch/templates/mcsearch-tunnel.service.j2).
+# Service lifecycle: ollama's own upstream installer (curl|sh below)
+# creates and enables /etc/systemd/system/ollama.service as system
+# user `ollama`, binding 127.0.0.1:{{ mcsearch_remote_port }}. We
+# deliberately do NOT manage a parallel mcsearch-embed.service — a
+# duplicate ollama serve crashes on $HOME and races for port 11434.
+# Clients reach the endpoint via the SSH tunnel
+# (components/mcsearch/templates/mcsearch-tunnel.service.j2).
+#
+# Why ollama and not docker+vLLM: this is what mcsearch's own README
+# uses as the canonical demo, and it eliminates docker.io + NVIDIA
+# Container Toolkit from the dependency chain. WSL's CUDA driver is
+# consumed directly. Throughput is fine for code-search batches.
 
-- name: "Install docker (if missing)"
+- name: "Install ollama (also installs + enables ollama.service)"
+  # No native mooncake installer. Upstream's script handles: binary at
+  # /usr/local/bin/ollama, `ollama` system user, models dir under
+  # /usr/share/ollama/.ollama, and a systemd unit bound to 127.0.0.1:11434.
   shell: |
-    if ! command -v docker >/dev/null 2>&1; then
-      apt-get update
-      apt-get install -y docker.io
-      systemctl enable --now docker
-    fi
+    curl -fsSL https://ollama.com/install.sh | sh
+  unless_command: command -v ollama && systemctl is-active --quiet ollama.service
   as_user: root
-  tags: [mcsearch, server, docker]
+  timeout: 10m
+  tags: [mcsearch, server, ollama]
 
-- name: "Add current user to docker group"
-  shell: |
-    if ! id -nG "{{ username }}" | tr ' ' '\n' | grep -qx docker; then
-      usermod -aG docker "{{ username }}"
-    fi
-  as_user: root
-  tags: [mcsearch, server, docker]
-
-- name: "Install NVIDIA container toolkit (for --gpus all in docker)"
-  shell: |
-    if dpkg -l nvidia-container-toolkit 2>/dev/null | grep -q '^ii'; then
-      exit 0
-    fi
-    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
-      | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-    curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
-      | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
-      > /etc/apt/sources.list.d/nvidia-container-toolkit.list
-    apt-get update
-    apt-get install -y nvidia-container-toolkit
-    nvidia-ctk runtime configure --runtime=docker
-    systemctl restart docker
-  as_user: root
-  timeout: 15m
-  tags: [mcsearch, server, nvidia]
-
-- name: "Ensure /opt/mcsearch exists"
-  shell: |
-    mkdir -p /opt/mcsearch
-    chown {{ username }}:{{ username }} /opt/mcsearch
-  as_user: root
-  tags: [mcsearch, server]
-
-- name: "Deploy docker-compose for embedding engine"
-  file.template:
-    src: ./templates/embed.compose.yml.j2
-    dest: /opt/mcsearch/embed.compose.yml
-  # Path under /opt trips mooncake's static sudo predictor even though
-  # the dir is now owned by {{ username }}; declaring as_user: root keeps
-  # the planner happy.
-  as_user: root
-  tags: [mcsearch, server]
-
-- name: "Deploy mcsearch-embed systemd unit"
-  file.template:
-    src: ./templates/mcsearch-embed.service.j2
-    dest: /etc/systemd/system/mcsearch-embed.service
-  as_user: root
-  tags: [mcsearch, server]
-
-- name: "Enable and (re)start mcsearch-embed.service"
-  # `restart` rather than `start` so a changed embed.compose.yml or unit
-  # file actually propagates. docker compose up -d is a no-op when the
-  # spec hasn't changed, so this is cheap even on unchanged applies.
-  shell: |
-    systemctl daemon-reload
-    systemctl enable mcsearch-embed.service
-    systemctl restart mcsearch-embed.service
-  as_user: root
+- name: "Pull embedding model"
+  # CLI talks to the running ollama.service (default OLLAMA_HOST is
+  # 127.0.0.1:11434, which matches upstream's bind), so the pull
+  # downloads into the service's model dir even though this step
+  # runs as the user.
+  shell: ollama pull {{ mcsearch_embed_model }}
+  unless_command: ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_embed_model }}'
+  timeout: 20m
   tags: [mcsearch, server]
 
 - name: "Wait for the embedding endpoint to become ready"
-  # First boot pulls the image and warms the model — vLLM Qwen3-Embedding-4B
-  # typically takes ~60 s. Give it a generous window, but bail with a
-  # readable message if it never comes up.
-  shell: |
-    for i in $(seq 1 90); do
-      if curl -sf --max-time 3 -X POST \
-           -H 'Content-Type: application/json' \
-           -d '{"model":"{{ mcsearch_embed_model }}","input":["ping"]}' \
-           http://127.0.0.1:{{ mcsearch_remote_port }}/v1/embeddings >/dev/null; then
-        echo "✓ mcsearch-embed is up after ${i}0s"
-        exit 0
-      fi
-      sleep 10
-    done
-    echo "✗ mcsearch-embed never returned 2xx from /v1/embeddings"
-    echo "  inspect: journalctl -u mcsearch-embed -n 100"
-    echo "  inspect: docker logs mcsearch-embed"
-    exit 1
-  timeout: 20m
+  wait.http:
+    url: "http://127.0.0.1:{{ mcsearch_remote_port }}/v1/embeddings"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"model":"{{ mcsearch_embed_model }}","input":["ping"]}'
+    status: [200]
+    timeout: 10m
+    poll_interval: 5s
   tags: [mcsearch, server, verify]

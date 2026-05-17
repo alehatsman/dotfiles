@@ -69,6 +69,15 @@ fi
 
 export SSH_KEY_PATH=~/.ssh/rsa_id
 
+# mcsearch — point ad-hoc CLI invocations at the same endpoint + model
+# that the MCP registration (components/mcsearch/index.yml) and watch
+# units (mcsearch-watch@.service.j2) use. Naked `mcsearch status` /
+# `mcsearch index` would otherwise fall back to the binary's compiled
+# defaults (8082 + Qwen/Qwen3-Embedding-4B), which don't match the
+# ollama deploy.
+export MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }}
+export MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }}
+
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 
 if [[ -f $FZF_BASE/shell/key-bindings.zsh ]]; then

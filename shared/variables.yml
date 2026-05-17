@@ -26,19 +26,15 @@ palette_variant: monokai_dark
 # component import from their machines/<m>/index.yml.
 mcsearch_role: client
 
-# Inference engine running on the GPU host. vllm (default) supports
-# Qwen3-Embedding cleanly; tei is the simpler-but-narrower alternative.
-mcsearch_engine: vllm
-
 # Embedding model. Code-retrieval quality vs VRAM trade-off documented in
-# components/mcsearch/README.md.
-mcsearch_embed_model: "Qwen/Qwen3-Embedding-4B"
+# components/mcsearch/README.md. Ollama-style ref (vs HF-style for vLLM).
+mcsearch_embed_model: "qwen3-embedding:4b"
 
-# Port the embedding service listens on inside WSL (always bound to
-# 127.0.0.1; reached by clients through an SSH tunnel — see
+# Port the ollama embedding service listens on inside WSL (always bound
+# to 127.0.0.1; reached by clients through an SSH tunnel — see
 # components/mcsearch/templates/mcsearch-tunnel.service.j2).
-mcsearch_remote_port: "8082"
-mcsearch_local_port: "8082"
+mcsearch_remote_port: "11434"
+mcsearch_local_port: "11434"
 
 # SSH alias for the GPU host. Resolved via ~/.ssh/config — the user is
 # expected to have a `Host main_pc-wsl` entry that points at the WSL SSH
