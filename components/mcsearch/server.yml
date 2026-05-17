@@ -80,3 +80,48 @@
     timeout: 15m
     poll_interval: 5s
   tags: [mcsearch, server, verify]
+
+# ───────────────── RERANK (Cohere-shape /rerank server) ───────────────────
+#
+# ollama doesn't serve cross-encoders, so we run a dedicated rerank
+# container alongside it on the GPU host. Infinity is the lightest
+# Cohere-compatible option — single docker image, native /rerank
+# endpoint, supports BGE/Qwen/Jina cross-encoders out of the box.
+#
+# Port mapping is loopback-only to mirror ollama; clients reach the
+# endpoint via the second -L in mcsearch-tunnel.service.j2.
+
+- name: "Run Infinity rerank container"
+  # Docker Desktop's credsStore=desktop.exe is unreachable from inside
+  # WSL, breaking even anonymous pulls. We sidestep with a per-invocation
+  # empty config dir — Docker Hub allows anonymous pulls of public
+  # images, so no real auth is needed.
+  shell: |
+    set -e
+    cfg=$(mktemp -d)
+    trap 'rm -rf "$cfg"' EXIT
+    echo '{}' > "$cfg/config.json"
+    docker --config "$cfg" pull michaelf34/infinity:latest
+    docker --config "$cfg" run -d \
+      --name mcsearch-rerank \
+      --gpus all \
+      --restart unless-stopped \
+      -p 127.0.0.1:{{ mcsearch_rerank_remote_port }}:7997 \
+      -v "$HOME/.cache/huggingface:/app/.cache" \
+      -e HF_HOME=/app/.cache \
+      michaelf34/infinity:latest \
+      v2 --model-id {{ mcsearch_rerank_model }} --port 7997 --engine torch
+  unless_command: |
+    [ -n "$(docker ps -q --filter name=^/mcsearch-rerank$)" ]
+  tags: [mcsearch, server, rerank]
+
+- name: "Wait for the rerank endpoint to become ready"
+  # First request triggers model download (~1.2 GB for bge-reranker-v2-m3)
+  # plus VRAM load — give it 10 min on a cold start. /health is the
+  # cheapest readiness probe; /rerank itself would also warm the model.
+  wait.http:
+    url: "http://127.0.0.1:{{ mcsearch_rerank_remote_port }}/health"
+    status: [200]
+    timeout: 10m
+    poll_interval: 5s
+  tags: [mcsearch, server, rerank, verify]
