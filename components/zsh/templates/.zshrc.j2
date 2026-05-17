@@ -277,6 +277,11 @@ _mcsearch_watch_disable() {
   esc=$(systemd-escape "$1") || return 0
   systemctl --user disable --now "mcsearch-watch@${esc}.service" >/dev/null 2>&1
 }
+_mcsearch_index_nuke() {
+  command -v mcsearch >/dev/null 2>&1 || return 0
+  [[ -d "$1" ]] || return 0
+  mcsearch nuke "$1" >/dev/null 2>&1
+}
 
 # NB: never name a local `path` — zsh aliases it to the PATH array, so
 # `local path` clears PATH for the function scope and every external
@@ -327,6 +332,7 @@ gwd() { # git worktree delete (safe): gwd <name>
 
   [[ "$PWD/" == "$wt/"* ]] && cd "$root"
   _mcsearch_watch_disable "$wt"
+  _mcsearch_index_nuke "$wt"
   git worktree remove "$wt" || return 1
   git branch -d "$name"
   git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1 \
@@ -340,6 +346,7 @@ gwd!() { # git worktree delete force: gwd! <name>
   wt=$(_gw_path "$name")
   [[ "$PWD/" == "$wt/"* ]] && cd "$root"
   _mcsearch_watch_disable "$wt"
+  _mcsearch_index_nuke "$wt"
   [[ -d "$wt" ]] && git worktree remove --force "$wt"
   git branch -D "$name" 2>/dev/null
   git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1 \
