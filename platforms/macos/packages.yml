@@ -133,11 +133,11 @@
   changed_when: "'already tapped' not in result.stderr"
   timeout: 5m
 
-- name: Make sure all the apps are present
-  shell: |
-    brew install {{ apps | join: ' ' }}
-  as: apps_result
-  failed_when: result.rc not in [0, 1]
+- name: Install brew formulae
+  pkg:
+    manager: brew
+    state: present
+    names: "{{ apps }}"
   timeout: 30m
   retry:
     attempts: 2

@@ -21,18 +21,6 @@
       cmd: command -v go
   tags: [mcsearch, build]
 
-- name: "Remove orphaned /usr/local/bin/mcsearch{,.sha} from earlier deploys"
-  # The first wiring of this component installed mcsearch to
-  # /usr/local/bin/ as root. We've since moved to ~/.local/bin/ to avoid
-  # the as_user:root + tilde mismatch. Without this cleanup, /usr/local/
-  # bin/mcsearch (probably stale) would shadow the new binary on PATH.
-  shell: |
-    rm -f /usr/local/bin/mcsearch /usr/local/bin/mcsearch.sha
-  as_user: root
-  unless_command: |
-    test ! -e /usr/local/bin/mcsearch && test ! -e /usr/local/bin/mcsearch.sha
-  tags: [mcsearch, build]
-
 - name: "Ensure ~/.local/bin exists"
   file.write:
     path: ~/.local/bin
