@@ -7,14 +7,6 @@
   when: os == 'linux'
   tags: [git, install]
 
-- name: Backup existing .gitconfig
-  shell: |
-    if [ -f ~/.gitconfig ]; then
-      mkdir -p ~/.dotfiles-backup
-      cp ~/.gitconfig ~/.dotfiles-backup/.gitconfig.$(date +%Y%m%d_%H%M%S)
-    fi
-  tags: [git, backup]
-
 - name: Deploy .gitconfig
   file.template:
     src: ./.gitconfig.j2
