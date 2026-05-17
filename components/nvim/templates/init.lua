@@ -613,7 +613,8 @@ local diffview_toggle = function()
   end
 end
 vim.keymap.set('n', '<leader>gd', diffview_toggle)
-vim.keymap.set('n', '<leader>gl', ':DiffviewFileHistory<CR>')
+vim.keymap.set('n', '<leader>gl', ':DiffviewFileHistory %<CR>')
+vim.keymap.set('n', '<leader>gL', ':DiffviewFileHistory<CR>')
 
 vim.api.nvim_create_autocmd({ 'BufRead', 'BufNewFile' }, {
   pattern = '*.mdx',
@@ -687,7 +688,8 @@ wk.add({
   { "<leader>g", group = "Git" },
   { "<leader>gb", desc = "Blame" },
   { "<leader>gd", desc = "Diff view toggle" },
-  { "<leader>gl", desc = "File history" },
+  { "<leader>gl", desc = "File history (current buffer)" },
+  { "<leader>gL", desc = "File history (repo)" },
 
   -- Git hunks (from gitsigns)
   { "<leader>h", group = "Hunk" },
