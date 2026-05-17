@@ -25,4 +25,4 @@ mcsearch_role: server
 # Adding a path here = enabled at next apply; removing it = disabled.
 # Ad-hoc worktrees come and go through the zsh gwc/gwd helpers; only
 # durable checkouts belong in this list.
-mcsearch_watch_paths: "/home/aleh/projects/dotfiles /home/aleh/projects/mooncake /home/aleh/projects/mcsearch"
+mcsearch_watch_paths: "/home/aleh/dotfiles /home/aleh/projects/mooncake /home/aleh/projects/mcsearch"

@@ -34,9 +34,10 @@ Type=simple
 # We can't use {{ mcsearch_bin_path }} directly because it now resolves
 # to the tilde-prefixed form (`~/.local/bin/mcsearch`), and systemd does
 # NOT expand `~` in ExecStart= — the unit would load with bad-setting.
-# Env vars pinned to match the MCP registration in index.yml — ollama's
-# model ref + non-default port can't be left to the binary's compiled-in
-# defaults.
+# Embed-only: `mcsearch watch` indexes but never generates, so the
+# CHAT_* vars from the MCP registration in index.yml are intentionally
+# omitted. EMBED_* still has to be set — ollama's model ref + non-default
+# port can't be left to the binary's compiled-in defaults.
 Environment=MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }}
 Environment=MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }}
 ExecStart=%h/.local/bin/mcsearch watch -v %I
