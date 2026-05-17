@@ -189,7 +189,17 @@ require('lazy').setup({
 
   'lukas-reineke/lsp-format.nvim',
   'mfussenegger/nvim-lint',
-  'sindrets/diffview.nvim',
+  {
+    'sindrets/diffview.nvim',
+    config = function()
+      require('diffview').setup({
+        enhanced_diff_hl = true,
+        view = {
+          file_history = { layout = 'diff1_plain' },
+        },
+      })
+    end,
+  },
   'ojroques/nvim-osc52',
 
   {
