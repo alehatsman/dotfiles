@@ -28,7 +28,7 @@
   tags: [git, verify]
 
 - name: Verify git config
-  shell: git config --get user.name
-  as: git_user_check
-  changed_when: false
+  assert:
+    command:
+      cmd: git config --get user.name
   tags: [git, verify]
