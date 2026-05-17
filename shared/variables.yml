@@ -30,9 +30,18 @@ mcsearch_role: client
 # components/mcsearch/README.md. Ollama-style ref (vs HF-style for vLLM).
 mcsearch_embed_model: "qwen3-embedding:4b"
 
-# Port the ollama embedding service listens on inside WSL (always bound
-# to 127.0.0.1; reached by clients through an SSH tunnel — see
-# components/mcsearch/templates/mcsearch-tunnel.service.j2).
+# Chat-completion model powering mcsearch's `generate_code` MCP tool +
+# `mcsearch generate` CLI. Served by the same ollama instance as the
+# embedding model on the GPU host (so no second port / second tunnel).
+# Fits comfortably alongside the 4B embedder on a 5090; bump to
+# qwen2.5-coder:14b on machines with more VRAM headroom.
+mcsearch_chat_model: "qwen2.5-coder:7b"
+
+# Port the ollama service listens on inside WSL (always bound to
+# 127.0.0.1; reached by clients through an SSH tunnel — see
+# components/mcsearch/templates/mcsearch-tunnel.service.j2). Ollama
+# serves both /v1/embeddings and /v1/chat/completions on this port,
+# so embed and chat share the same tunnel.
 mcsearch_remote_port: "11434"
 mcsearch_local_port: "11434"
 
