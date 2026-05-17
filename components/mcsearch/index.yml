@@ -14,11 +14,11 @@
 # ───────────────── CLIENT (and server — server is a superset) ──────────────
 
 - name: "Ensure Go toolchain is installed (for building mcsearch)"
-  shell: |
-    if ! command -v go >/dev/null 2>&1; then
-      echo "go is not installed; expected components/languages to have provided it"
-      exit 1
-    fi
+  # Expected to be provided by components/languages — this is just a
+  # fail-fast guard so the build step doesn't error out cryptically.
+  assert:
+    command:
+      cmd: command -v go
   tags: [mcsearch, build]
 
 - name: "Remove orphaned /usr/local/bin/mcsearch{,.sha} from earlier deploys"
@@ -99,8 +99,9 @@
   tags: [mcsearch, verify]
 
 - name: "Verify mcsearch is registered with Claude Code"
-  shell: claude mcp list | grep -q '^mcsearch'
-  changed_when: false
+  assert:
+    command:
+      cmd: claude mcp list | grep -q '^mcsearch'
   tags: [mcsearch, verify]
 
 # ───────────────── CLIENT-ONLY TUNNEL (Linux + macOS) ──────────────────────
