@@ -1,6 +1,7 @@
 ---
 # Server-side bring-up: ensure ollama is installed and the embedding
-# model is pulled. Runs only on the GPU host (mcsearch_role=server).
+# + chat models are pulled. Runs only on the GPU host
+# (mcsearch_role=server).
 #
 # Service lifecycle: ollama's own upstream installer (curl|sh below)
 # creates and enables /etc/systemd/system/ollama.service as system
@@ -9,6 +10,11 @@
 # duplicate ollama serve crashes on $HOME and races for port 11434.
 # Clients reach the endpoint via the SSH tunnel
 # (components/mcsearch/templates/mcsearch-tunnel.service.j2).
+#
+# Both /v1/embeddings (used by semantic_search + the RAG leg of
+# generate_code) and /v1/chat/completions (used by the generation leg
+# of generate_code) are served from the same ollama instance on the
+# same port, so the tunnel covers both.
 #
 # Why ollama and not docker+vLLM: this is what mcsearch's own README
 # uses as the canonical demo, and it eliminates docker.io + NVIDIA
@@ -36,6 +42,18 @@
   timeout: 20m
   tags: [mcsearch, server]
 
+- name: "Pull chat-completion model"
+  # Powers the generate_code MCP tool. Same ollama service as the
+  # embedder — `ollama pull` happens to also serve as the warm-up: the
+  # model is paged into VRAM lazily on first request, not on pull, so
+  # the readiness check below is what actually proves end-to-end
+  # health. Tag-suffix names (e.g. qwen2.5-coder:7b) show up in
+  # `ollama list` as `qwen2.5-coder:7b` — match exactly with grep -x.
+  shell: ollama pull {{ mcsearch_chat_model }}
+  unless_command: ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_chat_model }}'
+  timeout: 30m
+  tags: [mcsearch, server]
+
 - name: "Wait for the embedding endpoint to become ready"
   wait.http:
     url: "http://127.0.0.1:{{ mcsearch_remote_port }}/v1/embeddings"
@@ -45,5 +63,20 @@
     body: '{"model":"{{ mcsearch_embed_model }}","input":["ping"]}'
     status: [200]
     timeout: 10m
+    poll_interval: 5s
+  tags: [mcsearch, server, verify]
+
+- name: "Wait for the chat-completion endpoint to become ready"
+  # First request after pull also triggers VRAM load — give it longer
+  # than the embed probe since coder models are 5–15× the size of the
+  # embedder. max_tokens=1 keeps the probe cheap once warm.
+  wait.http:
+    url: "http://127.0.0.1:{{ mcsearch_remote_port }}/v1/chat/completions"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"model":"{{ mcsearch_chat_model }}","messages":[{"role":"user","content":"ping"}],"max_tokens":1}'
+    status: [200]
+    timeout: 15m
     poll_interval: 5s
   tags: [mcsearch, server, verify]
