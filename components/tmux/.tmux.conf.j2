@@ -211,7 +211,7 @@ set -g pane-border-lines heavy
 # Claude's session description (set via terminal OSC), so each pane
 # advertises what's running in it.
 set -g pane-border-status top
-set -g pane-border-format ' #{pane_title} '
+set -g pane-border-format ' #h#{?#{!=:#{pane_title},#h},: #{pane_title},} '
 
 set -g mode-style bg='{{ palette.selection }}',fg='{{ palette.fg }}'
 set -g message-style bg='{{ palette.selection }}',fg='{{ palette.fg }}'
