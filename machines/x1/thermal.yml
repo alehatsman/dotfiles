@@ -94,21 +94,38 @@
   as_user: root
   tags: [thermal]
 
-- name: Append i915 power-save params to systemd-boot cmdline
-  shell: |
-    ENTRY=/boot/loader/entries/arch.conf
-    PARAMS="i915.enable_fbc=1 i915.enable_psr=2 i915.enable_dc=4 nmi_watchdog=0"
-    [ -f "$ENTRY" ] || { echo "boot entry not found, skipping"; exit 0; }
-    if grep -q 'i915.enable_psr=1' "$ENTRY"; then
-      sed -i 's|i915.enable_psr=1|i915.enable_psr=2|' "$ENTRY"
-      echo "upgraded psr 1 -> 2"
-    elif ! grep -q 'i915.enable_fbc' "$ENTRY"; then
-      sed -i "s|^options |options $PARAMS |" "$ENTRY"
-      echo "added: $PARAMS"
-    else
-      echo "already present"
-    fi
+# systemd-boot cmdline tweaks. Two independent edits to
+# /boot/loader/entries/arch.conf, each idempotent and gated by
+# unless_command so neither fires when the file is missing (live
+# from a different bootloader) or already at desired state.
+- name: Upgrade i915.enable_psr=1 to =2 in boot cmdline
+  text.replace:
+    path: /boot/loader/entries/arch.conf
+    pattern: 'i915.enable_psr=1'
+    replace: 'i915.enable_psr=2'
+    allow_no_match: true
+    flags:
+      regex: false
   as_user: root
+  unless_command: test ! -f /boot/loader/entries/arch.conf
+  tags: [thermal, bootloader]
+
+- name: Prepend i915 power-save params to boot cmdline (if not already)
+  # `unless_command` skips when arch.conf doesn't exist OR already
+  # contains the marker param. Matches the elif branch in the old
+  # shell — once fbc is set, the prepend stops firing.
+  text.replace:
+    path: /boot/loader/entries/arch.conf
+    pattern: '^options '
+    replace: 'options i915.enable_fbc=1 i915.enable_psr=2 i915.enable_dc=4 nmi_watchdog=0 '
+    allow_no_match: true
+    flags:
+      regex: true
+      multiline: true
+  as_user: root
+  unless_command: |
+    test ! -f /boot/loader/entries/arch.conf || \
+      grep -q 'i915.enable_fbc' /boot/loader/entries/arch.conf
   tags: [thermal, bootloader]
 
 - name: Deploy intel-rapl-cap script
