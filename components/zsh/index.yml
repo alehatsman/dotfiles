@@ -8,7 +8,10 @@
   tags: [zsh, install]
 
 - name: Install zsh (macos)
-  shell: brew install zsh 2>&1 | grep -v "already installed" || true
+  pkg:
+    name: zsh
+    state: present
+    manager: brew
   when: os == "darwin"
   timeout: 5m
   retry:

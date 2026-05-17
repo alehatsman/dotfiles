@@ -1,24 +1,43 @@
 ---
-- name: Make sure the apt is updated
-  shell: |
-    apt-get clean;
-    apt-get update;
-    apt-get upgrade -y;
+- name: Upgrade all installed apt packages
+  pkg.upgrade: {}
   as_user: root
   timeout: 15m
   retry:
     attempts: 3
     delay: 10s
 
-- name: Define basic + app packages
-  vars:
-    basic_packages:
+- name: Install bootstrap packages (needed before add-apt-repository / pkg.repo)
+  pkg:
+    state: present
+    names:
       - gnupg
       - software-properties-common
       - curl
       - ca-certificates
       - apt-transport-https
-    apps:
+  as_user: root
+  timeout: 10m
+  retry:
+    attempts: 3
+    delay: 10s
+
+# Neovim PPA — kept as shell until mooncake's apt pkg.repo driver
+# (currently dnf-only) gains PPA support. See dotfiles survey TODO.
+- name: Add neovim PPA
+  shell: |
+    add-apt-repository ppa:neovim-ppa/unstable -y
+    apt-get update
+  as_user: root
+  timeout: 5m
+  retry:
+    attempts: 2
+    delay: 5s
+
+- name: Install Ubuntu apt apps
+  pkg:
+    state: present
+    names:
       - gnupg
       - curl
       - clojure
@@ -57,36 +76,6 @@
       - postgresql-client
       - wl-clipboard
       - watchman
-
-- name: Make sure basics are installed
-  shell: |
-    apt-get install -y {{  basic_packages | join: " " }}
-  as_user: root
-  timeout: 10m
-  retry:
-    attempts: 3
-    delay: 10s
-
-- name: Make sure keyserver is updated
-  shell: |
-    apt-key adv --refresh-keys --keyserver keyserver.ubuntu.com
-  as_user: root
-  when: false
-  timeout: 5m
-
-- name: Add neovim repos
-  shell: |
-    add-apt-repository ppa:neovim-ppa/unstable -y
-    apt-get update
-  as_user: root
-  timeout: 5m
-  retry:
-    attempts: 2
-    delay: 5s
-
-- name: Make sure apps are installed
-  shell: |
-    apt-get install -y {{  apps | join: " " }}
   as_user: root
   timeout: 20m
   retry:

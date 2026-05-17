@@ -17,7 +17,10 @@
   tags: [atuin, install]
 
 - name: Install atuin (macos)
-  shell: brew install atuin 2>&1 | grep -v "already installed" || true
+  pkg:
+    name: atuin
+    state: present
+    manager: brew
   when: os == 'darwin'
   timeout: 5m
   retry:

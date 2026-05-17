@@ -19,8 +19,9 @@
 # this guest. Everything else common (git, tmux, htop, ...) comes from
 # packages/ubuntu_packages.yml.
 - name: Install openssh-server
-  shell: |
-    apt-get update && apt-get install -y openssh-server
+  pkg:
+    name: openssh-server
+    state: present
   as_user: root
   timeout: 10m
   retry:
@@ -28,8 +29,10 @@
     delay: 10s
 
 # Drop-in config avoids clobbering the base sshd_config
-- name: Configure SSH server
-  shell: mkdir -p /etc/ssh/sshd_config.d
+- name: Configure SSH server (config dir)
+  file.write:
+    path: /etc/ssh/sshd_config.d
+    state: directory
   as_user: root
 
 - name: Deploy SSH server config
@@ -56,7 +59,9 @@
 # task still handles the VM-down case (idle-shutdown or `wsl --shutdown`);
 # this drop-in handles sshd-down-but-VM-up.
 - name: Ensure /etc/systemd/system/ssh.service.d exists
-  shell: mkdir -p /etc/systemd/system/ssh.service.d
+  file.write:
+    path: /etc/systemd/system/ssh.service.d
+    state: directory
   as_user: root
 
 - name: Deploy ssh.service Restart=always drop-in
@@ -79,23 +84,30 @@
 # GPU tooling. nvtop is a small Vulkan/NVIDIA monitor; CUDA is the heavy
 # toolkit (multi-GB, ~30 min on first install). Both are skipped on
 # machines without an NVIDIA GPU.
-- name: Install GPU tooling (nvtop + CUDA, if NVIDIA GPU present)
-  shell: |
-    if ! lspci 2>/dev/null | grep -qi nvidia; then
-      echo "No NVIDIA GPU detected — skipping GPU tooling"
-      exit 0
-    fi
-    apt-get install -y nvtop
-    if ! command -v nvcc &>/dev/null; then
-      UBUNTU_VER=$(lsb_release -sr | tr -d '.')
-      wget "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_VER}/x86_64/cuda-keyring_1.1-1_all.deb" \
-        -O /tmp/cuda-keyring.deb
-      dpkg -i /tmp/cuda-keyring.deb
-      apt-get update
-      apt-get install -y cuda-toolkit
-      rm -f /tmp/cuda-keyring.deb
-    else
-      echo "CUDA already installed: $(nvcc --version | head -1)"
-    fi
+- name: Install nvtop (if NVIDIA GPU present)
+  pkg:
+    name: nvtop
+    state: present
   as_user: root
+  # Skip when no NVIDIA GPU on this host. `unless_command` reads as
+  # "skip step if this exits 0", so we negate the lspci match.
+  unless_command: "! lspci 2>/dev/null | grep -qi nvidia"
+  timeout: 10m
+
+# CUDA stays shell until mooncake's pkg.repo apt driver gains the
+# .deb-keyring-install pattern (the cuda-keyring_1.1-1_all.deb route
+# isn't a normal source-list-with-gpg-key flow — it's a single .deb
+# that drops the source.list AND the keyring in one go).
+- name: Install CUDA toolkit (if NVIDIA GPU present, CUDA not installed)
+  shell: |
+    UBUNTU_VER=$(lsb_release -sr | tr -d '.')
+    wget "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_VER}/x86_64/cuda-keyring_1.1-1_all.deb" \
+      -O /tmp/cuda-keyring.deb
+    dpkg -i /tmp/cuda-keyring.deb
+    apt-get update
+    apt-get install -y cuda-toolkit
+    rm -f /tmp/cuda-keyring.deb
+  as_user: root
+  # Skip when no GPU OR nvcc is already on PATH.
+  unless_command: "! lspci 2>/dev/null | grep -qi nvidia || command -v nvcc"
   timeout: 45m

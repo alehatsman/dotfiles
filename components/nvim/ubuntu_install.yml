@@ -1,7 +1,19 @@
 ---
-- name: Make unstable nvim is installed
+# Neovim install on Ubuntu via the neovim-ppa/unstable PPA.
+#
+# The PPA registration stays shell until mooncake's pkg.repo apt
+# driver gains PPA shorthand support. The install itself is pkg:.
+
+- name: Add neovim PPA
   shell: |
-    add-apt-repository ppa:neovim-ppa/unstable;
-    apt-get update;
-    apt-get install neovim;
+    add-apt-repository ppa:neovim-ppa/unstable -y
+  unless_command: |
+    grep -q neovim-ppa /etc/apt/sources.list.d/*.list 2>/dev/null
+  as_user: root
+
+- name: Install neovim
+  pkg:
+    name: neovim
+    state: present
+    update_cache: true
   as_user: root

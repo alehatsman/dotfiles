@@ -10,7 +10,10 @@
   tags: [tmux, install]
 
 - name: Install tmux (macos)
-  shell: brew install tmux 2>&1 | grep -v "already installed" || true
+  pkg:
+    name: tmux
+    state: present
+    manager: brew
   when: os == 'darwin'
   timeout: 5m
   retry:
