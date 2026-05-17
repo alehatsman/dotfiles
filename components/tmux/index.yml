@@ -71,10 +71,7 @@
   file.copy:
     src: ./scripts/tmux-claude-jump.sh
     dest: ~/.local/bin/tmux-claude-jump
-  tags: [tmux, scripts]
-
-- name: Mark tmux-claude-jump executable
-  shell: chmod +x ~/.local/bin/tmux-claude-jump
+    mode: '0755'
   tags: [tmux, scripts]
 
 - name: Verify tmux config
