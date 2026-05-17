@@ -192,10 +192,40 @@ require('lazy').setup({
   {
     'sindrets/diffview.nvim',
     config = function()
+      local actions = require('diffview.actions')
       require('diffview').setup({
         enhanced_diff_hl = true,
         view = {
           file_history = { layout = 'diff1_plain' },
+        },
+        file_history_panel = {
+          log_options = {
+            git = {
+              single_file = {
+                follow        = true,
+                diff_merges   = 'combined',
+              },
+              multi_file = {
+                diff_merges   = 'first-parent',
+              },
+            },
+          },
+          win_config = {
+            position = 'bottom',
+            height   = 20,
+          },
+        },
+        keymaps = {
+          file_history_panel = {
+            { 'n', 'yy', function()
+                local entry = require('diffview.lib').get_current_view():get_active_entry()
+                if entry and entry.commit then
+                  vim.fn.setreg('+', entry.commit.hash)
+                  vim.notify('Copied: ' .. entry.commit.hash, vim.log.levels.INFO)
+                end
+              end, { desc = 'Copy commit SHA' } },
+            { 'n', 'gf', actions.goto_file_edit, { desc = 'Open file in editor' } },
+          },
         },
       })
     end,
