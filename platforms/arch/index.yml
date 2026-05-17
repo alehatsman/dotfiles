@@ -10,19 +10,33 @@
     delay: 10s
   tags: [arch, system, packages]
 
-- name: Enable multilib repository
-  shell: |
-    if ! grep -q '^\[multilib\]' /etc/pacman.conf; then
-      sed -i '/^#\[multilib\]/{s/^#//;n;s/^#//}' /etc/pacman.conf
-      pacman -Sy --noconfirm
-    fi
+- name: Enable multilib repository (uncomment block in pacman.conf)
+  # Stock pacman.conf ships these two lines commented:
+  #   #[multilib]
+  #   #Include = /etc/pacman.d/mirrorlist
+  # text.replace uncomments both atomically. Idempotent: a second run
+  # finds neither commented line and (with allow_no_match) is a no-op.
+  text.replace:
+    path: /etc/pacman.conf
+    pattern: |
+      #[multilib]
+      #Include = /etc/pacman.d/mirrorlist
+    replace: |
+      [multilib]
+      Include = /etc/pacman.d/mirrorlist
+    allow_no_match: true
+    flags:
+      regex: false
   as_user: root
   tags: [arch, system, packages]
 
-- name: Install base-devel and git
+- name: Install base-devel and git (refreshes pacman db too)
+  # update_cache: true subsumes the explicit `pacman -Sy --noconfirm`
+  # that previously chased the multilib enable above.
   pkg:
     manager: pacman
     state: present
+    update_cache: true
     names:
       - base-devel
       - git
@@ -124,21 +138,58 @@
   as_user: root
   tags: [arch, system, packages, rapl]
 
-- name: Remap CapsLock to Ctrl and keep in lowercase mode
+# CapsLock → Ctrl remap, decomposed from a single shell block into
+# declarative pieces. The runtime-apply commands (localectl, loadkeys,
+# /sys/class/leds poke) stay shell because they're one-shot effects
+# with no idempotency surface to check against.
+
+- name: Create kbd keymaps directory
+  file.write:
+    path: /usr/local/share/kbd/keymaps
+    state: directory
+  as_user: root
+  tags: [arch, system, packages]
+
+- name: Deploy us-caps-ctrl keymap (CapsLock acts as Control)
+  file.write:
+    path: /usr/local/share/kbd/keymaps/us-caps-ctrl.map
+    state: file
+    content: |
+      include "/usr/share/kbd/keymaps/i386/qwerty/us.map.gz"
+      keycode 58 = Control
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages]
+
+- name: Set KEYMAP in /etc/vconsole.conf
+  # text.line replaces an existing KEYMAP= line (anchored by regexp)
+  # or appends one if absent. Idempotent on both branches of the
+  # pre-fix shell.
+  text.line:
+    path: /etc/vconsole.conf
+    line: KEYMAP=/usr/local/share/kbd/keymaps/us-caps-ctrl.map
+    regexp: '^KEYMAP='
+    state: present
+  as_user: root
+  tags: [arch, system, packages]
+
+- name: Deploy udev rule keeping CapsLock LED off
+  file.write:
+    path: /etc/udev/rules.d/99-capslock-led.rules
+    state: file
+    content: |
+      ACTION=="add", SUBSYSTEM=="leds", KERNEL=="input*::capslock", ATTR{brightness}="0"
+    mode: '0644'
+  as_user: root
+  tags: [arch, system, packages]
+
+- name: Apply CapsLock remap to running session (best-effort)
+  # localectl + loadkeys + the sysfs poke are one-shot apply-now
+  # commands; nothing to check declaratively. They're idempotent in
+  # spirit — each just re-affirms what the config files above persist.
   shell: |
-    mkdir -p /usr/local/share/kbd/keymaps
-    printf 'include "/usr/share/kbd/keymaps/i386/qwerty/us.map.gz"\nkeycode 58 = Control\n' \
-      > /usr/local/share/kbd/keymaps/us-caps-ctrl.map
-    if grep -q '^KEYMAP=' /etc/vconsole.conf 2>/dev/null; then
-      sed -i 's|^KEYMAP=.*|KEYMAP=/usr/local/share/kbd/keymaps/us-caps-ctrl.map|' /etc/vconsole.conf
-    else
-      echo 'KEYMAP=/usr/local/share/kbd/keymaps/us-caps-ctrl.map' >> /etc/vconsole.conf
-    fi
     localectl set-x11-keymap us "" "" ctrl:nocaps
     loadkeys /usr/local/share/kbd/keymaps/us-caps-ctrl.map
-    # Keep CapsLock LED always off (lowercase mode)
-    echo 'ACTION=="add", SUBSYSTEM=="leds", KERNEL=="input*::capslock", ATTR{brightness}="0"' \
-      > /etc/udev/rules.d/99-capslock-led.rules
     echo 0 > /sys/class/leds/input3::capslock/brightness 2>/dev/null || true
   as_user: root
   tags: [arch, system, packages]
