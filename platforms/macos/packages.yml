@@ -8,7 +8,7 @@
       echo "xcode tools are already installed. Skipping..."
     fi
   as: xcode_result
-  changed_when: "'not installed' in xcode_result.stdout"
+  changed_when: "'not installed' in result.stdout"
   timeout: 10m
 
 - name: Make sure rosetta 2 is installed
@@ -16,8 +16,8 @@
     softwareupdate --install-rosetta --agree-to-license
   as_user: root
   as: rosetta_result
-  failed_when: rosetta_result.rc not in [0, 1]
-  changed_when: rosetta_result.rc == 0
+  failed_when: result.rc not in [0, 1]
+  changed_when: result.rc == 0
   timeout: 10m
 
 - name: Make sure brew is installed
@@ -29,7 +29,7 @@
       echo "brew is already installed. Skipping..."
     fi
   as: brew_result
-  changed_when: "'not installed' in brew_result.stdout"
+  changed_when: "'not installed' in result.stdout"
   timeout: 10m
   retry:
     attempts: 3
@@ -129,15 +129,15 @@
     brew tap {{ item }}
   for_each: "{{ taps }}"
   as: tap_result
-  failed_when: tap_result.rc not in [0, 1]
-  changed_when: "'already tapped' not in tap_result.stderr"
+  failed_when: result.rc not in [0, 1]
+  changed_when: "'already tapped' not in result.stderr"
   timeout: 5m
 
 - name: Make sure all the apps are present
   shell: |
     brew install {{ apps | join: ' ' }}
   as: apps_result
-  failed_when: apps_result.rc not in [0, 1]
+  failed_when: result.rc not in [0, 1]
   timeout: 30m
   retry:
     attempts: 2
@@ -147,7 +147,7 @@
   shell: |
     brew install --cask {{ cask_apps | join: ' ' }}
   as: cask_result
-  failed_when: cask_result.rc not in [0, 1]
+  failed_when: result.rc not in [0, 1]
   timeout: 30m
   retry:
     attempts: 2
