@@ -8,12 +8,29 @@
 # Then optionally enable sync:
 #   atuin register -u <name> -e <email>   # or `atuin login`
 
-- name: Install atuin (linux)
+- name: Install atuin (arch)
   pkg:
     name: atuin
     state: present
   as_user: root
-  when: os == 'linux'
+  when: pacman_available
+  tags: [atuin, install]
+
+- name: Install atuin (ubuntu/debian via cargo)
+  # atuin isn't packaged in Ubuntu's apt repos (not in universe as of
+  # 24.04). Build from source via cargo instead — rust is already
+  # provisioned by components/languages. Installs to ~/.cargo/bin/atuin,
+  # which the zsh config adds to PATH.
+  #
+  # `rustup update stable` first: atuin tracks recent rustc (18.16.1
+  # needs ≥1.95). rustup updates are fast no-ops once current.
+  shell: |
+    export PATH="$HOME/.cargo/bin:$PATH"
+    rustup update stable
+    cargo install atuin --locked
+  unless_command: test -x "$HOME/.cargo/bin/atuin"
+  when: apt_available
+  timeout: 20m
   tags: [atuin, install]
 
 - name: Install atuin (macos)
@@ -29,7 +46,9 @@
   tags: [atuin, install]
 
 - name: Verify atuin installation
+  # PATH prepend covers the cargo install path (~/.cargo/bin/atuin)
+  # since mooncake's non-interactive bash doesn't source .bashrc.
   assert:
     command:
-      cmd: which atuin
+      cmd: 'PATH="$HOME/.cargo/bin:$PATH" command -v atuin'
   tags: [atuin, verify]
