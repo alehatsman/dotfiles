@@ -131,48 +131,36 @@
   tags: [thermal, rapl]
 
 - name: Deploy intel-rapl-cap.service (apply at boot)
-  file.write:
-    path: /etc/systemd/system/intel-rapl-cap.service
-    state: file
-    content: |
-      [Unit]
-      Description=Cap Intel RAPL power limits (PL1/PL2) for thermals
-      After=multi-user.target
-
-      [Service]
-      Type=oneshot
-      ExecStart=/usr/local/bin/intel-rapl-cap
-
-      [Install]
-      WantedBy=multi-user.target
-    mode: '0644'
+  os.systemd:
+    name: intel-rapl-cap.service
+    unit:
+      Description: "Cap Intel RAPL power limits (PL1/PL2) for thermals"
+      After: multi-user.target
+    service:
+      Type: oneshot
+      ExecStart: /usr/local/bin/intel-rapl-cap
+    install:
+      WantedBy: multi-user.target
+    enabled: true
+    started: true
   as_user: root
   tags: [thermal, rapl]
 
 - name: Deploy intel-rapl-cap-resume.service (re-apply after suspend)
-  file.write:
-    path: /etc/systemd/system/intel-rapl-cap-resume.service
-    state: file
-    content: |
-      [Unit]
-      Description=Re-apply Intel RAPL caps after resume
-      After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
-
-      [Service]
-      Type=oneshot
-      ExecStart=/usr/local/bin/intel-rapl-cap
-
-      [Install]
-      WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
-    mode: '0644'
-  as_user: root
-  tags: [thermal, rapl]
-
-- name: Enable and start intel-rapl-cap services
-  shell: |
-    systemctl daemon-reload
-    systemctl enable --now intel-rapl-cap.service
-    systemctl enable intel-rapl-cap-resume.service
+  # Enabled but not started — fires on the WantedBy hooks (suspend /
+  # hibernate / hybrid-sleep / suspend-then-hibernate target start)
+  # not at deploy time.
+  os.systemd:
+    name: intel-rapl-cap-resume.service
+    unit:
+      Description: "Re-apply Intel RAPL caps after resume"
+      After: "suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target"
+    service:
+      Type: oneshot
+      ExecStart: /usr/local/bin/intel-rapl-cap
+    install:
+      WantedBy: "suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target"
+    enabled: true
   as_user: root
   tags: [thermal, rapl]
 
@@ -202,47 +190,32 @@
   tags: [thermal, igpu]
 
 - name: Deploy intel-gt-freq-cap.service (apply at boot)
-  file.write:
-    path: /etc/systemd/system/intel-gt-freq-cap.service
-    state: file
-    content: |
-      [Unit]
-      Description=Cap Intel iGPU max frequency for thermals
-      After=multi-user.target
-
-      [Service]
-      Type=oneshot
-      ExecStart=/usr/local/bin/intel-gt-freq-cap
-
-      [Install]
-      WantedBy=multi-user.target
-    mode: '0644'
+  os.systemd:
+    name: intel-gt-freq-cap.service
+    unit:
+      Description: "Cap Intel iGPU max frequency for thermals"
+      After: multi-user.target
+    service:
+      Type: oneshot
+      ExecStart: /usr/local/bin/intel-gt-freq-cap
+    install:
+      WantedBy: multi-user.target
+    enabled: true
+    started: true
   as_user: root
   tags: [thermal, igpu]
 
 - name: Deploy intel-gt-freq-cap-resume.service (re-apply after suspend)
-  file.write:
-    path: /etc/systemd/system/intel-gt-freq-cap-resume.service
-    state: file
-    content: |
-      [Unit]
-      Description=Re-apply Intel iGPU freq cap after resume
-      After=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
-
-      [Service]
-      Type=oneshot
-      ExecStart=/usr/local/bin/intel-gt-freq-cap
-
-      [Install]
-      WantedBy=suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target
-    mode: '0644'
-  as_user: root
-  tags: [thermal, igpu]
-
-- name: Enable and start intel-gt-freq-cap services
-  shell: |
-    systemctl daemon-reload
-    systemctl enable --now intel-gt-freq-cap.service
-    systemctl enable intel-gt-freq-cap-resume.service
+  os.systemd:
+    name: intel-gt-freq-cap-resume.service
+    unit:
+      Description: "Re-apply Intel iGPU freq cap after resume"
+      After: "suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target"
+    service:
+      Type: oneshot
+      ExecStart: /usr/local/bin/intel-gt-freq-cap
+    install:
+      WantedBy: "suspend.target hibernate.target hybrid-sleep.target suspend-then-hibernate.target"
+    enabled: true
   as_user: root
   tags: [thermal, igpu]

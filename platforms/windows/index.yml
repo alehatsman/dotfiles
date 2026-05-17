@@ -47,11 +47,15 @@
 # fails its socket dependency. Disable ssh.socket and let ssh.service own
 # the listener on port 2222 (from our drop-in above).
 - name: Disable ssh.socket (conflicts with port 22 under mirrored networking)
-  shell: |
-    if systemctl list-unit-files ssh.socket >/dev/null 2>&1; then
-      systemctl disable --now ssh.socket 2>&1 | grep -v "Removed\|not loaded" || true
-    fi
+  os.service:
+    name: ssh.socket
+    state: stopped
+    enabled: false
   as_user: root
+  # Skip when systemd isn't running (first-apply on fresh WSL) and
+  # skip when ssh.socket isn't a known unit (already-fresh distros).
+  unless_command: |
+    [ "$(ps -p 1 -o comm= 2>/dev/null)" != systemd ] || ! systemctl list-unit-files ssh.socket >/dev/null 2>&1
 
 # Ubuntu's stock ssh.service is Restart=on-failure, which only covers
 # crashes — clean exits and signal-kills aren't restarted. Bump it to
@@ -70,16 +74,21 @@
     dest: /etc/systemd/system/ssh.service.d/restart.conf
   as_user: root
 
-- name: Enable and start SSH
-  shell: |
-    if [ "$(ps -p 1 -o comm= 2>/dev/null)" = "systemd" ]; then
-      systemctl daemon-reload
-      systemctl enable ssh
-      systemctl restart ssh
-    else
-      echo "WARNING: systemd not running — run 'wsl --shutdown' then reconnect, then re-run provisioning"
-    fi
+# First apply on a fresh WSL distro happens BEFORE systemd is up
+# (systemd is opt-in via the /etc/wsl.conf we just deployed). The
+# drop-in above lands fine without systemd; the actual
+# daemon-reload + enable + restart needs systemd, so we gate this
+# step on the init-is-systemd predicate. After the operator runs
+# `wsl --shutdown` and reconnects, the re-apply finds systemd up
+# and completes the start.
+- name: Enable and start SSH (requires systemd)
+  os.service:
+    name: ssh
+    state: restarted
+    enabled: true
+    daemon_reload: true
   as_user: root
+  unless_command: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
 
 # GPU tooling. nvtop is a small Vulkan/NVIDIA monitor; CUDA is the heavy
 # toolkit (multi-GB, ~30 min on first install). Both are skipped on
