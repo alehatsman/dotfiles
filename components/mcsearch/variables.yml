@@ -15,14 +15,3 @@ mcsearch_src_url: "git@github.com:alehatsman/mcsearch.git"
 # (no as_user: root) so ~ resolves to the same home consistently.
 mcsearch_src_dir: "~/.local/share/mcsearch-src"
 mcsearch_bin_path: "~/.local/bin/mcsearch"
-
-# Server-side container image tag for the embedding engine. The vLLM
-# image bundles its own CUDA runtime; bumping this gets you newer
-# model support without changing the host driver.
-mcsearch_vllm_image: "vllm/vllm-openai:latest"
-mcsearch_tei_image:  "ghcr.io/huggingface/text-embeddings-inference:1.9"
-
-# Embedding-server tuning knobs (only used when mcsearch_role=server).
-# Max sequence length the engine will accept per chunk. Embeddings models
-# generally truncate beyond this; setting it lower saves a bit of VRAM.
-mcsearch_max_model_len: "4096"

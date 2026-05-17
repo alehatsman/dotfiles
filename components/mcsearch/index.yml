@@ -79,10 +79,17 @@
 
 - name: "Register mcsearch with Claude Code (user scope)"
   # remove-then-add keeps the command/args in lockstep with this template
-  # so future arg changes propagate cleanly.
+  # so future arg changes propagate cleanly. Env vars are passed via
+  # `claude mcp add -e` rather than relying on shell defaults — the
+  # ollama-served model name + non-standard port both differ from the
+  # mcsearch binary's compiled-in defaults, so leaving them implicit
+  # would silently 4xx against the embedding endpoint.
   shell: |
     claude mcp remove mcsearch --scope user 2>/dev/null || true
-    claude mcp add --scope user mcsearch -- {{ mcsearch_bin_path }} mcp
+    claude mcp add --scope user mcsearch \
+      -e MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }} \
+      -e MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }} \
+      -- {{ mcsearch_bin_path }} mcp
   tags: [mcsearch, claude]
 
 - name: "Verify mcsearch is on $PATH"
