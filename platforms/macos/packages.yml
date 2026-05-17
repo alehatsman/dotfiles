@@ -37,11 +37,14 @@
 
 - name: Define brew taps, formulae, and casks
   vars:
+    # taps are objects rather than strings because mooncake's pkg.repo
+    # `name:` field doesn't allow slashes (it's a filesystem label).
+    # `tap` keeps the canonical `<owner>/<repo>` brew expects.
     taps:
-      - wata727/tflint
-      - borkdude/brew
-      - wagoodman/dive
-      - AdoptOpenJDK/openjdk
+      - { name: wata727-tflint,       tap: wata727/tflint }
+      - { name: borkdude-brew,        tap: borkdude/brew }
+      - { name: wagoodman-dive,       tap: wagoodman/dive }
+      - { name: adoptopenjdk-openjdk, tap: AdoptOpenJDK/openjdk }
     apps:
       - aria2
       - autoenv
@@ -124,13 +127,17 @@
       - zoom
       - font-jetbrains-mono-nerd-font
 
-- name: Make sure all the taps are present
-  shell: |
-    brew tap {{ item }}
+- name: Register brew taps
+  # mooncake's pkg.repo brew driver lists current taps first and only
+  # calls `brew tap` on drift — drops the failed_when/changed_when
+  # boilerplate the shell version needed for brew's rc=1 on "already
+  # tapped" (proposal-08).
+  pkg.repo:
+    name: "{{ item.name }}"
+    state: present
+    brew:
+      tap: "{{ item.tap }}"
   for_each: "{{ taps }}"
-  as: tap_result
-  failed_when: result.rc not in [0, 1]
-  changed_when: "'already tapped' not in result.stderr"
   timeout: 5m
 
 - name: Install brew formulae

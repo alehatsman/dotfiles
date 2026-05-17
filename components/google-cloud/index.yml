@@ -1,26 +1,22 @@
 ---
 # Google Cloud SDK install.
 #
-# The Linux path repeats the HashiCorp pattern (keyring + source +
-# apt-get install). Same migration footprint: keyring fetch stays
-# shell until pkg.repo apt driver lands; everything else is native.
+# Linux: pkg.repo apt driver handles keyring + DEB822 source + apt-get
+# update atomically.
+#
+# macOS: brew cask. `pkg.cask` is not yet a mooncake action
+# (proposal-20 in mooncake-repo), so this stays as shell until that lands.
 
-- name: Fetch Google Cloud apt keyring
-  shell: |
-    install -d /usr/share/keyrings
-    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
-      -o /usr/share/keyrings/cloud.google.gpg
-  unless_command: test -s /usr/share/keyrings/cloud.google.gpg
-  as_user: root
-  when: os == 'linux'
-
-- name: Add Google Cloud apt source
-  file.write:
-    path: /etc/apt/sources.list.d/google-cloud-sdk.list
-    state: file
-    content: |
-      deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main
-    mode: '0644'
+- name: Register Google Cloud apt repo
+  pkg.repo:
+    name: google-cloud-sdk
+    state: present
+    apt:
+      uri: https://packages.cloud.google.com/apt
+      suites: [cloud-sdk]
+      components: [main]
+      gpg_key_url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      gpg_check: false
   as_user: root
   when: os == 'linux'
 
@@ -28,7 +24,6 @@
   pkg:
     name: google-cloud-cli
     state: present
-    update_cache: true
   as_user: root
   when: os == 'linux'
 

@@ -167,26 +167,31 @@
     delay: 10s
   tags: [arch, system, packages]
 
-# AUR packages — kept as shell because mooncake's package action
-# does not support yay/paru. Migrate once AUR manager support lands.
+# AUR packages via yay. mooncake's pkg action supports manager: yay
+# (proposal-07 in mooncake repo) and emits `yay -S --noconfirm --needed`
+# under the hood. The handler now reads step.Pkg.Manager and returns
+# Sudo:false for yay/paru/brew (F049 fix), so the step runs as the
+# calling user — yay refuses root by design.
 - name: Install AUR packages
-  shell: |
-    yay -S --noconfirm --needed \
-      git-delta \
-      tealdeer \
-      nwg-dock-hyprland \
-      bruno-bin \
-      shfmt \
-      yq \
-      code-minimap \
-      zoxide \
-      tree-sitter-cli \
-      google-chrome \
-      1password \
-      1password-cli \
-      globalprotect-openconnect \
-      bluetuith \
-      wlogout
+  pkg:
+    manager: yay
+    state: present
+    names:
+      - git-delta
+      - tealdeer
+      - nwg-dock-hyprland
+      - bruno-bin
+      - shfmt
+      - yq
+      - code-minimap
+      - zoxide
+      - tree-sitter-cli
+      - google-chrome
+      - 1password
+      - 1password-cli
+      - globalprotect-openconnect
+      - bluetuith
+      - wlogout
   timeout: 15m
   retry:
     attempts: 2
