@@ -11,6 +11,18 @@
 # present" check, so re-running is safe. (Mooncake's shell action will
 # still report changed=true; that's a cosmetic issue, not a correctness one.)
 
+- name: Set computer name
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      if ($env:COMPUTERNAME -eq "{{ computer_name }}") {
+        Write-Host "Computer name already set to {{ computer_name }}"
+      } else {
+        Write-Host "Renaming computer to {{ computer_name }} (takes effect after reboot)"
+        Rename-Computer -NewName "{{ computer_name }}" -Force
+      }
+
 - name: Set WSL default version to 2
   shell:
     cmd: wsl --set-default-version 2

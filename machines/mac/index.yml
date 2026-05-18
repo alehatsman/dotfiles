@@ -9,6 +9,14 @@
 - import: ../../platforms/macos/index.yml
   tags: [macos]
 
+- name: Set computer name
+  shell: |
+    scutil --set ComputerName "{{ computer_name }}"
+    scutil --set LocalHostName "{{ computer_name }}"
+    scutil --set HostName "{{ computer_name }}"
+  as_user: root
+  tags: [macos]
+
 # Cross-platform components
 # Palette must come first — every later component's templates read
 # palette.* / editor.* from the variant selected by `palette_variant`.
