@@ -14,23 +14,14 @@
 - name: Make sure rosetta 2 is installed
   shell: |
     softwareupdate --install-rosetta --agree-to-license
+  unless_command: pkgutil --pkg-info com.apple.pkg.RosettaUpdateAuto >/dev/null 2>&1
   as_user: root
-  as: rosetta_result
-  failed_when: result.rc not in [0, 1]
-  changed_when: result.rc == 0
   timeout: 10m
 
 - name: Make sure brew is installed
   shell: |
-    # Check known install locations directly — mooncake's shell doesn't
-    # source .zshrc so /opt/homebrew/bin is not on PATH.
-    if test -x /opt/homebrew/bin/brew || test -x /usr/local/bin/brew; then
-      exit 2
-    fi
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  as: brew_result
-  failed_when: result.rc not in [0, 2]
-  changed_when: result.rc == 0
+  unless_command: test -x /opt/homebrew/bin/brew || test -x /usr/local/bin/brew
   timeout: 10m
   retry:
     attempts: 3
