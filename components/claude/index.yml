@@ -15,12 +15,6 @@
     state: directory
   tags: [claude]
 
-- name: "Deploy claude config"
-  file.template:
-    src: "./config.yml"
-    dest: "~/.claude/config.yml"
-  tags: [claude]
-
 - name: "Deploy claude settings"
   file.copy:
     src: "./settings.json"
