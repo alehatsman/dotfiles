@@ -196,7 +196,7 @@ require('lazy').setup({
       require('diffview').setup({
         enhanced_diff_hl = true,
         view = {
-          file_history = { layout = 'diff1_plain' },
+          file_history = { layout = 'diff2_horizontal' },
         },
         file_history_panel = {
           log_options = {
