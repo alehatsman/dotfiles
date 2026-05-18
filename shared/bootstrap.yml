@@ -11,3 +11,34 @@
   when: os == "linux"
   unless_command: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
   tags: [core, home]
+
+# User-scope systemd units (mcsearch-tunnel, mcsearch-watch@, and the
+# mooncake agentd itself once it lands in --user mode) need to survive
+# logout — otherwise remote fleet apply against a non-interactive peer
+# has no user systemd bus to talk to. Idempotent: enable-linger is a
+# no-op when already enabled.
+- name: Enable systemd linger for {{ username }} so user services survive logout
+  shell: loginctl enable-linger {{ username }}
+  unless_command: loginctl show-user {{ username }} 2>/dev/null | grep -q '^Linger=yes$'
+  when: os == "linux"
+  tags: [core, systemd]
+
+# Passwordless sudo for the provisioning user. Required after the
+# user-mode agentd switch: previously the agentd ran as root and any
+# `as_user: root` step was a no-op-on-uid, but a user-mode agentd has
+# to escalate via sudo for those steps. The first apply needs
+# `--ask-become-pass` to land this sudoers entry; subsequent applies
+# are passwordless. Content is a single fixed line with only
+# {{ username }} interpolated, so there's no template path that
+# produces invalid sudoers syntax — but a typo here lands without
+# visudo validation, so review changes carefully.
+- name: Configure passwordless sudo for {{ username }}
+  file.write:
+    path: /etc/sudoers.d/{{ username }}-nopasswd
+    state: file
+    content: |
+      {{ username }} ALL=(ALL) NOPASSWD: ALL
+    mode: '0440'
+  as_user: root
+  when: os == "linux"
+  tags: [core, sudo]

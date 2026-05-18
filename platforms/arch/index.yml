@@ -69,16 +69,6 @@
   timeout: 5m
   tags: [arch, system, packages]
 
-- name: Configure passwordless sudo for user
-  file.write:
-    path: /etc/sudoers.d/{{ username }}-nopasswd
-    state: file
-    content: |
-      {{ username }} ALL=(ALL) NOPASSWD: ALL
-    mode: '0440'
-  as_user: root
-  tags: [arch, system, packages]
-
 - import: ./packages.yml
   tags: [arch, system, packages]
 
