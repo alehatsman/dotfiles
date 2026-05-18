@@ -79,6 +79,7 @@
 - name: Install tree-sitter CLI (brew)
   pkg:
     name: tree-sitter
+    manager: brew
   when: os == 'darwin'
   tags: [nvim, treesitter]
 
