@@ -54,6 +54,18 @@
   timeout: 30m
   tags: [mcsearch, server]
 
+- name: "Pull ask-codebase model (optional second chat model)"
+  # Used only by the ask_codebase MCP tool when mcsearch_ask_model is
+  # non-empty. Coder-tuned chat models resist the citation-only system
+  # prompt and emit ungrounded "hypothetical" code; an instruction-tuned
+  # model follows the contract reliably. Skipped entirely when the var
+  # is empty (ask_codebase falls back to mcsearch_chat_model).
+  shell: ollama pull {{ mcsearch_ask_model }}
+  unless_command: |
+    [ -z "{{ mcsearch_ask_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_ask_model }}'
+  timeout: 30m
+  tags: [mcsearch, server]
+
 - name: "Wait for the embedding endpoint to become ready"
   wait.http:
     url: "http://127.0.0.1:{{ mcsearch_remote_port }}/v1/embeddings"
