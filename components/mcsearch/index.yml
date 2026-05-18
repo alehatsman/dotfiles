@@ -85,8 +85,10 @@
       -e MCSEARCH_CHAT_MODEL={{ mcsearch_chat_model }}
       -e MCSEARCH_ASK_MODEL={{ mcsearch_ask_model }}
       -e MCSEARCH_RERANK_URL=http://127.0.0.1:{{ mcsearch_rerank_local_port }}
+      -e MCSEARCH_RERANK_STYLE={{ mcsearch_rerank_style }}
       -e MCSEARCH_RERANK_MODEL={{ mcsearch_rerank_model }}
       -e MCSEARCH_RERANK_POOL={{ mcsearch_rerank_pool }}
+      -e MCSEARCH_RERANK_CONCURRENCY={{ mcsearch_rerank_concurrency }}
     )
     # Context compression: distils retrieved chunks before injecting into
     # Claude's context window (4–5× token savings). Disabled when port is "".
