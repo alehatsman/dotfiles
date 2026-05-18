@@ -2,6 +2,7 @@
 # x1-specific variables. Username is detected at runtime via {{ username }};
 # no need to set OS_USERNAME here.
 is_wsl: false
+computer_name: x1
 
 # ─── Thermal tuning (Ultra 7 255U, Xe2 iGPU) ────────────────────────────────
 # Re-apply any change with:

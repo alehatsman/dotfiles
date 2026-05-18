@@ -1,6 +1,7 @@
 ---
 # mac-specific variables.
 is_wsl: false
+computer_name: mac
 
 # ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
 # Inherits mcsearch_role=client from shared/variables.yml. The mcsearch

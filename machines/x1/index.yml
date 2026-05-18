@@ -9,6 +9,11 @@
 - import: ../../platforms/arch/index.yml
   tags: [arch, system, packages]
 
+- name: Set computer name
+  shell: hostnamectl set-hostname "{{ computer_name }}"
+  as_user: root
+  tags: [system]
+
 # x1-specific tuning (TLP, RAPL, iGPU freq cap, HDA, i915 cmdline)
 - import: ./thermal.yml
   tags: [thermal]

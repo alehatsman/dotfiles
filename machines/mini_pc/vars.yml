@@ -1,6 +1,7 @@
 ---
 # mini_pc-specific variables (Windows + WSL Ubuntu).
 is_wsl: true
+computer_name: mini_pc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
 # Mooncake agentd TCP ports.
