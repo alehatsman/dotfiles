@@ -78,6 +78,23 @@ mcsearch_rerank_model: "BAAI/bge-reranker-v2-m3"
 # to 40 on parse error.
 mcsearch_rerank_pool: "40"
 
+# Context compression — distils retrieved chunks into a ≤350-word prose
+# summary before injecting them into the chat model's context window.
+# Reduces tokens sent to Claude by 4–5× per ask_codebase / generate_code
+# call at the cost of one extra local-model round-trip. Reuses the same
+# ollama port + 32B model as chat: already loaded in VRAM, no extra cost.
+# Set port to "" to disable on machines without the tunnel.
+# Future: point at a faster 7B on the 5080 once it's wired up.
+mcsearch_compress_port: "11434"
+mcsearch_compress_model: "qwen2.5-coder:32b"
+
+# Speculative local draft — pre-generates a code implementation with the
+# 32B model before the main model refines it, then Claude validates.
+# Cuts Claude's generation tokens by 3–10× on generate_code calls.
+# Set port to "" to disable.
+mcsearch_draft_port: "11434"
+mcsearch_draft_model: "qwen2.5-coder:32b"
+
 # SSH alias for the GPU host. Resolved via ~/.ssh/config — the user is
 # expected to have a `Host main_pc-wsl` entry that points at the WSL SSH
 # port (typically <main_pc-lan-ip>:2222 with the appropriate key).
