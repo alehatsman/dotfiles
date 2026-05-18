@@ -76,16 +76,31 @@
   # generation leg of generate_code.
   shell: |
     claude mcp remove mcsearch --scope user 2>/dev/null || true
-    claude mcp add --scope user mcsearch \
-      -e MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }} \
-      -e MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }} \
-      -e MCSEARCH_CHAT_URL=http://127.0.0.1:{{ mcsearch_local_port }} \
-      -e MCSEARCH_CHAT_MODEL={{ mcsearch_chat_model }} \
-      -e MCSEARCH_ASK_MODEL={{ mcsearch_ask_model }} \
-      -e MCSEARCH_RERANK_URL=http://127.0.0.1:{{ mcsearch_rerank_local_port }} \
-      -e MCSEARCH_RERANK_MODEL={{ mcsearch_rerank_model }} \
-      -e MCSEARCH_RERANK_POOL={{ mcsearch_rerank_pool }} \
-      -- {{ mcsearch_bin_path }} mcp
+    # Build arg list in a bash array so optional features (compress, draft)
+    # can be conditionally appended without multi-line continuation gymnastics.
+    args=(
+      -e MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }}
+      -e MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }}
+      -e MCSEARCH_CHAT_URL=http://127.0.0.1:{{ mcsearch_local_port }}
+      -e MCSEARCH_CHAT_MODEL={{ mcsearch_chat_model }}
+      -e MCSEARCH_ASK_MODEL={{ mcsearch_ask_model }}
+      -e MCSEARCH_RERANK_URL=http://127.0.0.1:{{ mcsearch_rerank_local_port }}
+      -e MCSEARCH_RERANK_MODEL={{ mcsearch_rerank_model }}
+      -e MCSEARCH_RERANK_POOL={{ mcsearch_rerank_pool }}
+    )
+    # Context compression: distils retrieved chunks before injecting into
+    # Claude's context window (4–5× token savings). Disabled when port is "".
+    [[ -n '{{ mcsearch_compress_port }}' ]] && args+=(
+      -e MCSEARCH_COMPRESS_URL=http://127.0.0.1:{{ mcsearch_compress_port }}
+      -e MCSEARCH_COMPRESS_MODEL={{ mcsearch_compress_model }}
+    )
+    # Speculative local draft: pre-generates code so Claude refines rather
+    # than writes from scratch (3–10× generation token savings). Disabled when port is "".
+    [[ -n '{{ mcsearch_draft_port }}' ]] && args+=(
+      -e MCSEARCH_DRAFT_URL=http://127.0.0.1:{{ mcsearch_draft_port }}
+      -e MCSEARCH_DRAFT_MODEL={{ mcsearch_draft_model }}
+    )
+    claude mcp add --scope user mcsearch "${args[@]}" -- {{ mcsearch_bin_path }} mcp
   tags: [mcsearch, claude]
 
 - name: "Verify mcsearch is on $PATH"
