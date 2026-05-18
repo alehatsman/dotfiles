@@ -150,14 +150,13 @@
     attempts: 2
     delay: 10s
 
-- name: Install cask {{ item }}
-  shell: |
-    brew install --cask {{ item }}
-  for_each: "{{ cask_apps }}"
-  as: cask_result
-  failed_when: result.rc not in [0, 1]
-  timeout: 10m
+- name: Install brew casks
+  pkg:
+    manager: brew
+    cask: true
+    state: present
+    names: "{{ cask_apps }}"
+  timeout: 30m
   retry:
     attempts: 2
     delay: 10s
-  as_user: root

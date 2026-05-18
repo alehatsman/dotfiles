@@ -13,7 +13,7 @@
 - name: Install Python 3 (brew)
   pkg:
     name: python
-  as_user: root
+    manager: brew
   when: brew_available
   tags: [dev, python]
 
@@ -43,6 +43,7 @@
 - name: Install Go toolchain (brew)
   pkg:
     name: go
+    manager: brew
   when: brew_available
   tags: [dev, golang]
 
@@ -63,6 +64,7 @@
 - name: Install Java JDK (brew)
   pkg:
     name: openjdk@21
+    manager: brew
   when: brew_available
   tags: [dev, java]
 
