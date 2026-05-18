@@ -63,9 +63,12 @@ WSL2-SSH-Keepalive task). It **does not install agentd** anywhere
 `mooncake fleet bootstrap` calls from x1 stand up both peers:
 
 ```
-# WSL (Linux) peer — goes through WSL's OpenSSH on :2222
+# WSL (Linux) peer — goes through WSL's OpenSSH on :2222.
+# --user installs a user-scope systemd unit running as aleh (so the
+# remote agent has the same $HOME, SSH keys, and ~/.local/bin as a
+# local apply), instead of the default system unit running as root.
 mooncake fleet bootstrap aleh@192.168.1.68 \
-    --port 2222 --agentd-port 7878 \
+    --port 2222 --agentd-port 7878 --user \
     --name <machine> --tag <machine> --upgrade
 
 # Windows-host peer — goes through Windows OpenSSH on :22 (spec-56)
@@ -75,9 +78,13 @@ mooncake fleet bootstrap aleh@192.168.1.68 \
 ```
 
 Each command SCPs the right binary, installs the OS-native
-autostart (systemd unit on Linux, Task Scheduler entry with S4U
-principal on Windows), opens the firewall, and writes the peer
-entry to peers.toml.
+autostart (systemd user unit on Linux with `--user`, Task Scheduler
+entry with S4U principal on Windows), opens the firewall, and
+writes the peer entry to peers.toml.
+
+The Linux `--user` mode requires `loginctl enable-linger` so the
+unit survives logout; `shared/bootstrap.yml` enables linger for
+`{{ username }}` on every Linux machine.
 
 History: an earlier version of `bootstrap.yml` registered the
 Windows-side `Mooncake-Agentd-Autostart` scheduled task itself.
