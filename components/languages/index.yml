@@ -13,6 +13,7 @@
 - name: Install Python 3 (brew)
   pkg:
     name: python
+  as_user: root
   when: brew_available
   tags: [dev, python]
 
