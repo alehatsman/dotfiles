@@ -3,5 +3,7 @@
 is_wsl: false
 
 # ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
-# Inherits mcsearch_role=client from shared/variables.yml. Prerequisite:
-# `Host main_pc-wsl` alias in ~/.ssh/config; mcsearch-tunnel relies on it.
+# Inherits mcsearch_role=client from shared/variables.yml. The mcsearch
+# component automatically writes the Host main_pc-wsl alias into
+# ~/.ssh/config (using mcsearch_remote_ip/port/user from shared/variables.yml)
+# so the tunnel resolves without any manual prerequisite.
