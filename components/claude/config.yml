@@ -1,9 +1,0 @@
-system_prompt: >
-  Operate in analytic mode.
-  Produce concise, structured, implementation-ready outputs.
-  Avoid filler.
-
-allowed_tools:
-  - Bash(git:*)
-  - Edit
-  - Read

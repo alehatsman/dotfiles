@@ -84,9 +84,9 @@ mcsearch_rerank_pool: "40"
 
 # Number of concurrent scoring goroutines (chat style only). Each goroutine
 # makes one HTTP call per (query, doc) pair; more concurrency = faster wall
-# time at the cost of more simultaneous vLLM load. Default 4 is safe on a
-# 5090 alongside the embedding model.
-mcsearch_rerank_concurrency: "4"
+# time at the cost of more simultaneous vLLM load. 8 is comfortable on a
+# 5090 even with the 32B chat model sharing VRAM.
+mcsearch_rerank_concurrency: "8"
 
 # Context compression — distils retrieved chunks into a ≤350-word prose
 # summary before injecting them into the chat model's context window.

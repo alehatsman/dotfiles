@@ -312,10 +312,55 @@ vim.o.shiftwidth       = 2
 vim.o.tabstop          = 2
 
 -- Folding
+-- Treesitter folds normally; contiguous comment blocks (≥2 lines) get a
+-- high fold level so they close on load while code stays open. AI-generated
+-- code tends to be over-commented; this keeps noise out of view by default.
+do
+  local cache = {}
+  local function comment_lines(bufnr)
+    local tick = vim.api.nvim_buf_get_changedtick(bufnr)
+    local entry = cache[bufnr]
+    if entry and entry.tick == tick then return entry.lines end
+    local lines = {}
+    local ok, parser = pcall(vim.treesitter.get_parser, bufnr)
+    if ok and parser then
+      local trees = parser:parse()
+      for _, tree in ipairs(trees or {}) do
+        local function walk(node)
+          if node:type():find('comment') then
+            local sr, _, er, _ = node:range()
+            for l = sr, er do lines[l + 1] = true end
+          else
+            for child in node:iter_children() do walk(child) end
+          end
+        end
+        walk(tree:root())
+      end
+    end
+    cache[bufnr] = { tick = tick, lines = lines }
+    return lines
+  end
+  function _G.user_foldexpr()
+    local lnum = vim.v.lnum
+    local bufnr = vim.api.nvim_get_current_buf()
+    local cl = comment_lines(bufnr)
+    if cl[lnum] then
+      local prev, nxt = cl[lnum - 1], cl[lnum + 1]
+      if nxt and not prev then return '>99' end
+      if prev and not nxt then return '<99' end
+      if prev and nxt then return '99' end
+    end
+    return vim.treesitter.foldexpr(lnum)
+  end
+  vim.api.nvim_create_autocmd({ 'BufWipeout', 'BufUnload' }, {
+    callback = function(args) cache[args.buf] = nil end,
+  })
+end
+
 vim.o.foldmethod       = 'expr'
-vim.o.foldexpr         = 'v:lua.vim.treesitter.foldexpr()'
+vim.o.foldexpr         = 'v:lua.user_foldexpr()'
 vim.o.foldcolumn       = '0'
-vim.o.foldlevelstart   = 99
+vim.o.foldlevelstart   = 98
 vim.o.colorcolumn      = '80'
 
 -- UI/UX

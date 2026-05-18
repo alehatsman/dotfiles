@@ -1,15 +1,14 @@
-# Tool routing
+# Claude Code Instructions
 
-- **Refactor / rename / find-refs / diagnostics**: LSP. Never grep+Edit for symbol-level changes.
-- **Code search by meaning**: `semantic_search` (MCP). Use grep only for exact-string lookups.
-- **Codebase Q&A**: `ask_codebase` (MCP). Don't `Read` and synthesize yourself.
-- **File or range gist**: `summarize_path` (MCP). Don't `Read` a whole file just to orient.
-- **New code / scaffolding**: `generate_code` (MCP). Don't hand-write what it generates.
-- **Search seems wrong**: `mcsearch_status` (MCP). Check before chasing a "missing" result through code.
+Before using Grep, Glob, or broad Read for repository questions:
 
-# Token discipline
+1. Call `mcsearch_context`
+2. Read only suggested file ranges
+3. Use graph expansion if structural understanding is needed
+4. Fall back to Grep only if mcsearch returns insufficient results
 
-- Read targeted line ranges, not whole files.
-- Parallel-call independent tools in one message.
-- No preamble, recap, or status narration — the user sees the diff.
-- Default to no comments; only add when WHY is non-obvious.
+CLI fallback when MCP is unavailable:
+
+```bash
+mcsearch context . "question" --format json
+```
