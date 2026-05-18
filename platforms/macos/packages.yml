@@ -1,14 +1,14 @@
 ---
 - name: Make sure xcode is installed
   shell: |
-    if ! type "make" > /dev/null; then
-      echo "xcode tools are not installed."
+    if ! type "make" > /dev/null 2>&1; then
       xcode-select --install
-    else
-      echo "xcode tools are already installed. Skipping..."
+      exit 0
     fi
+    exit 2
   as: xcode_result
-  changed_when: "'not installed' in result.stdout"
+  failed_when: result.rc not in [0, 2]
+  changed_when: result.rc == 0
   timeout: 10m
 
 - name: Make sure rosetta 2 is installed
@@ -22,14 +22,14 @@
 
 - name: Make sure brew is installed
   shell: |
-    if ! type "brew" > /dev/null; then
-      echo "brew is not installed."
+    if ! type "brew" > /dev/null 2>&1; then
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    else
-      echo "brew is already installed. Skipping..."
+      exit 0
     fi
+    exit 2
   as: brew_result
-  changed_when: "'not installed' in result.stdout"
+  failed_when: result.rc not in [0, 2]
+  changed_when: result.rc == 0
   timeout: 10m
   retry:
     attempts: 3
@@ -150,12 +150,14 @@
     attempts: 2
     delay: 10s
 
-- name: Make sure all the cask apps are present
+- name: Install cask {{ item }}
   shell: |
-    brew install --cask {{ cask_apps | join: ' ' }}
+    brew install --cask {{ item }}
+  for_each: "{{ cask_apps }}"
   as: cask_result
   failed_when: result.rc not in [0, 1]
-  timeout: 30m
+  timeout: 10m
   retry:
     attempts: 2
     delay: 10s
+  as_user: root

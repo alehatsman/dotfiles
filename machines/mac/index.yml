@@ -46,3 +46,6 @@
 # Terminal
 - import: ../../components/alacritty/index.yml
   tags: [macos, terminal, config]
+
+- import: ../../components/mcsearch/index.yml
+  tags: [macos, mcsearch]
