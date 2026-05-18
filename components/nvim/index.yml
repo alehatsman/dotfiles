@@ -101,7 +101,7 @@
   shell: |
     set -e
     command -v go >/dev/null 2>&1 || { echo "go not installed, skipping"; exit 0; }
-    tmp=$(mktemp --suffix=.go)
+    tmp=$(mktemp /tmp/vimgo-XXXXXX.go)
     echo 'package main' > "$tmp"
     nvim --headless "$tmp" "+GoInstallBinaries" +qa
     rm -f "$tmp"
