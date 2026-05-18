@@ -123,6 +123,23 @@
 # loopback (mcsearch is fine pointing at the same 127.0.0.1:8082 that the
 # server publishes).
 
+- name: "Ensure {{ mcsearch_remote_host }} SSH alias is in ~/.ssh/config"
+  # The tunnel template (and the ssh binary launched by launchd/systemd)
+  # resolves `mcsearch_remote_host` as a hostname alias. Without this Host
+  # block the tunnel fails with "nodename nor servname provided". The step
+  # is idempotent — it exits early if the block is already present.
+  shell: |
+    config="$HOME/.ssh/config"
+    touch "$config" && chmod 0600 "$config"
+    if ! grep -q "^Host {{ mcsearch_remote_host }}$" "$config"; then
+      printf '\nHost %s\n    HostName %s\n    Port %s\n    User %s\n' \
+        '{{ mcsearch_remote_host }}' '{{ mcsearch_remote_ip }}' \
+        '{{ mcsearch_remote_ssh_port }}' '{{ mcsearch_remote_user }}' >> "$config"
+    fi
+  unless_command: "grep -q '^Host {{ mcsearch_remote_host }}$' ~/.ssh/config 2>/dev/null"
+  when: mcsearch_role == 'client'
+  tags: [mcsearch, tunnel]
+
 - name: "Deploy mcsearch-tunnel user systemd unit"
   file.template:
     src: ./templates/mcsearch-tunnel.service.j2

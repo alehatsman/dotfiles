@@ -105,10 +105,14 @@ mcsearch_compress_model: "qwen2.5-coder:32b"
 mcsearch_draft_port: "11434"
 mcsearch_draft_model: "qwen2.5-coder:32b"
 
-# SSH alias for the GPU host. Resolved via ~/.ssh/config — the user is
-# expected to have a `Host main_pc-wsl` entry that points at the WSL SSH
-# port (typically <main_pc-lan-ip>:2222 with the appropriate key).
+# SSH alias for the GPU host — used by both the tunnel template and the
+# ssh-config step managed by the mcsearch client install. The mcsearch
+# component writes a Host block into ~/.ssh/config on client machines
+# so the tunnel can resolve the alias without a manual prerequisite.
 mcsearch_remote_host: "main_pc-wsl"
+mcsearch_remote_ip: "192.168.1.68"
+mcsearch_remote_ssh_port: "2222"
+mcsearch_remote_user: "aleh"
 
 # Space-separated list of absolute project roots to auto-watch via
 # mcsearch-watch@.service. The apply step enables one user systemd
