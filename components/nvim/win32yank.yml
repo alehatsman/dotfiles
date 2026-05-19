@@ -14,6 +14,7 @@
 # chmod it ourselves. `creates:` keeps this idempotent.
 - name: Install win32yank.exe to ~/bin
   shell: |
+    set -euo pipefail
     unzip -p /tmp/win32yank.zip win32yank.exe > ~/bin/win32yank.exe
     chmod +x ~/bin/win32yank.exe
   creates: ~/bin/win32yank.exe

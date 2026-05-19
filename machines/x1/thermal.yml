@@ -89,6 +89,7 @@
 
 - name: Apply HDA powersave now (no reboot needed)
   shell: |
+    set -euo pipefail
     echo 1 > /sys/module/snd_hda_intel/parameters/power_save 2>/dev/null || true
     echo Y > /sys/module/snd_hda_intel/parameters/power_save_controller 2>/dev/null || true
   as_user: root

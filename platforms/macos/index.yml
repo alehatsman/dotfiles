@@ -4,6 +4,7 @@
 
 - name: Make sure macos configuration is set
   shell: |
+    set -euo pipefail
     # Disable window animations ('new window' scale effect)
     defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
     defaults write NSGlobalDomain NSWindowResizeTime -float 0.001

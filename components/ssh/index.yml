@@ -1,6 +1,7 @@
 ---
 - name: Make sure ssh key is present
   shell: |
+    set -euo pipefail
     ssh_key="$HOME/.ssh/id_ed25519"
 
     if [ -f "$ssh_key" ]; then

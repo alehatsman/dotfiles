@@ -25,6 +25,7 @@
   # `rustup update stable` first: atuin tracks recent rustc (18.16.1
   # needs ≥1.95). rustup updates are fast no-ops once current.
   shell: |
+    set -euo pipefail
     export PATH="$HOME/.cargo/bin:$PATH"
     rustup update stable
     cargo install atuin --locked

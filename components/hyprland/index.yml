@@ -210,6 +210,7 @@
 
 - name: Set freedesktop color-scheme to prefer-dark (Chrome and portal-aware apps read this)
   shell: |
+    set -euo pipefail
     gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
     gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
   tags: [hyprland, theme]
