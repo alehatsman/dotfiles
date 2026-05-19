@@ -22,6 +22,12 @@ windows_agentd_port: "7879"
 # the embedding container; confirm `nvidia-smi` works inside WSL first.
 mcsearch_role: server
 
+# 32 GB VRAM lets chat (32B) + summary (7B) + embed (4B) all stay
+# resident, so the index-time summary fan-out doesn't fight chat for
+# VRAM. Push concurrency until the 7B saturates rather than worrying
+# about swaps. The shared default is 4 (safe for any GPU host).
+mcsearch_summary_concurrency: "16"
+
 # Long-lived project roots to keep auto-reindexed via mcsearch-watch@.
 # Adding a path here = enabled at next apply; removing it = disabled.
 # Ad-hoc worktrees come and go through the zsh gwc/gwd helpers; only
