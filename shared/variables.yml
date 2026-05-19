@@ -91,19 +91,44 @@ mcsearch_rerank_concurrency: "8"
 # Context compression — distils retrieved chunks into a ≤350-word prose
 # summary before injecting them into the chat model's context window.
 # Reduces tokens sent to Claude by 4–5× per ask_codebase / generate_code
-# call at the cost of one extra local-model round-trip. Reuses the same
-# ollama port + 32B model as chat: already loaded in VRAM, no extra cost.
-# Set port to "" to disable on machines without the tunnel.
-# Future: point at a faster 7B on the 5080 once it's wired up.
+# call at the cost of one extra local-model round-trip. Quality-bound
+# (the compressed output feeds Claude as RAG context, so a bad distil
+# silently misleads downstream), but 7B is well above the floor —
+# 32B would just sit on the GPU longer for no quality gain. Shares the
+# 7B file with the summary leg, so no extra VRAM beyond what indexing
+# already loads. Set port to "" to disable on machines without the tunnel.
 mcsearch_compress_port: "11434"
-mcsearch_compress_model: "qwen2.5-coder:32b"
+mcsearch_compress_model: "qwen2.5-coder:7b"
 
-# Speculative local draft — pre-generates a code implementation with the
-# 32B model before the main model refines it, then Claude validates.
-# Cuts Claude's generation tokens by 3–10× on generate_code calls.
-# Set port to "" to disable.
+# Speculative local draft — pre-generates a code implementation with a
+# small coder model before Claude refines it. The whole point is that
+# draft latency hides behind Claude's network/thinking RTT, so the
+# draft must be MUCH faster than chat: 3B finishes a ~200-tok candidate
+# in ~2 s on the 5090, well inside Claude's TTFT window. 7B+ defeats
+# the speculative pipeline; 1.5B risks hallucinated APIs that waste
+# Claude's refinement cycles. Set port to "" to disable.
 mcsearch_draft_port: "11434"
-mcsearch_draft_model: "qwen2.5-coder:32b"
+mcsearch_draft_model: "qwen2.5-coder:3b"
+
+# Index-time summary model — overrides the chat leg used during indexing
+# (file / chunk / package / repo summaries). Outputs are 1–4 sentences,
+# so a smaller coder model nearly matches the 32B on quality at 4–5×
+# the throughput. Cold indexes on a large repo can mean hundreds of
+# sequential 32B generations; this is the biggest GPU-time lever during
+# indexing. Set port to "" to fall back to mcsearch_chat_model.
+# Concurrency caps in-flight chunk-summary chat calls per file —
+# raise it as far as the local server can serve concurrent /chat
+# requests without VRAM thrashing.
+# Min-lines drops short structural chunks from summary generation
+# entirely (default in mcsearch is 30; we raise to 50 for less noise
+# and lower cost on Go codebases full of small helpers).
+mcsearch_summary_port: "11434"
+mcsearch_summary_model: "qwen2.5-coder:7b"
+# Conservative default. The GPU host (main_pc/5090, 32 GB VRAM) bumps
+# this in machines/main_pc/vars.yml — push it as high as the local
+# ollama can serve concurrent /chat requests without VRAM thrash.
+mcsearch_summary_concurrency: "4"
+mcsearch_chunk_summary_min_lines: "50"
 
 # SSH alias for the GPU host — used by both the tunnel template and the
 # ssh-config step managed by the mcsearch client install. The mcsearch

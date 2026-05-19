@@ -66,6 +66,40 @@
   timeout: 30m
   tags: [mcsearch, server]
 
+- name: "Pull summary model (smaller chat model for index-time summaries)"
+  # Used by mcsearch's per-file / per-chunk / per-package summary calls
+  # during `mcsearch index`. Outputs are 1–4 sentences, so a 7B coder
+  # matches the 32B at ~4–5× the throughput and frees the 32B for
+  # query-time chat / compress / draft. Skipped when empty (summaries
+  # fall back to mcsearch_chat_model). De-duplicates with the chat pull
+  # via the unless_command — same model name means no second download.
+  shell: ollama pull {{ mcsearch_summary_model }}
+  unless_command: |
+    [ -z "{{ mcsearch_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_summary_model }}'
+  timeout: 30m
+  tags: [mcsearch, server]
+
+- name: "Pull compress model"
+  # Distinct from chat/summary only if the operator has pointed compress
+  # at a separate model; the unless_command de-dupes when it matches
+  # mcsearch_chat_model or mcsearch_summary_model (no second download).
+  shell: ollama pull {{ mcsearch_compress_model }}
+  unless_command: |
+    [ -z "{{ mcsearch_compress_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_compress_model }}'
+  timeout: 30m
+  tags: [mcsearch, server]
+
+- name: "Pull draft model (speculative-draft coder for generate_code)"
+  # Smaller than chat by design: draft latency must fit inside Claude's
+  # network/thinking RTT or the speculative pipeline is net-negative.
+  # Pulled separately because it's typically the smallest model on the
+  # box (1.5B/3B) — no overlap with chat/summary/compress.
+  shell: ollama pull {{ mcsearch_draft_model }}
+  unless_command: |
+    [ -z "{{ mcsearch_draft_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_draft_model }}'
+  timeout: 30m
+  tags: [mcsearch, server]
+
 - name: "Wait for the embedding endpoint to become ready"
   wait.http:
     url: "http://127.0.0.1:{{ mcsearch_remote_port }}/v1/embeddings"

@@ -102,6 +102,18 @@
       -e MCSEARCH_DRAFT_URL=http://127.0.0.1:{{ mcsearch_draft_port }}
       -e MCSEARCH_DRAFT_MODEL={{ mcsearch_draft_model }}
     )
+    # Index-time summary leg: smaller, faster model for per-file /
+    # per-chunk / per-package summaries generated during `mcsearch index`.
+    # SUMMARY_URL disabled when port is "" (summaries fall back to the
+    # main chat leg). Concurrency + min-lines always apply.
+    [[ -n '{{ mcsearch_summary_port }}' ]] && args+=(
+      -e MCSEARCH_SUMMARY_URL=http://127.0.0.1:{{ mcsearch_summary_port }}
+      -e MCSEARCH_SUMMARY_MODEL={{ mcsearch_summary_model }}
+    )
+    args+=(
+      -e MCSEARCH_SUMMARY_CONCURRENCY={{ mcsearch_summary_concurrency }}
+      -e MCSEARCH_CHUNK_SUMMARY_MIN_LINES={{ mcsearch_chunk_summary_min_lines }}
+    )
     claude mcp add --scope user mcsearch "${args[@]}" -- {{ mcsearch_bin_path }} mcp
   tags: [mcsearch, claude]
 
