@@ -28,6 +28,7 @@
 # the cargo bin dir is added by zsh config.
 - name: Install Rust toolchain via rustup
   shell: |
+    set -euo pipefail
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
       sh -s -- -y --default-toolchain stable --profile default --no-modify-path
   unless_command: command -v rustup >/dev/null 2>&1 && rustup show >/dev/null 2>&1

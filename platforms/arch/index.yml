@@ -45,26 +45,30 @@
   tags: [arch, system, packages]
 
 - name: Build yay AUR helper
+  # Build under ~/.cache (stable across tmpfiles cleanup) so the install
+  # step below finds the package at a deterministic path — no /tmp
+  # sentinel file passing state between steps. unless_command makes
+  # both steps idempotent at the mooncake level.
   shell: |
-    if ! pacman -Qi yay > /dev/null 2>&1; then
-      tmpdir=$(mktemp -d)
-      git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
-      cd "$tmpdir/yay" && makepkg -s --noconfirm
-      echo "$tmpdir/yay" > /tmp/.yay_build_dir
-    else
-      echo "" > /tmp/.yay_build_dir
-    fi
+    set -euo pipefail
+    builddir="$HOME/.cache/yay-build"
+    rm -rf "$builddir"
+    mkdir -p "$builddir"
+    git clone https://aur.archlinux.org/yay.git "$builddir/yay"
+    cd "$builddir/yay" && makepkg -s --noconfirm
+  unless_command: pacman -Qi yay
   timeout: 10m
   tags: [arch, system, packages]
 
 - name: Install yay AUR helper
+  # $HOME would resolve to /root under as_user: root, so reference the
+  # user's path explicitly via {{ username }}.
   shell: |
-    build_dir=$(cat /tmp/.yay_build_dir)
-    rm -f /tmp/.yay_build_dir
-    if [ -n "$build_dir" ]; then
-      pacman -U --noconfirm "$build_dir"/yay-*.pkg.tar.zst
-      rm -rf "$build_dir"
-    fi
+    set -euo pipefail
+    builddir="/home/{{ username }}/.cache/yay-build"
+    pacman -U --noconfirm "$builddir"/yay/yay-*.pkg.tar.zst
+    rm -rf "$builddir"
+  unless_command: pacman -Qi yay
   as_user: root
   timeout: 5m
   tags: [arch, system, packages]
@@ -121,6 +125,7 @@
 
 - name: Make Intel RAPL energy_uj readable by non-root (waybar power module)
   shell: |
+    set -euo pipefail
     cat > /etc/udev/rules.d/99-rapl-readable.rules <<'EOF'
     ACTION=="add", SUBSYSTEM=="powercap", KERNEL=="intel-rapl:*", RUN+="/usr/bin/chmod 0444 /sys%p/energy_uj"
     EOF
@@ -181,6 +186,7 @@
   # commands; nothing to check declaratively. They're idempotent in
   # spirit — each just re-affirms what the config files above persist.
   shell: |
+    set -euo pipefail
     localectl set-x11-keymap us "" "" ctrl:nocaps
     loadkeys /usr/local/share/kbd/keymaps/us-caps-ctrl.map
     echo 0 > /sys/class/leds/input3::capslock/brightness 2>/dev/null || true

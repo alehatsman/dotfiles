@@ -1,6 +1,7 @@
 ---
 - name: Make sure xcode is installed
   shell: |
+    set -euo pipefail
     if ! type "make" > /dev/null 2>&1; then
       xcode-select --install
       exit 0
@@ -13,6 +14,7 @@
 
 - name: Make sure rosetta 2 is installed
   shell: |
+    set -euo pipefail
     softwareupdate --install-rosetta --agree-to-license
   unless_command: pkgutil --pkg-info com.apple.pkg.RosettaUpdateAuto >/dev/null 2>&1
   as_user: root
@@ -20,6 +22,7 @@
 
 - name: Make sure brew is installed
   shell: |
+    set -euo pipefail
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   unless_command: test -x /opt/homebrew/bin/brew || test -x /usr/local/bin/brew
   timeout: 10m

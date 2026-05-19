@@ -50,6 +50,7 @@
   # /usr/local/bin/ollama, `ollama` system user, models dir under
   # /usr/share/ollama/.ollama, and a systemd unit bound to 127.0.0.1:11434.
   shell: |
+    set -euo pipefail
     curl -fsSL https://ollama.com/install.sh | sh
   unless_command: command -v ollama && systemctl is-active --quiet ollama.service
   as_user: root

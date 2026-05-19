@@ -1,12 +1,9 @@
 ---
 - name: "Install claude if not present"
-  shell: |
-    if ! which claude >/dev/null 2>&1; then
-      # Upstream install script uses bashisms; pipe into bash explicitly
-      # because /bin/sh is dash on Ubuntu.
-      curl -sSL https://claude.ai/install.sh | bash
-    fi
-  failed_when: "false"
+  # Upstream install script uses bashisms; pipe into bash explicitly
+  # because /bin/sh is dash on Ubuntu.
+  shell: curl -sSL https://claude.ai/install.sh | bash
+  unless_command: which claude
   tags: [claude]
 
 - name: "Make sure claude config directory exists"
@@ -29,26 +26,27 @@
 
 - name: "Install claude-autoapprove"
   shell: |
+    set -euo pipefail
     tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' EXIT
     git clone https://github.com/alehatsman/claude-autoapprove "$tmpdir/claude-autoapprove"
     cd "$tmpdir/claude-autoapprove"
     go build -o claude-autoapprove ./cmd/claude-autoapprove
     sudo mv claude-autoapprove /usr/local/bin/claude-autoapprove
-    rm -rf "$tmpdir"
   creates: /usr/local/bin/claude-autoapprove
   tags: [claude]
 
 - name: "Install gopls LSP plugin"
-  shell: "claude plugins install gopls-lsp@claude-plugins-official --scope user"
-  failed_when: "false"
+  shell: claude plugins install gopls-lsp@claude-plugins-official --scope user
+  unless_command: claude plugins list 2>/dev/null | grep -q 'gopls-lsp@claude-plugins-official'
   tags: [claude]
 
 - name: "Install lua LSP plugin"
-  shell: "claude plugins install lua-lsp@claude-plugins-official --scope user"
-  failed_when: "false"
+  shell: claude plugins install lua-lsp@claude-plugins-official --scope user
+  unless_command: claude plugins list 2>/dev/null | grep -q 'lua-lsp@claude-plugins-official'
   tags: [claude]
 
 - name: "Install typescript LSP plugin"
-  shell: "claude plugins install typescript-lsp@claude-plugins-official --scope user"
-  failed_when: "false"
+  shell: claude plugins install typescript-lsp@claude-plugins-official --scope user
+  unless_command: claude plugins list 2>/dev/null | grep -q 'typescript-lsp@claude-plugins-official'
   tags: [claude]

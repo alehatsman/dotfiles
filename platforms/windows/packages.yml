@@ -28,6 +28,7 @@
 # possible but uglier than this one-liner.
 - name: Add neovim PPA
   shell: |
+    set -euo pipefail
     add-apt-repository ppa:neovim-ppa/unstable -y
     apt-get update
   as_user: root

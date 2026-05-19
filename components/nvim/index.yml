@@ -85,6 +85,7 @@
 
 - name: Make sure plugins are installed
   shell: |
+    set -euo pipefail
     export PATH="$HOME/.local/bin:$PATH"
     nvim --headless "+Lazy! sync" +qa
   timeout: 15m
