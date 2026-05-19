@@ -3,7 +3,7 @@
 # 255U, Xe2 iGPU). Values come from vars.yml.
 #
 # Re-apply just this slice with:
-#   ./scripts/run.sh --machine x1 --tags thermal
+#   mooncake apply -c ./x1.yml -K -t thermal
 
 - name: Set TLP platform_profile from vars
   file.write:

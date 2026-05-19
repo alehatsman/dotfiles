@@ -1,0 +1,14 @@
+---
+# main_pc — Windows 11 desktop, WSL2 Ubuntu side.
+#
+# Apply:  mooncake apply -c ./main_pc.yml
+# Plan:   mooncake plan  -c ./main_pc.yml
+#
+# NOPASSWD sudo is configured on this host, so no -K flag is needed.
+# Windows-host bootstrap (run separately from an Administrator PowerShell):
+#   mooncake.exe apply -c platforms\windows\bootstrap.yml \
+#                      -v shared/variables.yml -v machines/main_pc/vars.yml
+
+- vars.load: ./shared/variables.yml
+- vars.load: ./machines/main_pc/vars.yml
+- import: ./machines/main_pc/index.yml

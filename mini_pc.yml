@@ -1,0 +1,14 @@
+---
+# mini_pc — Windows mini-PC, WSL2 Ubuntu side.
+#
+# Apply:  mooncake apply -c ./mini_pc.yml
+# Plan:   mooncake plan  -c ./mini_pc.yml
+#
+# NOPASSWD sudo is configured on this host, so no -K flag is needed.
+# Windows-host bootstrap (run separately from an Administrator PowerShell):
+#   mooncake.exe apply -c platforms\windows\bootstrap.yml \
+#                      -v shared/variables.yml -v machines/mini_pc/vars.yml
+
+- vars.load: ./shared/variables.yml
+- vars.load: ./machines/mini_pc/vars.yml
+- import: ./machines/mini_pc/index.yml
