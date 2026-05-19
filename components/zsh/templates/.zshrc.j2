@@ -77,6 +77,20 @@ export SSH_KEY_PATH=~/.ssh/rsa_id
 # ollama deploy.
 export MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }}
 export MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }}
+export MCSEARCH_CHAT_URL=http://127.0.0.1:{{ mcsearch_local_port }}
+export MCSEARCH_CHAT_MODEL={{ mcsearch_chat_model }}
+export MCSEARCH_ASK_MODEL={{ mcsearch_ask_model }}
+export MCSEARCH_SUMMARY_URL=http://127.0.0.1:{{ mcsearch_summary_port }}
+export MCSEARCH_SUMMARY_MODEL={{ mcsearch_summary_model }}
+export MCSEARCH_COMPRESS_URL=http://127.0.0.1:{{ mcsearch_compress_port }}
+export MCSEARCH_COMPRESS_MODEL={{ mcsearch_compress_model }}
+export MCSEARCH_DRAFT_URL=http://127.0.0.1:{{ mcsearch_draft_port }}
+export MCSEARCH_DRAFT_MODEL={{ mcsearch_draft_model }}
+export MCSEARCH_RERANK_URL=http://127.0.0.1:{{ mcsearch_rerank_local_port }}
+export MCSEARCH_RERANK_STYLE={{ mcsearch_rerank_style }}
+export MCSEARCH_RERANK_MODEL={{ mcsearch_rerank_model }}
+export MCSEARCH_RERANK_POOL={{ mcsearch_rerank_pool }}
+export MCSEARCH_RERANK_CONCURRENCY={{ mcsearch_rerank_concurrency }}
 
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 
