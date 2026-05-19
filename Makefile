@@ -9,24 +9,24 @@ help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
 
 x1:       ## Apply on x1 (Arch laptop, Hyprland)
-	./scripts/run.sh --machine x1
+	mooncake apply -c ./x1.yml -K
 x1-plan:  ## Plan on x1 (no changes)
-	./scripts/run.sh --machine x1 --plan
+	mooncake plan -c ./x1.yml
 
 main_pc:       ## Apply inside WSL on main_pc (run bootstrap.yml on the Windows host first)
-	./scripts/run.sh --machine main_pc
+	mooncake apply -c ./main_pc.yml
 main_pc-plan:  ## Plan inside WSL on main_pc
-	./scripts/run.sh --machine main_pc --plan
+	mooncake plan -c ./main_pc.yml
 
 mini_pc:       ## Apply inside WSL on mini_pc
-	./scripts/run.sh --machine mini_pc
+	mooncake apply -c ./mini_pc.yml
 mini_pc-plan:  ## Plan inside WSL on mini_pc
-	./scripts/run.sh --machine mini_pc --plan
+	mooncake plan -c ./mini_pc.yml
 
 mac:           ## Apply on macOS
-	./scripts/run.sh --machine mac
+	mooncake apply -c ./mac.yml -K
 mac-plan:      ## Plan on macOS
-	./scripts/run.sh --machine mac --plan
+	mooncake plan -c ./mac.yml
 
 backup: ## Backup current configs
 	@echo "Creating backup..."

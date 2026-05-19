@@ -3,19 +3,19 @@
 #
 # Two-step provisioning:
 #   1. Windows host (from an Administrator PowerShell):
-#        mooncake.exe apply -c platforms/windows/bootstrap.yml \
+#        mooncake.exe apply -c platforms\windows\bootstrap.yml \
 #                           -v shared/variables.yml -v machines/main_pc/vars.yml
-#   2. Inside WSL Ubuntu, either:
-#        mooncake apply -c machines/main_pc/index.yml \
-#                       -v shared/variables.yml -v machines/main_pc/vars.yml -K
+#   2. Inside WSL Ubuntu, via the root entry (NOPASSWD sudo, no -K):
+#        mooncake apply -c ./main_pc.yml
 #      or via the daemon:
 #        curl --unix-socket /run/user/$UID/mooncake/agentd.sock \
-#             -d '{"plan_path":"<abs>/machines/main_pc/index.yml",
+#             -d '{"plan_path":"<abs>/main_pc.yml",
 #                  "base_dir":"<abs>"}' http://localhost/v1/runs
 #
 # The vars: step below pins machine-identity values so the agentd path
-# (which doesn't accept -v files yet) works without an external vars
-# file. CLI invocations get the same values via machines/main_pc/vars.yml.
+# (which doesn't accept -v files yet) works even if a caller bypasses
+# main_pc.yml. CLI invocations get the same values via main_pc.yml's
+# vars.load of machines/main_pc/vars.yml.
 
 - vars:
     is_wsl: true

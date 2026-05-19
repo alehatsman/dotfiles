@@ -21,6 +21,30 @@
 # Container Toolkit from the dependency chain. WSL's CUDA driver is
 # consumed directly. Throughput is fine for code-search batches.
 
+- name: "Verify required mcsearch server vars are set"
+  # Fail fast before `ollama pull` renders as `ollama pull ''` and emits a
+  # confusing error about a missing model name, or before a wait.http
+  # builds a malformed URL with an empty port.
+  assert:
+    command:
+      cmd: |
+        test -n "{{ mcsearch_embed_model }}" \
+          && test -n "{{ mcsearch_chat_model }}" \
+          && test -n "{{ mcsearch_remote_port }}" \
+          && test -n "{{ mcsearch_rerank_model }}" \
+          && test -n "{{ mcsearch_rerank_remote_port }}"
+  tags: [mcsearch, server]
+
+- name: "Verify GPU is visible (nvidia-smi)"
+  # The whole point of this entry is GPU-backed inference. Without a
+  # working nvidia-smi, ollama silently falls back to CPU and the
+  # wait.http probes below still pass — hiding a broken-but-running
+  # server until query latency tanks in production.
+  assert:
+    command:
+      cmd: nvidia-smi
+  tags: [mcsearch, server]
+
 - name: "Install ollama (also installs + enables ollama.service)"
   # No native mooncake installer. Upstream's script handles: binary at
   # /usr/local/bin/ollama, `ollama` system user, models dir under

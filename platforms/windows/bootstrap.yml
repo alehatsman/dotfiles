@@ -242,7 +242,7 @@
         3. Inside WSL, clone dotfiles + apply the per-machine entry:
              git clone https://github.com/alehatsman/dotfiles ~/dotfiles
              cd ~/dotfiles && bash scripts/install_mooncake.sh
-             ./scripts/run.sh --machine <this-machine>
+             mooncake apply -c ./<this-machine>.yml
         4. Add your SSH public key to ~/.ssh/authorized_keys (WSL side)
         5. wsl --shutdown, then verify: ssh <this-pc-ip> -p {{ wsl_ssh_port }}
         6. From your controller machine (e.g. x1), bootstrap BOTH agentd

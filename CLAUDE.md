@@ -28,11 +28,18 @@ platform-specific bits.
 
 ## How to deploy
 
+Each machine has a thin root entry (`./x1.yml`, `./main_pc.yml`, etc.) that
+loads its vars and imports `machines/<name>/index.yml`. Apply with
+mooncake directly — no wrapper script:
+
 ```
-./scripts/run.sh --machine x1              # full provision on x1
-./scripts/run.sh --machine x1 --plan       # preview only (mooncake plan)
-./scripts/run.sh --machine x1 --tags zsh   # only the zsh slice
+mooncake apply -c ./x1.yml -K              # full provision on x1
+mooncake plan  -c ./x1.yml                 # preview only
+mooncake apply -c ./x1.yml -K -t zsh       # only the zsh slice
 ```
+
+`-K` prompts for sudo password (needed on `x1` and `mac`). `main_pc` and
+`mini_pc` have NOPASSWD sudo configured, so omit `-K` there.
 
 Or via make:
 
@@ -114,8 +121,8 @@ under `platforms/arch/` uses `arch`/`system`/`packages`.
 ## Workflow
 
 1. Edit the template (`*.j2`) or YAML in the repo.
-2. `./scripts/run.sh --machine <m> --plan --tags <tag>` first.
-3. `./scripts/run.sh --machine <m> --tags <tag>` to apply.
+2. `mooncake plan -c ./<m>.yml -t <tag>` first.
+3. `mooncake apply -c ./<m>.yml [-K] -t <tag>` to apply (`-K` only on `x1`/`mac`).
 4. If mooncake fails or behaves unexpectedly, **stop and report it** —
    that's the whole point. Do not fall back to `cp` to "just get it
    deployed."

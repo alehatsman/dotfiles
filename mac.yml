@@ -1,0 +1,11 @@
+---
+# mac — macOS workstation.
+#
+# Apply:  mooncake apply -c ./mac.yml -K
+# Plan:   mooncake plan  -c ./mac.yml
+#
+# -K prompts for the sudo password (needed for brew casks, system flags).
+
+- vars.load: ./shared/variables.yml
+- vars.load: ./machines/mac/vars.yml
+- import: ./machines/mac/index.yml

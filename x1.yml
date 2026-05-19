@@ -1,0 +1,11 @@
+---
+# x1 — Arch laptop, Hyprland.
+#
+# Apply:  mooncake apply -c ./x1.yml -K
+# Plan:   mooncake plan  -c ./x1.yml
+#
+# -K prompts for the sudo password (needed for pacman, systemd, etc.).
+
+- vars.load: ./shared/variables.yml
+- vars.load: ./machines/x1/vars.yml
+- import: ./machines/x1/index.yml

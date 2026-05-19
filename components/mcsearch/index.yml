@@ -41,7 +41,7 @@
 # Both build + install are skipped when the installed binary's sidecar SHA
 # matches the source HEAD — otherwise every apply rebuilds and re-installs
 # and plan-mode reports a change every run. Force rebuild via:
-#   rm /usr/local/bin/mcsearch{,.sha} && ./scripts/run.sh -m <m> --tags mcsearch
+#   rm /usr/local/bin/mcsearch{,.sha} && mooncake apply -c ./<m>.yml [-K] -t mcsearch
 
 - name: "Build mcsearch binary"
   # {{ mcsearch_src_dir }} is unquoted on purpose — see variables.yml.
