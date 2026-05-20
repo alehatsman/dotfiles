@@ -40,6 +40,7 @@ Type=simple
 # port can't be left to the binary's compiled-in defaults.
 Environment=MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }}
 Environment=MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }}
+Environment=MCSEARCH_EMBED_BATCH={{ mcsearch_embed_batch }}
 ExecStart=%h/.local/bin/mcsearch watch -v %I
 Restart=always
 RestartSec=10s

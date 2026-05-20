@@ -130,6 +130,19 @@ mcsearch_summary_model: "qwen2.5-coder:7b"
 mcsearch_summary_concurrency: "4"
 mcsearch_chunk_summary_min_lines: "50"
 
+# Embed batch size — chunks per /v1/embeddings call. The mcsearch default
+# is 32; 128 cuts request overhead with no measurable quality cost on
+# Ollama or vLLM/TEI. Larger batches show bigger wins on big repos.
+mcsearch_embed_batch: "128"
+
+# OLLAMA_NUM_PARALLEL — max concurrent generation requests ollama will
+# pack into a single model. Deployed as a systemd drop-in on the GPU
+# host (components/mcsearch/templates/ollama-num-parallel.conf.j2). 4 is
+# upstream's default since v0.2.0 but is set explicitly here so a
+# future upstream change can't silently regress the summary/rerank
+# concurrency caps that assume it.
+mcsearch_ollama_num_parallel: "4"
+
 # SSH alias for the GPU host — used by both the tunnel template and the
 # ssh-config step managed by the mcsearch client install. The mcsearch
 # component writes a Host block into ~/.ssh/config on client machines
