@@ -249,10 +249,10 @@ call s:h('Error',          { 'fg': s:purered, 'bg': s:lightblack3 })
 " Diff / Git
 " ============================================================================
 
-call s:h('DiffAdd',        { 'fg': s:diff_add_fg,    'bg': s:diff_add_bg })
+call s:h('DiffAdd',        { 'bg': s:diff_add_bg })
 call s:h('DiffDelete',     { 'fg': s:diff_delete_fg, 'bg': s:diff_delete_bg })
-call s:h('DiffChange',     { 'fg': s:diff_change_fg, 'bg': s:diff_change_bg })
-call s:h('DiffText',       { 'fg': s:white,          'bg': s:diff_change_bg, 'format': 'bold' })
+call s:h('DiffChange',     { 'bg': s:diff_change_bg })
+call s:h('DiffText',       { 'bg': s:diff_change_bg, 'format': 'bold' })
 
 call s:h('GitSignsAdd',    { 'fg': { 'gui': '#8FCF4A', 'cterm': '113' } })
 call s:h('GitSignsChange', { 'fg': { 'gui': '#7AA6DA', 'cterm': '110' } })
