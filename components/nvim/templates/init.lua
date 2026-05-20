@@ -158,19 +158,13 @@ require('lazy').setup({
     config = function()
       local ts_install_dir = vim.fn.stdpath('data') .. '/treesitter'
       vim.fn.mkdir(ts_install_dir, 'p')
-      require('nvim-treesitter').setup({ install_dir = ts_install_dir })
-      -- Install parsers (nvim 0.10+ has built-in treesitter highlight/indent)
-      local parsers = {
-        'lua','vim','vimdoc','bash','json','yaml','markdown','markdown_inline',
-        'rust','typescript','tsx','javascript','go','python','regex','toml','html','css','query'
-      }
-      local installed = require('nvim-treesitter').get_installed()
-      local to_install = vim.tbl_filter(function(p)
-        return not vim.tbl_contains(installed, p)
-      end, parsers)
-      if #to_install > 0 then
-        require('nvim-treesitter.install').install(to_install)
-      end
+      require('nvim-treesitter').setup({
+        install_dir = ts_install_dir,
+        ensure_installed = {
+          'lua','vim','vimdoc','bash','json','yaml','markdown','markdown_inline',
+          'rust','typescript','tsx','javascript','go','python','regex','toml','html','css','query'
+        },
+      })
     end,
   },
   'nvim-treesitter/nvim-treesitter-context',
