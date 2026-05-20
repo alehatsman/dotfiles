@@ -84,6 +84,7 @@
     args=(
       -e MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }}
       -e MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }}
+      -e MCSEARCH_EMBED_BATCH={{ mcsearch_embed_batch }}
       -e MCSEARCH_CHAT_URL=http://127.0.0.1:{{ mcsearch_local_port }}
       -e MCSEARCH_CHAT_MODEL={{ mcsearch_chat_model }}
       -e MCSEARCH_ASK_MODEL={{ mcsearch_ask_model }}

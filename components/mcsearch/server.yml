@@ -57,6 +57,40 @@
   timeout: 10m
   tags: [mcsearch, server, ollama]
 
+# OLLAMA_NUM_PARALLEL drop-in. Upstream's installer doesn't expose env
+# tuning, so we own this as a systemd drop-in rather than editing the
+# unit file (which would be clobbered on `ollama update`). Restarts the
+# service only when the currently-loaded Environment doesn't match —
+# matters because the model pulls + wait.http probes below would
+# otherwise pay an unnecessary unload/reload of every loaded model on
+# every re-apply.
+- name: "Ensure /etc/systemd/system/ollama.service.d exists"
+  file.write:
+    path: /etc/systemd/system/ollama.service.d
+    state: directory
+  as_user: root
+  tags: [mcsearch, server, ollama]
+
+- name: "Deploy ollama OLLAMA_NUM_PARALLEL drop-in"
+  file.template:
+    src: ./templates/ollama-num-parallel.conf.j2
+    dest: /etc/systemd/system/ollama.service.d/num-parallel.conf
+  as_user: root
+  tags: [mcsearch, server, ollama]
+
+- name: "Reload + restart ollama.service if OLLAMA_NUM_PARALLEL drifted"
+  shell: |
+    set -euo pipefail
+    systemctl daemon-reload
+    want="OLLAMA_NUM_PARALLEL={{ mcsearch_ollama_num_parallel }}"
+    cur=$(systemctl show ollama.service -p Environment --value 2>/dev/null || true)
+    if ! printf '%s\n' "$cur" | tr ' ' '\n' | grep -qx "$want"; then
+      systemctl restart ollama.service
+    fi
+  as_user: root
+  changed_when: false
+  tags: [mcsearch, server, ollama]
+
 - name: "Pull embedding model"
   # CLI talks to the running ollama.service (default OLLAMA_HOST is
   # 127.0.0.1:11434, which matches upstream's bind), so the pull
