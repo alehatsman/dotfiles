@@ -4,12 +4,15 @@
 # dunst, hyprlock, hyprland, tmux, zsh fzf, and the vendored vim
 # colorscheme).
 #
-# Variant is selected via `palette_variant` (see shared/variables.yml).
-# Override per-machine in machines/<m>/vars.yml.
+# Variant is selected by the caller via `with: { variant: ... }`.
+# Default variant is monokai_dark. Per-machine override flows from
+# machines/<m>/vars.yml -> the `palette_variant` global -> the `with:`
+# block at the call site.
 #
-# IMPORTANT: import this component BEFORE any consumer in each machine
-# entry, so palette/editor vars are in scope when subsequent components'
-# templates render.
+# IMPORTANT: call this component BEFORE any consumer in each machine
+# entry — vars.load runs at expansion time and mutates the global vars
+# table, so palette.* / editor.* must be in scope when subsequent
+# components' templates render.
 #
 # This component intentionally has no file.template steps of its own —
 # the vendored vim colorscheme is deployed by the nvim component (it
@@ -17,4 +20,12 @@
 # other consumers just read palette.* / editor.* directly in their
 # existing templates.
 
-- vars.load: ./vars/{{ palette_variant }}.yml
+props:
+  variant:
+    type: string
+    enum: [monokai_dark, monokai_light]
+    default: monokai_dark
+    description: Color palette variant. Selects vars/<variant>.yml.
+
+steps:
+  - vars.load: ./vars/{{ props.variant }}.yml
