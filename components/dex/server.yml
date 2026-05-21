@@ -1,39 +1,39 @@
 ---
 # Server-side bring-up: ensure ollama is installed and the embedding
 # + chat models are pulled. Runs only on the GPU host
-# (mcsearch_role=server).
+# (dex_role=server).
 #
 # Service lifecycle: ollama's own upstream installer (curl|sh below)
 # creates and enables /etc/systemd/system/ollama.service as system
-# user `ollama`, binding 127.0.0.1:{{ mcsearch_remote_port }}. We
-# deliberately do NOT manage a parallel mcsearch-embed.service — a
+# user `ollama`, binding 127.0.0.1:{{ dex_remote_port }}. We
+# deliberately do NOT manage a parallel dex-embed.service — a
 # duplicate ollama serve crashes on $HOME and races for port 11434.
 # Clients reach the endpoint via the SSH tunnel
-# (components/mcsearch/templates/mcsearch-tunnel.service.j2).
+# (components/dex/templates/dex-tunnel.service.j2).
 #
 # Both /v1/embeddings (used by semantic_search + the RAG leg of
 # generate_code) and /v1/chat/completions (used by the generation leg
 # of generate_code) are served from the same ollama instance on the
 # same port, so the tunnel covers both.
 #
-# Why ollama and not docker+vLLM: this is what mcsearch's own README
+# Why ollama and not docker+vLLM: this is what dex's own README
 # uses as the canonical demo, and it eliminates docker.io + NVIDIA
 # Container Toolkit from the dependency chain. WSL's CUDA driver is
 # consumed directly. Throughput is fine for code-search batches.
 
-- name: "Verify required mcsearch server vars are set"
+- name: "Verify required dex server vars are set"
   # Fail fast before `ollama pull` renders as `ollama pull ''` and emits a
   # confusing error about a missing model name, or before a wait.http
   # builds a malformed URL with an empty port.
   assert:
     command:
       cmd: |
-        test -n "{{ mcsearch_embed_model }}" \
-          && test -n "{{ mcsearch_chat_model }}" \
-          && test -n "{{ mcsearch_remote_port }}" \
-          && test -n "{{ mcsearch_rerank_model }}" \
-          && test -n "{{ mcsearch_rerank_remote_port }}"
-  tags: [mcsearch, server]
+        test -n "{{ dex_embed_model }}" \
+          && test -n "{{ dex_chat_model }}" \
+          && test -n "{{ dex_remote_port }}" \
+          && test -n "{{ dex_rerank_model }}" \
+          && test -n "{{ dex_rerank_remote_port }}"
+  tags: [dex, server]
 
 - name: "Verify GPU is visible (nvidia-smi)"
   # The whole point of this entry is GPU-backed inference. Without a
@@ -43,7 +43,7 @@
   assert:
     command:
       cmd: nvidia-smi
-  tags: [mcsearch, server]
+  tags: [dex, server]
 
 - name: "Install ollama (also installs + enables ollama.service)"
   # No native mooncake installer. Upstream's script handles: binary at
@@ -55,7 +55,7 @@
   unless_command: command -v ollama && systemctl is-active --quiet ollama.service
   as_user: root
   timeout: 10m
-  tags: [mcsearch, server, ollama]
+  tags: [dex, server, ollama]
 
 # OLLAMA_NUM_PARALLEL drop-in. Upstream's installer doesn't expose env
 # tuning, so we own this as a systemd drop-in rather than editing the
@@ -69,37 +69,37 @@
     path: /etc/systemd/system/ollama.service.d
     state: directory
   as_user: root
-  tags: [mcsearch, server, ollama]
+  tags: [dex, server, ollama]
 
 - name: "Deploy ollama OLLAMA_NUM_PARALLEL drop-in"
   file.template:
     src: ./templates/ollama-num-parallel.conf.j2
     dest: /etc/systemd/system/ollama.service.d/num-parallel.conf
   as_user: root
-  tags: [mcsearch, server, ollama]
+  tags: [dex, server, ollama]
 
 - name: "Reload + restart ollama.service if OLLAMA_NUM_PARALLEL drifted"
   shell: |
     set -euo pipefail
     systemctl daemon-reload
-    want="OLLAMA_NUM_PARALLEL={{ mcsearch_ollama_num_parallel }}"
+    want="OLLAMA_NUM_PARALLEL={{ dex_ollama_num_parallel }}"
     cur=$(systemctl show ollama.service -p Environment --value 2>/dev/null || true)
     if ! printf '%s\n' "$cur" | tr ' ' '\n' | grep -qx "$want"; then
       systemctl restart ollama.service
     fi
   as_user: root
   changed_when: false
-  tags: [mcsearch, server, ollama]
+  tags: [dex, server, ollama]
 
 - name: "Pull embedding model"
   # CLI talks to the running ollama.service (default OLLAMA_HOST is
   # 127.0.0.1:11434, which matches upstream's bind), so the pull
   # downloads into the service's model dir even though this step
   # runs as the user.
-  shell: ollama pull {{ mcsearch_embed_model }}
-  unless_command: ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_embed_model }}'
+  shell: ollama pull {{ dex_embed_model }}
+  unless_command: ollama list | awk '{print $1}' | grep -qx '{{ dex_embed_model }}'
   timeout: 20m
-  tags: [mcsearch, server]
+  tags: [dex, server]
 
 - name: "Pull chat-completion model"
   # Powers the generate_code MCP tool. Same ollama service as the
@@ -108,83 +108,83 @@
   # the readiness check below is what actually proves end-to-end
   # health. Tag-suffix names (e.g. qwen2.5-coder:7b) show up in
   # `ollama list` as `qwen2.5-coder:7b` — match exactly with grep -x.
-  shell: ollama pull {{ mcsearch_chat_model }}
-  unless_command: ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_chat_model }}'
+  shell: ollama pull {{ dex_chat_model }}
+  unless_command: ollama list | awk '{print $1}' | grep -qx '{{ dex_chat_model }}'
   timeout: 30m
-  tags: [mcsearch, server]
+  tags: [dex, server]
 
 - name: "Pull ask-codebase model (optional second chat model)"
-  # Used only by the ask_codebase MCP tool when mcsearch_ask_model is
+  # Used only by the ask_codebase MCP tool when dex_ask_model is
   # non-empty. Coder-tuned chat models resist the citation-only system
   # prompt and emit ungrounded "hypothetical" code; an instruction-tuned
   # model follows the contract reliably. Skipped entirely when the var
-  # is empty (ask_codebase falls back to mcsearch_chat_model).
-  shell: ollama pull {{ mcsearch_ask_model }}
+  # is empty (ask_codebase falls back to dex_chat_model).
+  shell: ollama pull {{ dex_ask_model }}
   unless_command: |
-    [ -z "{{ mcsearch_ask_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_ask_model }}'
+    [ -z "{{ dex_ask_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_ask_model }}'
   timeout: 30m
-  tags: [mcsearch, server]
+  tags: [dex, server]
 
 - name: "Pull summary model (smaller chat model for index-time summaries)"
-  # Used by mcsearch's per-file / per-chunk / per-package summary calls
-  # during `mcsearch index`. Outputs are 1–4 sentences, so a 7B coder
+  # Used by dex's per-file / per-chunk / per-package summary calls
+  # during `dex index`. Outputs are 1–4 sentences, so a 7B coder
   # matches the 32B at ~4–5× the throughput and frees the 32B for
   # query-time chat / compress / draft. Skipped when empty (summaries
-  # fall back to mcsearch_chat_model). De-duplicates with the chat pull
+  # fall back to dex_chat_model). De-duplicates with the chat pull
   # via the unless_command — same model name means no second download.
-  shell: ollama pull {{ mcsearch_summary_model }}
+  shell: ollama pull {{ dex_summary_model }}
   unless_command: |
-    [ -z "{{ mcsearch_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_summary_model }}'
+    [ -z "{{ dex_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_summary_model }}'
   timeout: 30m
-  tags: [mcsearch, server]
+  tags: [dex, server]
 
 - name: "Pull compress model"
   # Distinct from chat/summary only if the operator has pointed compress
   # at a separate model; the unless_command de-dupes when it matches
-  # mcsearch_chat_model or mcsearch_summary_model (no second download).
-  shell: ollama pull {{ mcsearch_compress_model }}
+  # dex_chat_model or dex_summary_model (no second download).
+  shell: ollama pull {{ dex_compress_model }}
   unless_command: |
-    [ -z "{{ mcsearch_compress_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_compress_model }}'
+    [ -z "{{ dex_compress_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_compress_model }}'
   timeout: 30m
-  tags: [mcsearch, server]
+  tags: [dex, server]
 
 - name: "Pull draft model (speculative-draft coder for generate_code)"
   # Smaller than chat by design: draft latency must fit inside Claude's
   # network/thinking RTT or the speculative pipeline is net-negative.
   # Pulled separately because it's typically the smallest model on the
   # box (1.5B/3B) — no overlap with chat/summary/compress.
-  shell: ollama pull {{ mcsearch_draft_model }}
+  shell: ollama pull {{ dex_draft_model }}
   unless_command: |
-    [ -z "{{ mcsearch_draft_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ mcsearch_draft_model }}'
+    [ -z "{{ dex_draft_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_draft_model }}'
   timeout: 30m
-  tags: [mcsearch, server]
+  tags: [dex, server]
 
 - name: "Wait for the embedding endpoint to become ready"
   wait.http:
-    url: "http://127.0.0.1:{{ mcsearch_remote_port }}/v1/embeddings"
+    url: "http://127.0.0.1:{{ dex_remote_port }}/v1/embeddings"
     method: POST
     headers:
       Content-Type: application/json
-    body: '{"model":"{{ mcsearch_embed_model }}","input":["ping"]}'
+    body: '{"model":"{{ dex_embed_model }}","input":["ping"]}'
     status: [200]
     timeout: 10m
     poll_interval: 5s
-  tags: [mcsearch, server, verify]
+  tags: [dex, server, verify]
 
 - name: "Wait for the chat-completion endpoint to become ready"
   # First request after pull also triggers VRAM load — give it longer
   # than the embed probe since coder models are 5–15× the size of the
   # embedder. max_tokens=1 keeps the probe cheap once warm.
   wait.http:
-    url: "http://127.0.0.1:{{ mcsearch_remote_port }}/v1/chat/completions"
+    url: "http://127.0.0.1:{{ dex_remote_port }}/v1/chat/completions"
     method: POST
     headers:
       Content-Type: application/json
-    body: '{"model":"{{ mcsearch_chat_model }}","messages":[{"role":"user","content":"ping"}],"max_tokens":1}'
+    body: '{"model":"{{ dex_chat_model }}","messages":[{"role":"user","content":"ping"}],"max_tokens":1}'
     status: [200]
     timeout: 15m
     poll_interval: 5s
-  tags: [mcsearch, server, verify]
+  tags: [dex, server, verify]
 
 # ───────────────── RERANK (Cohere-shape /rerank server) ───────────────────
 #
@@ -194,7 +194,7 @@
 # endpoint, supports BGE/Qwen/Jina cross-encoders out of the box.
 #
 # Port mapping is loopback-only to mirror ollama; clients reach the
-# endpoint via the second -L in mcsearch-tunnel.service.j2.
+# endpoint via the second -L in dex-tunnel.service.j2.
 
 - name: "Run Infinity rerank container"
   # Docker Desktop's credsStore=desktop.exe is unreachable from inside
@@ -208,25 +208,25 @@
     echo '{}' > "$cfg/config.json"
     docker --config "$cfg" pull michaelf34/infinity:latest
     docker --config "$cfg" run -d \
-      --name mcsearch-rerank \
+      --name dex-rerank \
       --gpus all \
       --restart unless-stopped \
-      -p 127.0.0.1:{{ mcsearch_rerank_remote_port }}:7997 \
+      -p 127.0.0.1:{{ dex_rerank_remote_port }}:7997 \
       -v "$HOME/.cache/huggingface:/app/.cache" \
       -e HF_HOME=/app/.cache \
       michaelf34/infinity:latest \
-      v2 --model-id {{ mcsearch_rerank_model }} --port 7997 --engine torch
+      v2 --model-id {{ dex_rerank_model }} --port 7997 --engine torch
   unless_command: |
-    [ -n "$(docker ps -q --filter name=^/mcsearch-rerank$)" ]
-  tags: [mcsearch, server, rerank]
+    [ -n "$(docker ps -q --filter name=^/dex-rerank$)" ]
+  tags: [dex, server, rerank]
 
 - name: "Wait for the rerank endpoint to become ready"
   # First request triggers model download (~1.2 GB for bge-reranker-v2-m3)
   # plus VRAM load — give it 10 min on a cold start. /health is the
   # cheapest readiness probe; /rerank itself would also warm the model.
   wait.http:
-    url: "http://127.0.0.1:{{ mcsearch_rerank_remote_port }}/health"
+    url: "http://127.0.0.1:{{ dex_rerank_remote_port }}/health"
     status: [200]
     timeout: 10m
     poll_interval: 5s
-  tags: [mcsearch, server, rerank, verify]
+  tags: [dex, server, rerank, verify]

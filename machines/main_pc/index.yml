@@ -58,6 +58,6 @@
   tags: [editor, nvim]
 
 # Semantic-search MCP helper. Embedding endpoint runs on the local 5090;
-# see machines/main_pc/vars.yml for mcsearch_role and watch paths.
-- import: ../../components/mcsearch/index.yml
-  tags: [tools, mcsearch]
+# see machines/main_pc/vars.yml for dex_role and watch paths.
+- import: ../../components/dex/index.yml
+  tags: [tools, dex]
