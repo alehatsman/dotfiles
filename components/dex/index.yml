@@ -36,6 +36,7 @@
     repo: "{{ dex_src_url }}"
     dest: "{{ dex_src_dir }}"
     update: true
+    force: true
   tags: [dex, build]
 
 # Both build + install are skipped when the installed binary's sidecar SHA
