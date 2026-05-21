@@ -52,5 +52,5 @@
 - import: ../../components/alacritty/index.yml
   tags: [macos, terminal, config]
 
-- import: ../../components/mcsearch/index.yml
-  tags: [macos, mcsearch]
+- import: ../../components/dex/index.yml
+  tags: [macos, dex]

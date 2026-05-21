@@ -1,9 +1,9 @@
-# mcsearch SSH tunnel — user-level systemd unit on Linux clients.
+# dex SSH tunnel — user-level systemd unit on Linux clients.
 #
 # Forwards two ports on this machine through the GPU host's WSL SSH
 # listener to their remote counterparts:
-#   - {{ mcsearch_local_port }} → {{ mcsearch_remote_port }}: ollama (embed + chat)
-#   - {{ mcsearch_rerank_local_port }} → {{ mcsearch_rerank_remote_port }}: Cohere-compatible rerank service (TEI/vLLM)
+#   - {{ dex_local_port }} → {{ dex_remote_port }}: ollama (embed + chat)
+#   - {{ dex_rerank_local_port }} → {{ dex_rerank_remote_port }}: Cohere-compatible rerank service (TEI/vLLM)
 # ExitOnForwardFailure means either port unbound on the remote takes
 # the tunnel down — both endpoints must be reachable on the server.
 #
@@ -13,14 +13,14 @@
 #     your codebase are source-derived; treat them as sensitive)
 #   - avoids a new Windows-FW + Hyper-V-FW rule pair on the GPU host
 #
-# Requires ~/.ssh/config to define `Host {{ mcsearch_remote_host }}` with
+# Requires ~/.ssh/config to define `Host {{ dex_remote_host }}` with
 # the right port + IdentityFile.
 #
 # ServerAlive* + ExitOnForwardFailure ensure a half-broken tunnel exits
 # cleanly so systemd can restart it.
 
 [Unit]
-Description=mcsearch SSH tunnel to {{ mcsearch_remote_host }}
+Description=dex SSH tunnel to {{ dex_remote_host }}
 After=network-online.target
 Wants=network-online.target
 
@@ -32,9 +32,9 @@ ExecStart=/usr/bin/ssh \
   -o ServerAliveInterval=30 \
   -o ServerAliveCountMax=3 \
   -o StrictHostKeyChecking=accept-new \
-  -L 127.0.0.1:{{ mcsearch_local_port }}:127.0.0.1:{{ mcsearch_remote_port }} \
-  -L 127.0.0.1:{{ mcsearch_rerank_local_port }}:127.0.0.1:{{ mcsearch_rerank_remote_port }} \
-  {{ mcsearch_remote_host }}
+  -L 127.0.0.1:{{ dex_local_port }}:127.0.0.1:{{ dex_remote_port }} \
+  -L 127.0.0.1:{{ dex_rerank_local_port }}:127.0.0.1:{{ dex_rerank_remote_port }} \
+  {{ dex_remote_host }}
 Restart=always
 RestartSec=10s
 

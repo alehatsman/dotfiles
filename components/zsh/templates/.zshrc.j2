@@ -69,28 +69,28 @@ fi
 
 export SSH_KEY_PATH=~/.ssh/rsa_id
 
-# mcsearch — point ad-hoc CLI invocations at the same endpoint + model
-# that the MCP registration (components/mcsearch/index.yml) and watch
-# units (mcsearch-watch@.service.j2) use. Naked `mcsearch status` /
-# `mcsearch index` would otherwise fall back to the binary's compiled
+# dex — point ad-hoc CLI invocations at the same endpoint + model
+# that the MCP registration (components/dex/index.yml) and watch
+# units (dex-watch@.service.j2) use. Naked `dex status` /
+# `dex index` would otherwise fall back to the binary's compiled
 # defaults (8082 + Qwen/Qwen3-Embedding-4B), which don't match the
 # ollama deploy.
-export MCSEARCH_EMBED_URL=http://127.0.0.1:{{ mcsearch_local_port }}
-export MCSEARCH_EMBED_MODEL={{ mcsearch_embed_model }}
-export MCSEARCH_CHAT_URL=http://127.0.0.1:{{ mcsearch_local_port }}
-export MCSEARCH_CHAT_MODEL={{ mcsearch_chat_model }}
-export MCSEARCH_ASK_MODEL={{ mcsearch_ask_model }}
-export MCSEARCH_SUMMARY_URL=http://127.0.0.1:{{ mcsearch_summary_port }}
-export MCSEARCH_SUMMARY_MODEL={{ mcsearch_summary_model }}
-export MCSEARCH_COMPRESS_URL=http://127.0.0.1:{{ mcsearch_compress_port }}
-export MCSEARCH_COMPRESS_MODEL={{ mcsearch_compress_model }}
-export MCSEARCH_DRAFT_URL=http://127.0.0.1:{{ mcsearch_draft_port }}
-export MCSEARCH_DRAFT_MODEL={{ mcsearch_draft_model }}
-export MCSEARCH_RERANK_URL=http://127.0.0.1:{{ mcsearch_rerank_local_port }}
-export MCSEARCH_RERANK_STYLE={{ mcsearch_rerank_style }}
-export MCSEARCH_RERANK_MODEL={{ mcsearch_rerank_model }}
-export MCSEARCH_RERANK_POOL={{ mcsearch_rerank_pool }}
-export MCSEARCH_RERANK_CONCURRENCY={{ mcsearch_rerank_concurrency }}
+export DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
+export DEX_EMBED_MODEL={{ dex_embed_model }}
+export DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
+export DEX_CHAT_MODEL={{ dex_chat_model }}
+export DEX_ASK_MODEL={{ dex_ask_model }}
+export DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
+export DEX_SUMMARY_MODEL={{ dex_summary_model }}
+export DEX_COMPRESS_URL=http://127.0.0.1:{{ dex_compress_port }}
+export DEX_COMPRESS_MODEL={{ dex_compress_model }}
+export DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
+export DEX_DRAFT_MODEL={{ dex_draft_model }}
+export DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
+export DEX_RERANK_STYLE={{ dex_rerank_style }}
+export DEX_RERANK_MODEL={{ dex_rerank_model }}
+export DEX_RERANK_POOL={{ dex_rerank_pool }}
+export DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
 
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 
@@ -274,27 +274,27 @@ _gw_default() {
   done
 }
 
-# mcsearch-watch helpers — enable / disable the per-project auto-reindex
-# user systemd unit. Silent no-op when mcsearch or the unit template
+# dex-watch helpers — enable / disable the per-project auto-reindex
+# user systemd unit. Silent no-op when dex or the unit template
 # isn't present (macOS, unprovisioned hosts, opt-out machines).
-_mcsearch_watch_enable() {
-  command -v mcsearch       >/dev/null 2>&1 || return 0
+_dex_watch_enable() {
+  command -v dex             >/dev/null 2>&1 || return 0
   command -v systemd-escape >/dev/null 2>&1 || return 0
-  [[ -f ~/.config/systemd/user/mcsearch-watch@.service ]] || return 0
+  [[ -f ~/.config/systemd/user/dex-watch@.service ]] || return 0
   local esc
   esc=$(systemd-escape "$1") || return 0
-  systemctl --user enable --now "mcsearch-watch@${esc}.service" >/dev/null 2>&1
+  systemctl --user enable --now "dex-watch@${esc}.service" >/dev/null 2>&1
 }
-_mcsearch_watch_disable() {
+_dex_watch_disable() {
   command -v systemd-escape >/dev/null 2>&1 || return 0
   local esc
   esc=$(systemd-escape "$1") || return 0
-  systemctl --user disable --now "mcsearch-watch@${esc}.service" >/dev/null 2>&1
+  systemctl --user disable --now "dex-watch@${esc}.service" >/dev/null 2>&1
 }
-_mcsearch_index_nuke() {
-  command -v mcsearch >/dev/null 2>&1 || return 0
+_dex_index_nuke() {
+  command -v dex >/dev/null 2>&1 || return 0
   [[ -d "$1" ]] || return 0
-  mcsearch nuke "$1" >/dev/null 2>&1
+  dex nuke "$1" >/dev/null 2>&1
 }
 
 # NB: never name a local `path` — zsh aliases it to the PATH array, so
@@ -314,7 +314,7 @@ gwc() { # git worktree create: gwc <name> [base]
       || git worktree add -b "$name" "$wt" "$base" || return 1
   fi
   cd "$wt"
-  _mcsearch_watch_enable "$wt"
+  _dex_watch_enable "$wt"
 }
 
 gwd() { # git worktree delete (safe): gwd <name>
@@ -345,8 +345,8 @@ gwd() { # git worktree delete (safe): gwd <name>
   fi
 
   [[ "$PWD/" == "$wt/"* ]] && cd "$root"
-  _mcsearch_watch_disable "$wt"
-  _mcsearch_index_nuke "$wt"
+  _dex_watch_disable "$wt"
+  _dex_index_nuke "$wt"
   git worktree remove "$wt" || return 1
   git branch -d "$name"
   git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1 \
@@ -359,8 +359,8 @@ gwd!() { # git worktree delete force: gwd! <name>
   root=$(_gw_root) || { echo "not in a git repo" >&2; return 1 }
   wt=$(_gw_path "$name")
   [[ "$PWD/" == "$wt/"* ]] && cd "$root"
-  _mcsearch_watch_disable "$wt"
-  _mcsearch_index_nuke "$wt"
+  _dex_watch_disable "$wt"
+  _dex_index_nuke "$wt"
   [[ -d "$wt" ]] && git worktree remove --force "$wt"
   git branch -D "$name" 2>/dev/null
   git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1 \
