@@ -19,42 +19,42 @@ use_win32yank: false
 #   monokai_light  — Sublime Monokai Light companion variant
 palette_variant: monokai_dark
 
-# ─── mcsearch — local semantic-search MCP helper ───────────────────────────
+# ─── dex — local semantic-search MCP helper ───────────────────────────
 # Default role is client (install the binary + tunnel + MCP registration).
 # main_pc overrides to `server` to additionally run the embedding service
-# on its 5090. Machines that don't want mcsearch at all simply omit the
+# on its 5090. Machines that don't want dex at all simply omit the
 # component import from their machines/<m>/index.yml.
-mcsearch_role: client
+dex_role: client
 
 # Embedding model. Code-retrieval quality vs VRAM trade-off documented in
-# components/mcsearch/README.md. Ollama-style ref (vs HF-style for vLLM).
-mcsearch_embed_model: "qwen3-embedding:4b"
+# components/dex/README.md. Ollama-style ref (vs HF-style for vLLM).
+dex_embed_model: "qwen3-embedding:4b"
 
-# Chat-completion model powering mcsearch's `generate_code` MCP tool +
-# `mcsearch generate` CLI. Served by the same ollama instance as the
+# Chat-completion model powering dex's `generate_code` MCP tool +
+# `dex generate` CLI. Served by the same ollama instance as the
 # embedding model on the GPU host (so no second port / second tunnel).
 # 32B Q4_K_M is ~20 GB, comfortably fits alongside the 4B embedder on
 # a 5090 (32 GB VRAM); step down to qwen2.5-coder:14b (~9 GB) or :7b
 # on smaller GPUs.
-mcsearch_chat_model: "qwen2.5-coder:14b"
+dex_chat_model: "qwen2.5-coder:14b"
 
 # Optional second chat model used only by ask_codebase. Plumbing is
 # in place but no local model tested so far (qwen2.5-coder:32b,
 # qwen2.5:14b-instruct) consistently follows the citations-first
 # system prompt — the coder pattern-matches paths from CONTEXT but
 # still emits fenced code blocks; the instruct model invents whole
-# project layouts. Leave empty to fall back to mcsearch_chat_model.
+# project layouts. Leave empty to fall back to dex_chat_model.
 # Revisit when a stronger local model lands (qwen2.5:72b-instruct,
 # DeepSeek-V3, etc.) or wire a hosted Claude/GPT-4 endpoint.
-mcsearch_ask_model: ""
+dex_ask_model: ""
 
 # Port the ollama service listens on inside WSL (always bound to
 # 127.0.0.1; reached by clients through an SSH tunnel — see
-# components/mcsearch/templates/mcsearch-tunnel.service.j2). Ollama
+# components/dex/templates/dex-tunnel.service.j2). Ollama
 # serves both /v1/embeddings and /v1/chat/completions on this port,
 # so embed and chat share the same tunnel.
-mcsearch_remote_port: "11434"
-mcsearch_local_port: "11434"
+dex_remote_port: "11434"
+dex_local_port: "11434"
 
 # Cross-encoder rerank endpoint. ollama doesn't expose /v1/rerank, so
 # this is a separate service on the GPU host. Two styles are supported:
@@ -64,29 +64,29 @@ mcsearch_local_port: "11434"
 #
 #   chat: decoder-style via /v1/chat/completions + logprobs — use vLLM
 #     serving Qwen/Qwen3-Reranker-4B (~2.5 GB, stronger on code). Set
-#     mcsearch_rerank_style to "chat" and point the URL at the vLLM port.
+#     dex_rerank_style to "chat" and point the URL at the vLLM port.
 #
 # The SSH tunnel forwards both this port and the ollama port over the same
-# connection — see mcsearch-tunnel.service.j2.
-mcsearch_rerank_remote_port: "8082"
-mcsearch_rerank_local_port: "8082"
+# connection — see dex-tunnel.service.j2.
+dex_rerank_remote_port: "8082"
+dex_rerank_local_port: "8082"
 
 # Rerank backend style: "cohere" (Cohere-compatible /rerank endpoint) or
 # "chat" (decoder-style via chat completions + logprobs for Qwen3-Reranker-4B).
-mcsearch_rerank_style: "cohere"
+dex_rerank_style: "cohere"
 
 # Rerank model name forwarded to the backend.
-mcsearch_rerank_model: "BAAI/bge-reranker-v2-m3"
+dex_rerank_model: "BAAI/bge-reranker-v2-m3"
 
 # Candidate-pool cap fed to the reranker per query. Larger = better recall,
 # slower rerank. Binary clamps to [1, 100] and falls back to 40 on parse error.
-mcsearch_rerank_pool: "40"
+dex_rerank_pool: "40"
 
 # Number of concurrent scoring goroutines (chat style only). Each goroutine
 # makes one HTTP call per (query, doc) pair; more concurrency = faster wall
 # time at the cost of more simultaneous vLLM load. 8 is comfortable on a
 # 5090 even with the 32B chat model sharing VRAM.
-mcsearch_rerank_concurrency: "8"
+dex_rerank_concurrency: "8"
 
 # Context compression — distils retrieved chunks into a ≤350-word prose
 # summary before injecting them into the chat model's context window.
@@ -97,8 +97,8 @@ mcsearch_rerank_concurrency: "8"
 # 32B would just sit on the GPU longer for no quality gain. Shares the
 # 7B file with the summary leg, so no extra VRAM beyond what indexing
 # already loads. Set port to "" to disable on machines without the tunnel.
-mcsearch_compress_port: "11434"
-mcsearch_compress_model: "qwen2.5-coder:7b"
+dex_compress_port: "11434"
+dex_compress_model: "qwen2.5-coder:7b"
 
 # Speculative local draft — pre-generates a code implementation with a
 # small coder model before Claude refines it. The whole point is that
@@ -107,56 +107,56 @@ mcsearch_compress_model: "qwen2.5-coder:7b"
 # in ~2 s on the 5090, well inside Claude's TTFT window. 7B+ defeats
 # the speculative pipeline; 1.5B risks hallucinated APIs that waste
 # Claude's refinement cycles. Set port to "" to disable.
-mcsearch_draft_port: "11434"
-mcsearch_draft_model: "qwen2.5-coder:3b"
+dex_draft_port: "11434"
+dex_draft_model: "qwen2.5-coder:3b"
 
 # Index-time summary model — overrides the chat leg used during indexing
 # (file / chunk / package / repo summaries). Outputs are 1–4 sentences,
 # so a smaller coder model nearly matches the 32B on quality at 4–5×
 # the throughput. Cold indexes on a large repo can mean hundreds of
 # sequential 32B generations; this is the biggest GPU-time lever during
-# indexing. Set port to "" to fall back to mcsearch_chat_model.
+# indexing. Set port to "" to fall back to dex_chat_model.
 # Concurrency caps in-flight chunk-summary chat calls per file —
 # raise it as far as the local server can serve concurrent /chat
 # requests without VRAM thrashing.
 # Min-lines drops short structural chunks from summary generation
-# entirely (default in mcsearch is 30; we raise to 50 for less noise
+# entirely (default in dex is 30; we raise to 50 for less noise
 # and lower cost on Go codebases full of small helpers).
-mcsearch_summary_port: "11434"
-mcsearch_summary_model: "qwen2.5-coder:7b"
+dex_summary_port: "11434"
+dex_summary_model: "qwen2.5-coder:7b"
 # Conservative default. The GPU host (main_pc/5090, 32 GB VRAM) bumps
 # this in machines/main_pc/vars.yml — push it as high as the local
 # ollama can serve concurrent /chat requests without VRAM thrash.
-mcsearch_summary_concurrency: "4"
-mcsearch_chunk_summary_min_lines: "50"
+dex_summary_concurrency: "4"
+dex_chunk_summary_min_lines: "50"
 
-# Embed batch size — chunks per /v1/embeddings call. The mcsearch default
+# Embed batch size — chunks per /v1/embeddings call. The dex default
 # is 32; 128 cuts request overhead with no measurable quality cost on
 # Ollama or vLLM/TEI. Larger batches show bigger wins on big repos.
-mcsearch_embed_batch: "128"
+dex_embed_batch: "128"
 
 # OLLAMA_NUM_PARALLEL — max concurrent generation requests ollama will
 # pack into a single model. Deployed as a systemd drop-in on the GPU
-# host (components/mcsearch/templates/ollama-num-parallel.conf.j2). 4 is
+# host (components/dex/templates/ollama-num-parallel.conf.j2). 4 is
 # upstream's default since v0.2.0 but is set explicitly here so a
 # future upstream change can't silently regress the summary/rerank
 # concurrency caps that assume it.
-mcsearch_ollama_num_parallel: "4"
+dex_ollama_num_parallel: "4"
 
 # SSH alias for the GPU host — used by both the tunnel template and the
-# ssh-config step managed by the mcsearch client install. The mcsearch
+# ssh-config step managed by the dex client install. The dex
 # component writes a Host block into ~/.ssh/config on client machines
 # so the tunnel can resolve the alias without a manual prerequisite.
-mcsearch_remote_host: "main_pc-wsl"
-mcsearch_remote_ip: "192.168.1.68"
-mcsearch_remote_ssh_port: "2222"
-mcsearch_remote_user: "aleh"
+dex_remote_host: "main_pc-wsl"
+dex_remote_ip: "192.168.1.68"
+dex_remote_ssh_port: "2222"
+dex_remote_user: "aleh"
 
 # Space-separated list of absolute project roots to auto-watch via
-# mcsearch-watch@.service. The apply step enables one user systemd
+# dex-watch@.service. The apply step enables one user systemd
 # instance per path and disables any orphaned instance no longer in the
 # list. Empty = additive mode (leave existing instances alone). Paths
 # must not contain spaces. Ad-hoc worktrees pick up their own watch
 # instance through the zsh gwc/gwd helpers — only long-lived project
 # roots belong here.
-mcsearch_watch_paths: ""
+dex_watch_paths: ""

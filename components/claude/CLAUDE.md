@@ -2,11 +2,11 @@
 
 ## Search and exploration
 
-Always call `mcsearch_context` before reaching for Grep, Glob, or broad file reads. Read only the line ranges it returns. Use graph expansion only when you need architecture or call-flow understanding. Fall back to Grep only if semantic search is genuinely insufficient — briefly say why when you do. Stop searching once you have enough confidence to implement; don't keep exploring for completeness.
+Always call `dex_context` before reaching for Grep, Glob, or broad file reads. Read only the line ranges it returns. Use graph expansion only when you need architecture or call-flow understanding. Fall back to Grep only if semantic search is genuinely insufficient — briefly say why when you do. Stop searching once you have enough confidence to implement; don't keep exploring for completeness.
 
-If the MCP server is unavailable, fall back to: `mcsearch context . "$QUESTION" --format json`
+If the MCP server is unavailable, fall back to: `dex context . "$QUESTION" --format json`
 
-Read the mcsearch tool docs at the start of each session.
+Read the dex tool docs at the start of each session.
 
 ## Token usage
 

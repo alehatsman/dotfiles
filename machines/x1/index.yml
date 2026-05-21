@@ -49,8 +49,8 @@
   tags: [editor, nvim]
 
 # Semantic-search MCP helper. Disabled — uncomment to re-enable.
-# - import: ../../components/mcsearch/index.yml
-#   tags: [tools, mcsearch]
+# - import: ../../components/dex/index.yml
+#   tags: [tools, dex]
 
 # Desktop — Hyprland install + config (component is now self-contained).
 - import: ../../components/hyprland/index.yml

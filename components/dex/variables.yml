@@ -2,16 +2,16 @@
 # Component-local defaults. Override at the machine level via vars.yml.
 # Cross-machine defaults live in shared/variables.yml.
 
-# The component clones mcsearch_src_url into mcsearch_src_dir and builds.
+# The component clones dex_src_url into dex_src_dir and builds.
 # Path lives under ~/.local/share/ to make "this is mooncake's checkout —
 # don't hack here" obvious. Keep dev checkouts in ~/projects/<repo>/ so
 # mooncake's git.clone update:true (which refuses divergent local commits)
 # trips on accidents, not on intentional dev work.
-mcsearch_src_url: "git@github.com:alehatsman/mcsearch.git"
+dex_src_url: "git@github.com:alehatsman/mcsearch.git"
 # Both paths are user-relative. Mooncake's git.clone dest: expands ~ via
 # PathUtil; shell heredocs reference the vars UNQUOTED (`cd {{ var }}`,
 # not `cd "{{ var }}"`) so bash also expands the tilde at run time —
 # `cd "~/..."` inside double-quotes fails. Install runs as the user
 # (no as_user: root) so ~ resolves to the same home consistently.
-mcsearch_src_dir: "~/.local/share/mcsearch-src"
-mcsearch_bin_path: "~/.local/bin/mcsearch"
+dex_src_dir: "~/.local/share/dex-src"
+dex_bin_path: "~/.local/bin/dex"

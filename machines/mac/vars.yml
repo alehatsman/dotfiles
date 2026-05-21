@@ -3,8 +3,8 @@
 is_wsl: false
 computer_name: mac
 
-# ─── mcsearch — semantic-search MCP helper ─────────────────────────────────
-# Inherits mcsearch_role=client from shared/variables.yml. The mcsearch
+# ─── dex — semantic-search MCP helper ─────────────────────────────────
+# Inherits dex_role=client from shared/variables.yml. The dex
 # component automatically writes the Host main_pc-wsl alias into
-# ~/.ssh/config (using mcsearch_remote_ip/port/user from shared/variables.yml)
+# ~/.ssh/config (using dex_remote_ip/port/user from shared/variables.yml)
 # so the tunnel resolves without any manual prerequisite.

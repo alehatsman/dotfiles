@@ -12,7 +12,7 @@
   unless_command: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
   tags: [core, home]
 
-# User-scope systemd units (mcsearch-tunnel, mcsearch-watch@, and the
+# User-scope systemd units (dex-tunnel, dex-watch@, and the
 # mooncake agentd itself once it lands in --user mode) need to survive
 # logout — otherwise remote fleet apply against a non-interactive peer
 # has no user systemd bus to talk to. Idempotent: enable-linger is a

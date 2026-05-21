@@ -1,0 +1,279 @@
+---
+# dex — local semantic-search MCP helper for Claude Code.
+#
+# Role:
+#   dex_role=client  install the Go binary + register MCP + SSH tunnel
+#   dex_role=server  additionally bring up the embedding service in WSL
+#
+# Default is client (see shared/variables.yml); main_pc overrides to server.
+# Machines that don't want dex at all simply omit the import line.
+# See components/dex/server.yml for server-side steps.
+
+- vars.load: ./variables.yml
+
+# ───────────────── CLIENT (and server — server is a superset) ──────────────
+
+- name: "Ensure Go toolchain is installed (for building dex)"
+  # Expected to be provided by components/languages — this is just a
+  # fail-fast guard so the build step doesn't error out cryptically.
+  assert:
+    command:
+      cmd: command -v go
+  tags: [dex, build]
+
+- name: "Ensure ~/.local/bin exists"
+  file.write:
+    path: ~/.local/bin
+    state: directory
+  tags: [dex, build]
+
+- name: "Clone or update dex source"
+  # update:true is safe here because dex_src_dir is under
+  # ~/.local/share/ — kept distinct from any dev checkout in ~/projects/.
+  # If somehow this checkout diverges, mooncake refuses with a clear error
+  # instead of silently trampling work.
+  git.clone:
+    repo: "{{ dex_src_url }}"
+    dest: "{{ dex_src_dir }}"
+    update: true
+  tags: [dex, build]
+
+# Both build + install are skipped when the installed binary's sidecar SHA
+# matches the source HEAD — otherwise every apply rebuilds and re-installs
+# and plan-mode reports a change every run. Force rebuild via:
+#   rm /usr/local/bin/dex{,.sha} && mooncake apply -c ./<m>.yml [-K] -t dex
+
+- name: "Build dex binary"
+  # {{ dex_src_dir }} is unquoted on purpose — see variables.yml.
+  shell: |
+    set -euo pipefail
+    cd {{ dex_src_dir }}
+    go build -trimpath -ldflags "-s -w" -o ./dex ./cmd/mcsearch
+  unless_command: |
+    test -x {{ dex_bin_path }} && \
+      [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
+  tags: [dex, build]
+
+- name: "Install dex to {{ dex_bin_path }}"
+  # Runs as the user (no as_user: root) so ~ resolves to the same home
+  # the build step used.
+  shell: |
+    set -euo pipefail
+    install -m 0755 {{ dex_src_dir }}/dex {{ dex_bin_path }}
+    git -C {{ dex_src_dir }} rev-parse HEAD > {{ dex_bin_path }}.sha
+    chmod 0644 {{ dex_bin_path }}.sha
+  unless_command: |
+    test -x {{ dex_bin_path }} && \
+      [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
+  tags: [dex, build]
+
+- name: "Register dex with Claude Code (user scope)"
+  # remove-then-add keeps the command/args in lockstep with this template
+  # so future arg changes propagate cleanly. Env vars are passed via
+  # `claude mcp add -e` rather than relying on shell defaults — the
+  # ollama-served model names + non-standard port all differ from the
+  # dex binary's compiled-in defaults, so leaving them implicit
+  # would silently 4xx against both endpoints. EMBED_* drives both
+  # semantic_search and the RAG leg of generate_code; CHAT_* drives the
+  # generation leg of generate_code.
+  shell: |
+    set -euo pipefail
+    claude mcp remove dex --scope user 2>/dev/null || true
+    # Build arg list in a bash array so optional features (compress, draft)
+    # can be conditionally appended without multi-line continuation gymnastics.
+    args=(
+      -e DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
+      -e DEX_EMBED_MODEL={{ dex_embed_model }}
+      -e DEX_EMBED_BATCH={{ dex_embed_batch }}
+      -e DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
+      -e DEX_CHAT_MODEL={{ dex_chat_model }}
+      -e DEX_ASK_MODEL={{ dex_ask_model }}
+      -e DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
+      -e DEX_RERANK_STYLE={{ dex_rerank_style }}
+      -e DEX_RERANK_MODEL={{ dex_rerank_model }}
+      -e DEX_RERANK_POOL={{ dex_rerank_pool }}
+      -e DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
+    )
+    # Context compression: distils retrieved chunks before injecting into
+    # Claude's context window (4–5× token savings). Disabled when port is "".
+    [[ -n '{{ dex_compress_port }}' ]] && args+=(
+      -e DEX_COMPRESS_URL=http://127.0.0.1:{{ dex_compress_port }}
+      -e DEX_COMPRESS_MODEL={{ dex_compress_model }}
+    )
+    # Speculative local draft: pre-generates code so Claude refines rather
+    # than writes from scratch (3–10× generation token savings). Disabled when port is "".
+    [[ -n '{{ dex_draft_port }}' ]] && args+=(
+      -e DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
+      -e DEX_DRAFT_MODEL={{ dex_draft_model }}
+    )
+    # Index-time summary leg: smaller, faster model for per-file /
+    # per-chunk / per-package summaries generated during `dex index`.
+    # SUMMARY_URL disabled when port is "" (summaries fall back to the
+    # main chat leg). Concurrency + min-lines always apply.
+    [[ -n '{{ dex_summary_port }}' ]] && args+=(
+      -e DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
+      -e DEX_SUMMARY_MODEL={{ dex_summary_model }}
+    )
+    args+=(
+      -e DEX_SUMMARY_CONCURRENCY={{ dex_summary_concurrency }}
+      -e DEX_CHUNK_SUMMARY_MIN_LINES={{ dex_chunk_summary_min_lines }}
+    )
+    claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
+  tags: [dex, claude]
+
+- name: "Verify dex is on $PATH"
+  assert:
+    command:
+      cmd: which dex
+  tags: [dex, verify]
+
+- name: "Verify dex is registered with Claude Code"
+  assert:
+    command:
+      cmd: "claude mcp list | grep -q '^dex: '"
+  tags: [dex, verify]
+
+# ───────────────── CLIENT-ONLY TUNNEL (Linux + macOS) ──────────────────────
+#
+# Server hosts skip the tunnel — they reach the embedding endpoint over
+# loopback (dex is fine pointing at the same 127.0.0.1:8082 that the
+# server publishes).
+
+- name: "Ensure {{ dex_remote_host }} SSH alias is in ~/.ssh/config"
+  # The tunnel template (and the ssh binary launched by launchd/systemd)
+  # resolves `dex_remote_host` as a hostname alias. Without this Host
+  # block the tunnel fails with "nodename nor servname provided". The step
+  # is idempotent — it exits early if the block is already present.
+  shell: |
+    set -euo pipefail
+    config="$HOME/.ssh/config"
+    touch "$config" && chmod 0600 "$config"
+    if ! grep -q "^Host {{ dex_remote_host }}$" "$config"; then
+      printf '\nHost %s\n    HostName %s\n    Port %s\n    User %s\n' \
+        '{{ dex_remote_host }}' '{{ dex_remote_ip }}' \
+        '{{ dex_remote_ssh_port }}' '{{ dex_remote_user }}' >> "$config"
+    fi
+  unless_command: "grep -q '^Host {{ dex_remote_host }}$' ~/.ssh/config 2>/dev/null"
+  when: dex_role == 'client'
+  tags: [dex, tunnel]
+
+- name: "Deploy dex-tunnel user systemd unit"
+  file.template:
+    src: ./templates/dex-tunnel.service.j2
+    dest: "~/.config/systemd/user/dex-tunnel.service"
+  when: dex_role == 'client' and os == 'linux'
+  tags: [dex, tunnel]
+
+- name: "Enable and start dex-tunnel.service"
+  shell: |
+    set -euo pipefail
+    systemctl --user daemon-reload
+    systemctl --user enable --now dex-tunnel.service
+  when: dex_role == 'client' and os == 'linux'
+  tags: [dex, tunnel]
+
+- name: "Deploy dex-tunnel launchd plist (mac)"
+  file.template:
+    src: ./templates/dex-tunnel.plist.j2
+    dest: "~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist"
+  when: dex_role == 'client' and os == 'darwin'
+  tags: [dex, tunnel]
+
+- name: "Load dex-tunnel launchd plist (mac)"
+  shell: |
+    set -euo pipefail
+    plist=~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist
+    launchctl unload "$plist" 2>/dev/null || true
+    launchctl load "$plist"
+  when: dex_role == 'client' and os == 'darwin'
+  tags: [dex, tunnel]
+
+# ───────────────── AUTO-REINDEX (dex watch) ───────────────────────────
+#
+# A templated user systemd unit so each indexed project gets its own
+# fsnotify-driven watcher. Long-lived projects opt in declaratively via
+# dex_watch_paths in machine vars; ad-hoc worktrees pick up watches
+# automatically through the zsh gwc helper (components/zsh).
+#
+# Linux-only by design — mac clients have no equivalent watcher, since
+# long-lived projects live on the GPU host (main_pc) and the Mac is a
+# read-only consumer over the tunnel.
+
+- name: "Deploy dex-watch@ templated systemd unit"
+  file.template:
+    src: ./templates/dex-watch@.service.j2
+    dest: "~/.config/systemd/user/dex-watch@.service"
+  when: os == 'linux'
+  tags: [dex, watch]
+
+- name: "Reload user systemd so dex-watch@ is discoverable"
+  shell: systemctl --user daemon-reload
+  when: os == 'linux'
+  changed_when: false
+  tags: [dex, watch]
+
+# Empty dex_watch_paths = additive mode (leave existing instances
+# alone). Listing one or more paths flips into declarative mode: enable
+# each, disable any other dex-watch@* instance.
+# Existing watch instances cache their ExecStart from when they were
+# started, so a template change (e.g. dex_bin_path moves) doesn't
+# propagate until the instance is restarted. try-restart only acts on
+# running units, so this is a no-op when nothing's enabled.
+- name: "Restart any running dex-watch@* to pick up new template"
+  shell: |
+    set -euo pipefail
+    instances=$(systemctl --user list-units --type=service --no-legend 'dex-watch@*' 2>/dev/null | awk '{print $1}')
+    for u in $instances; do
+      systemctl --user try-restart "$u" || true
+    done
+  when: os == 'linux'
+  changed_when: false
+  tags: [dex, watch]
+
+- name: "Sync dex-watch instances against dex_watch_paths"
+  # Pongo2 (mooncake's templater) treats `{#` as a block-comment opener,
+  # so any literal `${#paths[@]}` blows up at parse time. Check the input
+  # variable instead — same effect, no `{#` bigram.
+  shell: |
+    set -euo pipefail
+    declared='{{ dex_watch_paths }}'
+    if [[ -z "${declared// /}" ]]; then
+      echo "dex_watch_paths empty — leaving existing watch instances alone"
+      exit 0
+    fi
+    declare -a paths
+    read -ra paths <<<"$declared"
+    for p in "${paths[@]}"; do
+      esc=$(systemd-escape "$p")
+      systemctl --user enable --now "dex-watch@${esc}.service"
+    done
+    wants_dir="$HOME/.config/systemd/user/default.target.wants"
+    [[ -d "$wants_dir" ]] || exit 0
+    shopt -s nullglob
+    for f in "$wants_dir"/dex-watch@*.service; do
+      unit=$(basename "$f")
+      inst=${unit#dex-watch@}
+      inst=${inst%.service}
+      # `--` is load-bearing: $inst always starts with `-` (every absolute
+      # path escapes `/` to `-`), so without it systemd-escape misreads the
+      # arg as malformed flags, prints usage to stderr, and emits nothing
+      # on stdout — every entry then looks "stale" and the loop disables
+      # every running watcher.
+      path=$(systemd-escape --unescape -- "$inst")
+      found=0
+      for p in "${paths[@]}"; do
+        [[ "$p" == "$path" ]] && { found=1; break; }
+      done
+      if [[ "$found" -eq 0 ]]; then
+        echo "disabling stale: $unit ($path)"
+        systemctl --user disable --now "$unit"
+      fi
+    done
+  when: os == 'linux'
+  tags: [dex, watch]
+
+# ───────────────── SERVER (main_pc) ────────────────────────────────────────
+
+- import: ./server.yml
+  when: dex_role == 'server'
+  tags: [dex, server]
