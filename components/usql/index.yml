@@ -1,0 +1,37 @@
+---
+# usql — universal SQL CLI (https://github.com/xo/usql).
+#
+# Native packages exist on Arch (AUR) and macOS (brew). Ubuntu has no
+# apt package, so on WSL hosts we fall back to `go install` — the Go
+# toolchain is already installed by components/languages, and
+# $HOME/go/bin is on PATH via components/zsh/templates/.zshrc.j2.
+
+- name: Install usql (yay, Arch)
+  pkg:
+    manager: yay
+    name: usql-bin
+    state: present
+  when: pacman_available
+  tags: [usql]
+
+- name: Install usql (brew, macOS)
+  pkg:
+    manager: brew
+    name: usql
+    state: present
+  when: brew_available
+  tags: [usql]
+
+- name: Install usql via go install (apt — no native package)
+  shell: |
+    set -euo pipefail
+    go install github.com/xo/usql@latest
+  unless_command: command -v usql >/dev/null 2>&1
+  when: apt_available
+  tags: [usql]
+
+- name: Verify usql is on $PATH
+  assert:
+    command:
+      cmd: command -v usql
+  tags: [usql, verify]
