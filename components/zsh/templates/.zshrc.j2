@@ -702,6 +702,7 @@ zle -N vi-yank-xclip
 bindkey -M vicmd 'y' vi-yank-xclip
 
 bindkey '^n' autosuggest-accept
+bindkey '^@' fzf-history-widget
 
 # rush tab completion
 autoload -Uz +X bashcompinit && bashcompinit
