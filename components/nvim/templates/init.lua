@@ -610,10 +610,10 @@ require('lspfuzzy').setup()
 require('fzf_lsp').setup()
 
 -- Splits
-vim.keymap.set('n', '<c-h>', '<c-w>h')
-vim.keymap.set('n', '<c-j>', '<c-w>j')
-vim.keymap.set('n', '<c-k>', '<c-w>k')
-vim.keymap.set('n', '<c-l>', '<c-w>l')
+-- vim.keymap.set('n', '<c-h>', '<c-w>h')
+-- vim.keymap.set('n', '<c-j>', '<c-w>j')
+-- vim.keymap.set('n', '<c-k>', '<c-w>k')
+-- vim.keymap.set('n', '<c-l>', '<c-w>l')
 vim.keymap.set('n', '<c-w>o', '<c-w><c-o>')
 
 -- Split creation (mirrors tmux <prefix> v / s)
