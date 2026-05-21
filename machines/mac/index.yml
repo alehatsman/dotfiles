@@ -21,7 +21,10 @@
 # Cross-platform components
 # Palette must come first — every later component's templates read
 # palette.* / editor.* from the variant selected by `palette_variant`.
-- import: ../../components/palette/index.yml
+- name: Use pallete component
+  use: ../../components/palette/index.yml
+  props:
+    variant: "{{ palette_variant }}"
   tags: [core, palette]
 
 - import: ../../components/claude/index.yml

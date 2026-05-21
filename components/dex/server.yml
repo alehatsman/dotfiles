@@ -196,28 +196,52 @@
 # Port mapping is loopback-only to mirror ollama; clients reach the
 # endpoint via the second -L in dex-tunnel.service.j2.
 
+# Docker Desktop's credsStore=desktop.exe is unreachable from inside
+# WSL, breaking even anonymous pulls. We sidestep by pointing
+# DOCKER_CONFIG at an empty config dir for both the pull and the run —
+# Docker Hub allows anonymous pulls of public images, so no real auth
+# is needed. The dir is materialized once via file.write below and
+# reused; mooncake's container actions honor step.Env on the docker
+# subprocess (mooncake feat/container-engine-env).
+
+- name: "Ensure empty DOCKER_CONFIG dir exists for WSL anonymous pulls"
+  file.write:
+    path: "{{ env.HOME }}/.docker-anon/config.json"
+    content: "{}\n"
+  tags: [dex, server, rerank]
+
+- name: "Pull Infinity rerank image"
+  env:
+    DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
+  container.image:
+    name: michaelf34/infinity:latest
+    runtime: docker
+  tags: [dex, server, rerank]
+
 - name: "Run Infinity rerank container"
-  # Docker Desktop's credsStore=desktop.exe is unreachable from inside
-  # WSL, breaking even anonymous pulls. We sidestep with a per-invocation
-  # empty config dir — Docker Hub allows anonymous pulls of public
-  # images, so no real auth is needed.
-  shell: |
-    set -e
-    cfg=$(mktemp -d)
-    trap 'rm -rf "$cfg"' EXIT
-    echo '{}' > "$cfg/config.json"
-    docker --config "$cfg" pull michaelf34/infinity:latest
-    docker --config "$cfg" run -d \
-      --name dex-rerank \
-      --gpus all \
-      --restart unless-stopped \
-      -p 127.0.0.1:{{ dex_rerank_remote_port }}:7997 \
-      -v "$HOME/.cache/huggingface:/app/.cache" \
-      -e HF_HOME=/app/.cache \
-      michaelf34/infinity:latest \
-      v2 --model-id {{ dex_rerank_model }} --port 7997 --engine torch
-  unless_command: |
-    [ -n "$(docker ps -q --filter name=^/dex-rerank$)" ]
+  env:
+    DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
+  container:
+    name: dex-rerank
+    image: michaelf34/infinity:latest
+    runtime: docker
+    state: running
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ dex_rerank_remote_port }}:7997"
+    volumes:
+      - "{{ env.HOME }}/.cache/huggingface:/app/.cache"
+    env:
+      HF_HOME: /app/.cache
+    extra: ["--gpus", "all"]
+    command:
+      - v2
+      - --model-id
+      - "{{ dex_rerank_model }}"
+      - --port
+      - "7997"
+      - --engine
+      - torch
   tags: [dex, server, rerank]
 
 - name: "Wait for the rerank endpoint to become ready"

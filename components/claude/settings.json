@@ -31,17 +31,6 @@
     "gopls-lsp@claude-plugins-official": true
   },
   "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "[ -n \"$CLAUDE_PROJECT_DIR\" ] && dex index \"$CLAUDE_PROJECT_DIR\" >/dev/null 2>&1",
-            "async": true
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
