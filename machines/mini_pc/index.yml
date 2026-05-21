@@ -27,6 +27,9 @@
 - import: ../../components/languages/index.yml
   tags: [dev, languages]
 
+- import: ../../components/usql/index.yml
+  tags: [tools, usql]
+
 - import: ../../components/clojure/index.yml
   tags: [dev, clojure, config]
 
