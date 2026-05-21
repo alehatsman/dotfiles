@@ -32,4 +32,4 @@ dex_summary_concurrency: "16"
 # Adding a path here = enabled at next apply; removing it = disabled.
 # Ad-hoc worktrees come and go through the zsh gwc/gwd helpers; only
 # durable checkouts belong in this list.
-dex_watch_paths: "/home/{{ username }}/dotfiles /home/{{ username }}/projects/mooncake /home/{{ username }}/projects/mcsearch"
+dex_watch_paths: "/home/{{ username }}/dotfiles /home/{{ username }}/projects/mooncake /home/{{ username }}/projects/dex"
