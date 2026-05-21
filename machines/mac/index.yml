@@ -39,8 +39,6 @@
 - import: ../../components/zsh/index.yml
   tags: [core, shell]
 
-- import: ../../components/atuin/index.yml
-  tags: [core, shell, atuin]
 
 - import: ../../components/tmux/index.yml
   tags: [tools, tmux]
