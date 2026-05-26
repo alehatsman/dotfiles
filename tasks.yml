@@ -2,65 +2,48 @@ version: '1'
 
 # Dotfiles dev surface, driven by `mooncake task`.
 #
-#   mooncake task                 # list available targets
+#   mooncake task                 # list available tasks
 #   mooncake task <machine>       # apply config for that machine
-#   mooncake task <machine>-plan  # preview without applying
+#   mooncake task <machine> -p    # preview without applying (--plan)
+#   mooncake task <machine> -K    # apply with interactive sudo prompt
+#                                 # (needed on x1 and mac; main_pc and
+#                                 # mini_pc have NOPASSWD sudo)
 #   mooncake task backup          # snapshot rc files to ~/.dotfiles-backup
 #
-# Per-machine `apply` targets that touch privileged ops pass `-K` so
-# mooncake prompts for the sudo password once. Plan-mode targets skip
-# `-K` — plan never escalates.
+# Per-machine tasks use mooncake's native `import:` so the steps from
+# the machine yml expand inline at plan time. That means `--plan`
+# renders the actual underlying steps (not a black-box "would run
+# shell"), and `-K` propagates through normally. Earlier versions of
+# this file shelled out to `mooncake apply -c <machine>.yml`; that
+# spawned a nested mooncake process, dropped ANSI color in the wrap,
+# saturated the event channel on noisy plans, and made `--plan` show
+# only the outer shell wrapper.
 
 tasks:
 
-  # ── x1 (Arch laptop, Hyprland) ───────────────────────────────────────
   x1:
-    desc: Apply on x1 (Arch laptop, Hyprland)
+    desc: Apply on x1 (Arch laptop, Hyprland) — pass -K for sudo prompt
     steps:
-      - shell: { cmd: "mooncake apply -c ./x1.yml -K" }
+      - import: ./x1.yml
 
-  x1-plan:
-    desc: Plan on x1 (no changes)
-    steps:
-      - shell: { cmd: "mooncake plan -c ./x1.yml" }
-
-  # ── main_pc (WSL on Windows host) ────────────────────────────────────
   main_pc:
-    desc: Apply inside WSL on main_pc (run bootstrap.yml on the Windows host first)
+    desc: Apply inside WSL on main_pc (run platforms/windows/bootstrap.yml first)
     steps:
-      - shell: { cmd: "mooncake apply -c ./main_pc.yml" }
+      - import: ./main_pc.yml
 
-  main_pc-plan:
-    desc: Plan inside WSL on main_pc
-    steps:
-      - shell: { cmd: "mooncake plan -c ./main_pc.yml" }
-
-  # ── mini_pc (WSL) ────────────────────────────────────────────────────
   mini_pc:
     desc: Apply inside WSL on mini_pc
     steps:
-      - shell: { cmd: "mooncake apply -c ./mini_pc.yml" }
+      - import: ./mini_pc.yml
 
-  mini_pc-plan:
-    desc: Plan inside WSL on mini_pc
-    steps:
-      - shell: { cmd: "mooncake plan -c ./mini_pc.yml" }
-
-  # ── mac ──────────────────────────────────────────────────────────────
   mac:
-    desc: Apply on macOS
+    desc: Apply on macOS — pass -K for sudo prompt
     steps:
-      - shell: { cmd: "mooncake apply -c ./mac.yml -K" }
+      - import: ./mac.yml
 
-  mac-plan:
-    desc: Plan on macOS
-    steps:
-      - shell: { cmd: "mooncake plan -c ./mac.yml" }
-
-  # ── Backup ───────────────────────────────────────────────────────────
-  # The Makefile re-invoked `date` per command, so each `cp` could
-  # straddle a second boundary and write to different directories. The
-  # script-form below computes the timestamp once and reuses it.
+  # backup is a one-off shell script; no machine yml to import. Kept
+  # as a shell step because the timestamp computation needs to happen
+  # once and be reused across cp invocations.
   backup:
     desc: Snapshot ~/.zshrc, ~/.tmux.conf, ~/.gitconfig to ~/.dotfiles-backup
     steps:
