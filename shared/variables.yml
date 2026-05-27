@@ -124,6 +124,18 @@ dex_draft_model: "qwen2.5-coder:3b"
 # and lower cost on Go codebases full of small helpers).
 dex_summary_port: "11434"
 dex_summary_model: "qwen2.5-coder:7b"
+# Per-tier summary model overrides. Empty = inherit dex_summary_model.
+# Lets boxes with VRAM headroom (e.g. 5090) route the dozen package
+# summaries and the single repo summary that compound into LLM_GUIDE.md
+# through a much heavier model than the hundreds of chunk summaries.
+# Tier ordering reflects call volume — chunk fires per code chunk
+# (hundreds), file per file (tens), package per directory (~dozens),
+# repo once per project. Default empty across the fleet; main_pc
+# overrides with the 3b/7b/14b/32b ladder.
+dex_chunk_summary_model: ""
+dex_file_summary_model: ""
+dex_package_summary_model: ""
+dex_repo_summary_model: ""
 # Conservative default. The GPU host (main_pc/5090, 32 GB VRAM) bumps
 # this in machines/main_pc/vars.yml — push it as high as the local
 # ollama can serve concurrent /chat requests without VRAM thrash.

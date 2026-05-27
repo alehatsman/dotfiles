@@ -28,6 +28,18 @@ dex_role: server
 # about swaps. The shared default is 4 (safe for any GPU host).
 dex_summary_concurrency: "16"
 
+# Per-tier summary model ladder — quality scales inversely with call
+# volume. Hundreds of chunk summaries on 3B (throughput wins), tens of
+# file summaries on 7B (balanced), ~dozens of package summaries on 14B
+# (quality compounds into LLM_GUIDE.md), one repo summary on 32B (the
+# top-level overview is read most often and deserves the strongest
+# model we can fit). All four models stay pulled in ollama on this
+# box; cold-start hits amortize over the indexing run.
+dex_chunk_summary_model: "qwen2.5-coder:3b"
+dex_file_summary_model: "qwen2.5-coder:7b"
+dex_package_summary_model: "qwen2.5-coder:14b"
+dex_repo_summary_model: "qwen2.5-coder:32b"
+
 # Long-lived project roots to keep auto-reindexed via dex-watch@.
 # Adding a path here = enabled at next apply; removing it = disabled.
 # Ad-hoc worktrees come and go through the zsh gwc/gwd helpers; only
