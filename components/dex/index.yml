@@ -115,6 +115,25 @@
       -e DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
       -e DEX_SUMMARY_MODEL={{ dex_summary_model }}
     )
+    # Per-tier model overrides. Each empty string means "inherit
+    # DEX_SUMMARY_MODEL", so the default fleet behavior is unchanged;
+    # only boxes with VRAM headroom (main_pc) override and route the
+    # higher tiers through bigger models. These also flow through the
+    # MCP server into the auto-watcher's drainer, so summaries
+    # regenerated in the background use the same ladder as inline
+    # `dex index`.
+    [[ -n '{{ dex_chunk_summary_model }}' ]] && args+=(
+      -e DEX_CHUNK_SUMMARY_MODEL={{ dex_chunk_summary_model }}
+    )
+    [[ -n '{{ dex_file_summary_model }}' ]] && args+=(
+      -e DEX_FILE_SUMMARY_MODEL={{ dex_file_summary_model }}
+    )
+    [[ -n '{{ dex_package_summary_model }}' ]] && args+=(
+      -e DEX_PACKAGE_SUMMARY_MODEL={{ dex_package_summary_model }}
+    )
+    [[ -n '{{ dex_repo_summary_model }}' ]] && args+=(
+      -e DEX_REPO_SUMMARY_MODEL={{ dex_repo_summary_model }}
+    )
     args+=(
       -e DEX_SUMMARY_CONCURRENCY={{ dex_summary_concurrency }}
       -e DEX_CHUNK_SUMMARY_MIN_LINES={{ dex_chunk_summary_min_lines }}
