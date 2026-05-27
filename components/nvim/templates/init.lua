@@ -799,8 +799,8 @@ local is_ssh = (vim.env.SSH_TTY ~= nil) or (vim.env.SSH_CONNECTION ~= nil)
 local in_tmux = (vim.env.TMUX ~= nil)
 local force_osc52 = (vim.env.NVIM_USE_OSC52 == "1")
 
-local local_wsl  = is_wsl and not is_ssh   -- WSL directly
-local remote_ssh = is_ssh and not is_wsl   -- remote Linux over SSH
+local local_wsl  = is_wsl and not is_ssh   -- WSL at the console
+local remote_ssh = is_ssh                  -- any SSH session, WSL or not
 
 if local_wsl and os.getenv("WAYLAND_DISPLAY") then
   -- vim.opt.clipboard = { 
