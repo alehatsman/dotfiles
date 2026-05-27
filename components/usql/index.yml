@@ -14,11 +14,11 @@
   when: pacman_available
   tags: [usql]
 
-- name: Install usql (brew, macOS)
-  pkg:
-    manager: brew
-    name: usql
-    state: present
+- name: Install usql via go install (macOS — no brew formula)
+  shell: |
+    set -euo pipefail
+    go install github.com/xo/usql@latest
+  unless_command: command -v usql >/dev/null 2>&1
   when: brew_available
   tags: [usql]
 
