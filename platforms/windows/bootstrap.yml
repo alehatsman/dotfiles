@@ -104,42 +104,18 @@
 
 # With networkingMode=mirrored + firewall=true in .wslconfig, the WSL VM
 # sits behind the Hyper-V Firewall — a separate stack from the regular
-# Windows Firewall. The New-NetFirewallRule above governs the host's
-# NICs, but inbound traffic still gets dropped at the VM boundary unless
-# a matching New-NetFirewallHyperVRule exists with the WSL VMCreatorId.
-- name: Add Hyper-V firewall rule for WSL SSH (if not already present)
-  shell:
-    interpreter: powershell
-    run_as_admin: true
-    cmd: |
-      $ruleName = "WSL2 SSH"
-      # Discover the WSL VMCreatorId at runtime rather than hardcoding it
-      # ({40E0AC32-46A5-438A-A0B2-2B479E8F2E90} is the well-known WSL2
-      # value as of 2026, but Microsoft has rotated similar IDs in past
-      # Windows releases). Prefer Get-NetFirewallHyperVVMCreator; fall
-      # back to the constant if the cmdlet hasn't seen WSL register yet
-      # (can happen on a fresh box before first VM boot).
-      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match 'WSL' } |
-        Select-Object -First 1 -ExpandProperty VMCreatorId)
-      if (-not $wslId) {
-        $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
-        Write-Host "WSL VMCreator not registered yet — falling back to constant $wslId"
-      }
-      $existing = Get-NetFirewallHyperVRule -VMCreatorId $wslId -ErrorAction SilentlyContinue |
-        Where-Object { $_.DisplayName -eq $ruleName }
-      if (-not $existing) {
-        Write-Host "Adding Hyper-V firewall rule for port {{ wsl_ssh_port }} (creator $wslId)..."
-        New-NetFirewallHyperVRule `
-          -DisplayName $ruleName `
-          -VMCreatorId $wslId `
-          -Direction Inbound `
-          -Protocol TCP `
-          -LocalPorts {{ wsl_ssh_port }} `
-          -Action Allow | Out-Null
-      } else {
-        Write-Host "Hyper-V firewall rule '$ruleName' already exists"
-      }
+# Windows Firewall. The native action below opens the host's NICs;
+# the Hyper-V rule below opens the VM boundary. Both are required.
+- name: Add Hyper-V firewall rule for WSL SSH
+  windows.hyperv_firewall_rule:
+    name: "WSL2 SSH"
+    description: "WSL guest SSH (Hyper-V VM boundary; mirrored networking)"
+    direction: inbound
+    protocol: tcp
+    local_port: ["{{ wsl_ssh_port }}"]
+    # vm_creator_id defaults to "auto": discovers WSL's GUID via
+    # Get-NetFirewallHyperVVMCreator at apply time, with a fallback
+    # constant ({40E0AC32-…}) for fresh boxes pre-first-VM-boot.
 
 - name: Add firewall rule for WSL mooncake agentd
   windows.firewall_rule:
@@ -150,35 +126,13 @@
     local_port: ["{{ wsl_agentd_port }}"]
     profile: [domain, private]
 
-- name: Add Hyper-V firewall rule for WSL mooncake agentd (if not already present)
-  shell:
-    interpreter: powershell
-    run_as_admin: true
-    cmd: |
-      $ruleName = "WSL2 Mooncake Agentd"
-      # Detect at runtime; see the same block for "WSL2 SSH" above for
-      # the rationale on falling back to the constant.
-      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match 'WSL' } |
-        Select-Object -First 1 -ExpandProperty VMCreatorId)
-      if (-not $wslId) {
-        $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
-        Write-Host "WSL VMCreator not registered yet — falling back to constant $wslId"
-      }
-      $existing = Get-NetFirewallHyperVRule -VMCreatorId $wslId -ErrorAction SilentlyContinue |
-        Where-Object { $_.DisplayName -eq $ruleName }
-      if (-not $existing) {
-        Write-Host "Adding Hyper-V firewall rule for port {{ wsl_agentd_port }} (creator $wslId)..."
-        New-NetFirewallHyperVRule `
-          -DisplayName $ruleName `
-          -VMCreatorId $wslId `
-          -Direction Inbound `
-          -Protocol TCP `
-          -LocalPorts {{ wsl_agentd_port }} `
-          -Action Allow | Out-Null
-      } else {
-        Write-Host "Hyper-V firewall rule '$ruleName' already exists"
-      }
+- name: Add Hyper-V firewall rule for WSL mooncake agentd
+  windows.hyperv_firewall_rule:
+    name: "WSL2 Mooncake Agentd"
+    description: "WSL Linux agentd (Hyper-V VM boundary)"
+    direction: inbound
+    protocol: tcp
+    local_port: ["{{ wsl_agentd_port }}"]
 
 # ---- Mooncake agentd on the Windows host: HANDLED BY THE CONTROLLER ------
 #
