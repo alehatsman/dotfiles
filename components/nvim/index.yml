@@ -83,6 +83,63 @@
   when: os == 'darwin'
   tags: [nvim, treesitter]
 
+# zk — Zettelkasten CLI over plain markdown. zk-nvim runs it as the
+# markdown LSP (link/backlink/tag completion, note search). Same pattern
+# as tree-sitter: prebuilt GitHub release on Linux, brew on macOS.
+- name: Install zk (linux release binary)
+  shell: |
+    set -e
+    mkdir -p "$HOME/.local/bin"
+    tmp=$(mktemp -d)
+    curl -fsSL -o "$tmp/zk.tar.gz" https://github.com/zk-org/zk/releases/download/v0.15.4/zk-v0.15.4-linux-amd64.tar.gz
+    tar -xzf "$tmp/zk.tar.gz" -C "$tmp"
+    install -m 0755 "$tmp/zk" "$HOME/.local/bin/zk"
+    rm -rf "$tmp"
+  unless_command: command -v zk >/dev/null 2>&1 || test -x "$HOME/.local/bin/zk"
+  when: os == 'linux'
+  tags: [nvim, zk]
+
+- name: Install zk (brew)
+  pkg:
+    name: zk
+    manager: brew
+  when: os == 'darwin'
+  tags: [nvim, zk]
+
+# Notebook root + managed config. Presence of .zk/config.toml is what
+# marks the directory as a zk notebook, so no `zk init` is needed.
+- name: Create zk notebook directory
+  file.write:
+    path: "{{ notes_dir }}/.zk"
+    state: directory
+  tags: [nvim, zk]
+
+- name: Deploy managed zk config
+  file.template:
+    src: ./zk_config.toml.j2
+    dest: "{{ notes_dir }}/.zk/config.toml"
+  tags: [nvim, zk]
+
+- name: Create zk templates directory
+  file.write:
+    path: "{{ notes_dir }}/.zk/templates"
+    state: directory
+  tags: [nvim, zk]
+
+# zk refuses to create a note in a missing directory, so the daily-note
+# group path (config.toml [group.daily]) must exist up front.
+- name: Create zk daily journal directory
+  file.write:
+    path: "{{ notes_dir }}/journal/daily"
+    state: directory
+  tags: [nvim, zk]
+
+- name: Deploy default note template
+  file.template:
+    src: ./zk_template_default.md.j2
+    dest: "{{ notes_dir }}/.zk/templates/default.md"
+  tags: [nvim, zk]
+
 - name: Make sure plugins are installed
   shell: |
     set -euo pipefail
