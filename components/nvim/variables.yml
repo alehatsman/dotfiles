@@ -1,6 +1,9 @@
 ---
 config_path: ~/.config/nvim
 
+# zk Zettelkasten notebook root (plain markdown; not tracked in this repo).
+notes_dir: ~/notes
+
 plug_path: "~/.config/nvim/plugged"
 ftplugin_path: "~/.config/nvim/ftplugin"
 autoload_path: "~/.config/nvim/autoload"

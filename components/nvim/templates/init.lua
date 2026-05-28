@@ -181,6 +181,49 @@ require('lazy').setup({
     ft = { 'markdown' },
   },
 
+  -- zk — Zettelkasten over plain markdown. The `zk` binary (installed by
+  -- the nvim mooncake component) runs as the markdown LSP, giving link /
+  -- backlink / tag completion. Picker reuses fzf-lua, already installed.
+  {
+    'zk-org/zk-nvim',
+    dependencies = { 'ibhagwan/fzf-lua' },
+    config = function()
+      -- Pin the notebook so :Zk* commands work from any cwd, not just
+      -- when editing inside ~/notes.
+      vim.env.ZK_NOTEBOOK_DIR = vim.env.ZK_NOTEBOOK_DIR or vim.fn.expand('~/notes')
+      require('zk').setup({
+        picker = 'fzf_lua',
+        lsp = {
+          auto_attach = { enabled = true, filetypes = { 'markdown' } },
+          config = { name = 'zk', cmd = { 'zk', 'lsp' } },
+        },
+      })
+    end,
+  },
+
+  -- Paste a screenshot/image straight from the clipboard into a note:
+  -- saves the PNG under <note-dir>/assets/ and inserts a markdown link.
+  -- Reads the clipboard via PowerShell on WSL, wl-paste on Wayland,
+  -- pngpaste/osascript on macOS — no extra binary needed on WSL/Arch.
+  {
+    'HakonHarnes/img-clip.nvim',
+    cmd = 'PasteImage',
+    opts = {
+      default = {
+        dir_path = 'assets',
+        relative_to_current_file = true,
+        file_name = '%Y%m%d-%H%M%S',
+        prompt_for_file_name = false,
+      },
+      filetypes = {
+        markdown = {
+          url_encode_path = true,
+          template = '![$CURSOR]($FILE_PATH)',
+        },
+      },
+    },
+  },
+
   'lukas-reineke/lsp-format.nvim',
   'mfussenegger/nvim-lint',
   {
@@ -559,6 +602,23 @@ vim.keymap.set('n', '<leader>rn', '<cmd>lua vim.lsp.buf.rename()<CR>')
 vim.keymap.set('n', '<leader>dd', '<cmd>lua vim.diagnostic.setqflist()<CR>')
 -- vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
 
+---------------------------------------------
+-- Notes (zk)
+---------------------------------------------
+-- Backlinks/Links need the zk LSP attached (run them inside a note).
+vim.keymap.set('n', '<leader>nn', "<Cmd>ZkNew { title = vim.fn.input('Title: ') }<CR>")
+vim.keymap.set('n', '<leader>nd', "<Cmd>ZkNew { dir = 'journal/daily' }<CR>")
+vim.keymap.set('n', '<leader>no', "<Cmd>ZkNotes { sort = { 'modified' } }<CR>")
+vim.keymap.set('n', '<leader>nf', "<Cmd>ZkNotes { sort = { 'modified' }, match = { vim.fn.input('Search: ') } }<CR>")
+vim.keymap.set('n', '<leader>nt', '<Cmd>ZkTags<CR>')
+vim.keymap.set('n', '<leader>nb', '<Cmd>ZkBacklinks<CR>')
+vim.keymap.set('n', '<leader>nl', '<Cmd>ZkLinks<CR>')
+-- Paste image/screenshot from the clipboard into the note (img-clip).
+vim.keymap.set('n', '<leader>np', '<Cmd>PasteImage<CR>')
+-- Visual: new note titled / matched from the selection.
+vim.keymap.set('v', '<leader>nn', ":'<,'>ZkNewFromTitleSelection<CR>")
+vim.keymap.set('v', '<leader>nf', ":'<,'>ZkMatch<CR>")
+
 
 require('ts_context_commentstring').setup({
   enable_autocmd = false,
@@ -743,6 +803,17 @@ wk.add({
   { "<leader>rn", desc = "Rename symbol" },
   { "<leader>d", group = "Diagnostics" },
   { "<leader>dd", desc = "Diagnostics quickfix" },
+
+  -- Notes (zk)
+  { "<leader>n", group = "Notes" },
+  { "<leader>nn", desc = "New note" },
+  { "<leader>nd", desc = "New daily note" },
+  { "<leader>no", desc = "Open/list notes" },
+  { "<leader>nf", desc = "Search notes" },
+  { "<leader>nt", desc = "Tags" },
+  { "<leader>nb", desc = "Backlinks" },
+  { "<leader>nl", desc = "Links" },
+  { "<leader>np", desc = "Paste image from clipboard" },
 
   -- Tabs
   { "<leader>t", group = "Tabs" },
