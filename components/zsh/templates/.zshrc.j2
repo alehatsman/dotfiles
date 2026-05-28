@@ -417,9 +417,18 @@ fkill() {
 }
 
 tm() {
-  tmux attach || tmux new
+  if [ -n "$1" ]; then
+    tmux attach -t "$1" 2>/dev/null || tmux new -s "$1"
+  elif [ -z "$TMUX" ] && tmux has-session 2>/dev/null; then
+    local s
+    s=$(tmux ls -F '#S' | fzf --height 40% --prompt='session> ')
+    [ -n "$s" ] && tmux attach -t "$s"
+  else
+    tmux new -s main
+  fi
 }
 
+alias tmn='tmux new -s'
 alias tmks="tmux kill-server"
 
 cheat() {
