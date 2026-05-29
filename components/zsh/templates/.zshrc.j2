@@ -92,6 +92,32 @@ export DEX_RERANK_MODEL={{ dex_rerank_model }}
 export DEX_RERANK_POOL={{ dex_rerank_pool }}
 export DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
 
+# moongit — coordination backend (components/moongit). agent.env is minted
+# once per host by mooncake and exports MOONGIT_SERVER + MOONGIT_DATA_DIR +
+# a baseline MOONGIT_TOKEN (this host's identity). Absent on hosts without
+# moongit, so the source is guarded.
+[[ -r ~/.config/moongit/agent.env ]] && source ~/.config/moongit/agent.env
+
+# Per-worktree moongit identity. gwc mints a token per worktree and stashes
+# it in that worktree's gitdir; on cd we export it as MOONGIT_TOKEN so each
+# worktree's claims/comments carry a distinct author. Outside such a
+# worktree we fall back to the baseline token from agent.env.
+_moongit_baseline_token="${MOONGIT_TOKEN:-}"
+_moongit_chpwd() {
+  command -v git >/dev/null 2>&1 || return 0
+  local gd tf
+  gd=$(git rev-parse --git-dir 2>/dev/null) \
+    || { export MOONGIT_TOKEN="$_moongit_baseline_token"; return 0 }
+  tf="$gd/moongit-token"
+  if [[ -r "$tf" ]]; then
+    export MOONGIT_TOKEN="$(<"$tf")"
+  else
+    export MOONGIT_TOKEN="$_moongit_baseline_token"
+  fi
+}
+autoload -Uz add-zsh-hook && add-zsh-hook chpwd _moongit_chpwd
+_moongit_chpwd
+
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 
 if [[ -f $FZF_BASE/shell/key-bindings.zsh ]]; then
@@ -297,6 +323,56 @@ _dex_index_nuke() {
   dex nuke "$1" >/dev/null 2>&1
 }
 
+# moongit — derive <owner>/<repo> from a checkout's origin (github), used to
+# build the `moongit` mirror remote URL.
+_moongit_owner_repo() {
+  local url
+  url=$(git -C "$1" remote get-url origin 2>/dev/null) || return 1
+  url=${url%.git}
+  case "$url" in
+    *://*) url=${url#*://}; url=${url#*/} ;;  # http(s)://host/owner/repo
+    *:*)   url=${url#*:} ;;                   # git@host:owner/repo
+  esac
+  [[ "$url" == */* ]] || return 1
+  print -r -- "$url"
+}
+
+# moongit — per-worktree identity + mirror remote. Server box only (the
+# moongitd CLI mints tokens against the live db, located via MOONGIT_DATA_DIR
+# from agent.env). No-op where moongitd isn't installed.
+_moongit_worktree_setup() {
+  command -v moongitd >/dev/null 2>&1 || return 0
+  local wt="$1" name="$2" gd tf tname tok owner_repo
+  gd=$(git -C "$wt" rev-parse --git-dir 2>/dev/null) || return 0
+  # Ensure a `moongit` mirror remote (shared across a repo's worktrees) —
+  # this is what mgit reads to resolve server + owner/repo.
+  if ! git -C "$wt" remote get-url moongit >/dev/null 2>&1; then
+    owner_repo=$(_moongit_owner_repo "$wt") \
+      && git -C "$wt" remote add moongit \
+           "${MOONGIT_SERVER:-http://127.0.0.1:8080}/${owner_repo}.git"
+  fi
+  # Mirror code on push: make `git push origin` also hit moongit, with no
+  # hook (the global hooks dir is overridden by per-repo core.hooksPath).
+  # Adding any pushurl drops the implicit one, so pin the github fetch url
+  # first, then add moongit. Idempotent on the moongit pushurl.
+  local mg_url origin_fetch
+  mg_url=$(git -C "$wt" remote get-url moongit 2>/dev/null)
+  origin_fetch=$(git -C "$wt" remote get-url origin 2>/dev/null)
+  if [[ -n "$mg_url" ]] \
+     && ! git -C "$wt" config --get-all remote.origin.pushurl 2>/dev/null | grep -qxF "$mg_url"; then
+    git -C "$wt" config --get-all remote.origin.pushurl >/dev/null 2>&1 \
+      || { [[ -n "$origin_fetch" ]] && git -C "$wt" remote set-url --add --push origin "$origin_fetch" }
+    git -C "$wt" remote set-url --add --push origin "$mg_url"
+  fi
+  # Mint a per-worktree identity token once (skip if this worktree has one).
+  tf="$gd/moongit-token"
+  [[ -f "$tf" ]] && return 0
+  tname="$(hostname -s):${name}"
+  tok=$(moongitd token create "$tname" 2>/dev/null | grep -oE 'mgt_[0-9a-f]+' | head -1)
+  [[ -n "$tok" ]] || return 0
+  umask 077; print -r -- "$tok" >| "$tf"
+}
+
 # NB: never name a local `path` — zsh aliases it to the PATH array, so
 # `local path` clears PATH for the function scope and every external
 # command (git, etc.) fails with command-not-found.
@@ -315,6 +391,8 @@ gwc() { # git worktree create: gwc <name> [base]
   fi
   cd "$wt"
   _dex_watch_enable "$wt"
+  _moongit_worktree_setup "$wt" "$name"
+  _moongit_chpwd            # pick up the freshly-minted per-worktree token
 }
 
 gwd() { # git worktree delete (safe): gwd <name>
