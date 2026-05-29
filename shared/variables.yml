@@ -10,6 +10,13 @@ FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
 use_win32yank: false
 
+# ─── claude — global system prompt (~/.claude/CLAUDE.md) ──────────────────
+# Source file the claude component deploys as the user-global system prompt.
+# Path is resolved relative to components/claude/. Default is the shared
+# hacker-trooper prompt; machines override per-host in machines/<m>/vars.yml
+# (main_pc points this at its own mgit-coordination + dex-intel variant).
+claude_system_prompt_src: "./CLAUDE.md"
+
 # ─── Color palette ──────────────────────────────────────────────────────────
 # Selects which Monokai variant gets loaded by components/palette/index.yml.
 # Every templated config across this repo (alacritty, waybar, wofi, dunst,
