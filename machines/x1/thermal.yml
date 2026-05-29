@@ -1,6 +1,9 @@
 ---
 # x1 thermal + power tuning. Targets ThinkPad X1 Carbon Gen 13 (Ultra 7
-# 255U, Xe2 iGPU). Values come from vars.yml.
+# 255U, Arrow Lake-U, Xe-LPG iGPU). The 255U's iGPU binds to i915 by
+# default on mainline Linux — xe is default only from Lunar Lake/
+# Battlemage onward — so the i915.* params and i915 sysfs freq paths
+# below are correct for this chip. Values come from vars.yml.
 #
 # Re-apply just this slice with:
 #   mooncake apply -c ./x1.yml -K -t thermal
@@ -189,9 +192,10 @@
     content: |
       #!/bin/sh
       # Cap Intel iGPU max frequency for thermals. Value is templated from
-      # machines/x1/vars.yml; on Lunar Lake Xe2 the hardware range is
-      # RPn=800..RP0=2100 MHz. Cap boost too — left uncapped, boost paths
-      # still spike to RP0.
+      # machines/x1/vars.yml; on Arrow Lake-U Xe-LPG (255U) the hardware
+      # range tops at RP0=2100 MHz. These are the i915 sysfs paths, which
+      # is the driver this chip uses by default. Cap boost too — left
+      # uncapped, boost paths still spike to RP0.
       CAP_MHZ={{ thermal_igpu_max_mhz }}
       for card in /sys/class/drm/card*; do
           [ -f "$card/gt_max_freq_mhz" ] || continue
