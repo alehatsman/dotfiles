@@ -154,6 +154,12 @@ dex_chunk_summary_min_lines: "50"
 # Ollama or vLLM/TEI. Larger batches show bigger wins on big repos.
 dex_embed_batch: "128"
 
+# Loopback port for `dex serve` — the HTTP query API consumed by moongit's
+# Intel tab (components/dex deploys dex-serve.service server-side; moongit's
+# MOONGIT_DEX_URL points here). Bound to 127.0.0.1, so no token/firewall
+# rule. Distinct from moongit (:8080), ollama (:11434), rerank (:8082).
+dex_serve_port: "7920"
+
 # OLLAMA_NUM_PARALLEL — max concurrent generation requests ollama will
 # pack into a single model. Deployed as a systemd drop-in on the GPU
 # host (components/dex/templates/ollama-num-parallel.conf.j2). 4 is
