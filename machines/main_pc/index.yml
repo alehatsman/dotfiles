@@ -65,3 +65,9 @@
 # see machines/main_pc/vars.yml for dex_role and watch paths.
 - import: ../../components/dex/index.yml
   tags: [tools, dex]
+
+# Private self-hosted git host. Builds from ~/projects/moongit and runs
+# moongitd as a user systemd service (API + git + web UI on one port).
+# This box is the main server.
+- import: ../../components/moongit/index.yml
+  tags: [tools, moongit]
