@@ -1,0 +1,42 @@
+# dex serve — HTTP transport for the dex query primitives (the same surface
+# the stdio MCP server exposes), consumed by moongit's Intel tab over
+# loopback. Server-side only: it serves a fixed allowlist of project roots
+# (dex_watch_paths) and reads the shared on-disk index.
+#
+# Bound to 127.0.0.1 on purpose — without DEX_SERVE_TOKEN dex only accepts
+# loopback binds, and moongitd reaches it over loopback (MOONGIT_DEX_URL),
+# so no bearer token or firewall rule is needed.
+
+[Unit]
+Description=dex serve (HTTP query API for moongit Intel)
+After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# `%h` is systemd's user-home specifier — systemd does NOT expand `~`, so
+# {{ dex_bin_path }} (tilde form) can't be used in ExecStart directly.
+# Search needs the embedding + rerank endpoints; ask needs chat. All are
+# loopback on the server box (no tunnel).
+Environment=DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
+Environment=DEX_EMBED_MODEL={{ dex_embed_model }}
+Environment=DEX_EMBED_BATCH={{ dex_embed_batch }}
+Environment=DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
+Environment=DEX_CHAT_MODEL={{ dex_chat_model }}
+Environment=DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
+Environment=DEX_RERANK_STYLE={{ dex_rerank_style }}
+Environment=DEX_RERANK_MODEL={{ dex_rerank_model }}
+# DEX_SERVE_PROJECTS (space-separated roots) comes from an EnvironmentFile
+# written by index.yml — NOT templated here, because file.template renders
+# single-pass and won't expand the {{ username }} nested inside
+# dex_watch_paths's value (shell `cmd` fields do; file.template doesn't).
+# The wrapper expands the list into repeated --project flags at runtime.
+# %h is expanded by systemd; $-vars by the shell.
+EnvironmentFile=-%h/.config/dex/serve.env
+ExecStart=/bin/sh -c 'p=""; for d in $DEX_SERVE_PROJECTS; do p="$p --project $d"; done; exec %h/.local/bin/dex serve --addr 127.0.0.1:{{ dex_serve_port }} $p'
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=default.target

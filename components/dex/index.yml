@@ -292,6 +292,43 @@
   when: os == 'linux'
   tags: [dex, watch]
 
+# ───────────────── SERVE (HTTP query API for moongit Intel) ─────────────────
+# A server-side `dex serve` daemon on loopback, consumed by moongit's Intel
+# tab (MOONGIT_DEX_URL). Serves the same roots that are auto-reindexed
+# (dex_watch_paths). Linux + server only; bound to 127.0.0.1 so no token.
+
+- name: "Write dex-serve EnvironmentFile (project list)"
+  # dex_watch_paths is rendered here (shell cmd → {{ username }} expands)
+  # rather than in the unit template (file.template is single-pass and
+  # would leave a literal {{ username }} that breaks the --project list).
+  shell: |
+    set -euo pipefail
+    mkdir -p ~/.config/dex
+    printf 'DEX_SERVE_PROJECTS=%s\n' '{{ dex_watch_paths }}' > ~/.config/dex/serve.env
+  when: dex_role == 'server' and os == 'linux'
+  changed_when: false
+  tags: [dex, serve]
+
+- name: "Deploy dex-serve user systemd unit"
+  file.template:
+    src: ./templates/dex-serve.service.j2
+    dest: "~/.config/systemd/user/dex-serve.service"
+  when: dex_role == 'server' and os == 'linux'
+  tags: [dex, serve]
+
+- name: "Enable + (re)start dex-serve.service"
+  # Always restart so a template change (new dex_watch_paths entry, port
+  # change) takes effect. The daemon is lightweight, so an apply-time blip
+  # is cheap; changed_when:false keeps plan output quiet.
+  shell: |
+    set -euo pipefail
+    systemctl --user daemon-reload
+    systemctl --user enable dex-serve.service
+    systemctl --user restart dex-serve.service
+  when: dex_role == 'server' and os == 'linux'
+  changed_when: false
+  tags: [dex, serve]
+
 # ───────────────── SERVER (main_pc) ────────────────────────────────────────
 
 - import: ./server.yml

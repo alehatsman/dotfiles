@@ -129,6 +129,7 @@
       MOONGIT_DATA_DIR={{ moongit_data_dir | expanduser }}
       MOONGIT_REPOS_DIR={{ moongit_repos_dir | expanduser }}
       MOONGIT_WEB_DIR={{ moongit_web_dir | expanduser }}
+      MOONGIT_DEX_URL=http://127.0.0.1:{{ dex_serve_port }}
     mode: '0644'
   tags: [moongit, service]
 
@@ -179,6 +180,24 @@
     enabled: true
     started: true
     reload_on_change: true
+  tags: [moongit, service]
+
+- name: "Restart moongit if the managed env file drifted from the running process"
+  # The unit's reload_on_change only fires on UNIT changes, not on
+  # EnvironmentFile content changes. So when MOONGIT_DEX_URL (or any managed
+  # env value) is added/changed, the running process keeps the stale env
+  # until restarted. Compare the live process env to the rendered file and
+  # restart only on drift — idempotent, no restart once in sync.
+  shell: |
+    set -euo pipefail
+    pid=$(systemctl --user show -p MainPID --value moongit.service 2>/dev/null || echo 0)
+    live=""
+    [ "$pid" -gt 0 ] && live=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep '^MOONGIT_DEX_URL=' || true)
+    want="MOONGIT_DEX_URL=http://127.0.0.1:{{ dex_serve_port }}"
+    if [ "$live" != "$want" ]; then
+      systemctl --user restart moongit.service
+    fi
+  changed_when: false
   tags: [moongit, service]
 
 - name: "Restart moongit + stamp deployed revision"
