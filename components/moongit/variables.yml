@@ -36,3 +36,11 @@ moongit_env_file: "~/.config/moongit/moongit.env"
 #   edit ~/.config/moongit/moongit.secret.env, then
 #   systemctl --user restart moongit.service
 moongit_secret_env_file: "~/.config/moongit/moongit.secret.env"
+
+# Agent identity env file sourced by the shell (components/zsh). Holds
+# MOONGIT_SERVER + MOONGIT_DATA_DIR (so the moongitd CLI used by the gwc
+# worktree helper hits the live db) and a baseline MOONGIT_TOKEN minted
+# under this host's name. CREATED ONCE and never clobbered — the plaintext
+# token is shown only at mint time. Per-worktree tokens (gwc) override
+# MOONGIT_TOKEN on cd; this is the fallback identity for the main checkout.
+moongit_agent_env_file: "~/.config/moongit/agent.env"

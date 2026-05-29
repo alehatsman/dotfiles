@@ -212,3 +212,29 @@
   log:
     msg: "moongit up on {{ moongit_addr }}. If /api/* 401s, run: {{ moongit_bin_path }} token create <name>"
   tags: [moongit, verify]
+
+# ───────────────── AGENT IDENTITY (baseline token + shell env) ──────────────
+
+- name: "Seed agent identity env file (mint baseline token, once)"
+  # Writes {{ moongit_agent_env_file }} with MOONGIT_SERVER, MOONGIT_DATA_DIR
+  # (so the moongitd CLI invoked by the gwc worktree helper hits the live
+  # db, not ./data), and a baseline MOONGIT_TOKEN minted under this host's
+  # name. CREATED ONCE and never clobbered — the plaintext is shown only at
+  # mint time, so a re-render can't recover it. zsh sources this file.
+  # To rotate: revoke the token, delete its row, remove this file, re-apply.
+  shell:
+    cmd: |
+      set -eu
+      umask 077
+      export MOONGIT_DATA_DIR="{{ moongit_data_dir | expanduser }}"
+      tok=$({{ moongit_bin_path }} token create "{{ computer_name }}" 2>/dev/null | grep -oE 'mgt_[0-9a-f]+' | head -1)
+      [ -n "$tok" ] || { echo "token mint failed (name '{{ computer_name }}' may already exist — revoke + delete the row, then retry)" >&2; exit 1; }
+      mkdir -p ~/.config/moongit
+      cat > "{{ moongit_agent_env_file | expanduser }}" <<EOF
+      export MOONGIT_SERVER=http://127.0.0.1{{ moongit_addr }}
+      export MOONGIT_DATA_DIR={{ moongit_data_dir | expanduser }}
+      export MOONGIT_TOKEN=$tok
+      EOF
+      chmod 0600 "{{ moongit_agent_env_file | expanduser }}"
+    creates: "{{ moongit_agent_env_file | expanduser }}"
+  tags: [moongit, token]
