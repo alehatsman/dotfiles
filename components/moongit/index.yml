@@ -119,7 +119,8 @@
 
 - name: "Render moongit environment file"
   # Host-specific absolute paths live here, not in the unit. systemd does
-  # not expand ~, so every path is run through expanduser.
+  # not expand ~, so every path is run through expanduser. No secrets —
+  # those live in the secret env file seeded below.
   file.write:
     path: "{{ moongit_env_file }}"
     state: file
@@ -129,6 +130,26 @@
       MOONGIT_REPOS_DIR={{ moongit_repos_dir | expanduser }}
       MOONGIT_WEB_DIR={{ moongit_web_dir | expanduser }}
     mode: '0644'
+  tags: [moongit, service]
+
+- name: "Seed moongit secret env file (HTTP Basic creds) if missing"
+  # Created once, NEVER overwritten — `creates:` skips the step when the
+  # file already exists, so hand-edited credentials survive every apply.
+  # umask 077 makes the file 0600 from birth (it carries the password).
+  # Empty values = basic auth disabled. The systemd unit references it
+  # with a leading `-`, so a missing/empty file is fine.
+  shell:
+    cmd: |
+      set -eu
+      umask 077
+      cat > {{ moongit_secret_env_file }} <<'EOF'
+      # HTTP Basic auth for the moongit web UI + git smart-HTTP.
+      # Fill both in, then: systemctl --user restart moongit.service
+      # Leave empty to disable. This file is never committed or clobbered.
+      MOONGIT_BASIC_USER=
+      MOONGIT_BASIC_PASS=
+      EOF
+    creates: "{{ moongit_secret_env_file | expanduser }}"
   tags: [moongit, service]
 
 - name: "Deploy + start moongit user systemd service"
@@ -145,7 +166,12 @@
     service:
       Type: simple
       ExecStart: "{{ moongit_bin_path | expanduser }} serve"
-      EnvironmentFile: "{{ moongit_env_file | expanduser }}"
+      # Two env files: the managed one (paths) and the secret one (basic
+      # auth creds). The leading `-` marks the secret file optional, so a
+      # fresh host with no creds yet still starts.
+      EnvironmentFile:
+        - "{{ moongit_env_file | expanduser }}"
+        - "-{{ moongit_secret_env_file | expanduser }}"
       Restart: on-failure
       RestartSec: "3"
     install:

@@ -23,6 +23,16 @@ moongit_addr: ":8080"
 # tree's web/dist, produced by the `vite build` step below.
 moongit_web_dir: "~/projects/moongit/web/dist"
 
-# Rendered environment file consumed by the systemd unit. Keeps the
-# unit free of host-specific absolute paths.
+# Managed environment file consumed by the systemd unit. Re-rendered on
+# every apply — keeps the unit free of host-specific absolute paths. No
+# secrets live here.
 moongit_env_file: "~/.config/moongit/moongit.env"
+
+# Secret env file holding the HTTP Basic credentials that gate the web UI
+# + git smart-HTTP (the /api surface keeps its Bearer-token auth). It is
+# CREATED ONCE and never overwritten by apply, so hand-edited creds
+# survive. Lives outside the repo, so the password is never committed.
+# Empty creds (the seeded default) = basic auth disabled. To enable:
+#   edit ~/.config/moongit/moongit.secret.env, then
+#   systemctl --user restart moongit.service
+moongit_secret_env_file: "~/.config/moongit/moongit.secret.env"
