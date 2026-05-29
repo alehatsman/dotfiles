@@ -1,0 +1,28 @@
+---
+# Component-local defaults for moongit — a private self-hosted git host.
+# Override at the machine level via machines/<m>/vars.yml.
+#
+# Unlike dex, moongit has no published git remote yet, so the component
+# builds from the existing local working tree rather than cloning. Point
+# moongit_src_dir at that checkout. The build is sha-gated on the tree's
+# committed HEAD — deploy committed code to the server, not WIP.
+moongit_src_dir: "~/projects/moongit"
+
+# Installed binaries (daemon + client) and their data dir. Mirrors the
+# paths the repo's tasks.yml backup/restore helpers expect.
+moongit_bin_path: "~/.local/bin/moongitd"
+moongit_client_path: "~/.local/bin/moongit"
+moongit_data_dir: "~/.local/share/moongit"
+moongit_repos_dir: "~/.local/share/moongit/repos"
+
+# Listen address for the daemon. moongitd serves /api/*, git smart-HTTP,
+# and the built SPA all on this one port.
+moongit_addr: ":8080"
+
+# Built web UI served by moongitd (MOONGIT_WEB_DIR). Lives in the source
+# tree's web/dist, produced by the `vite build` step below.
+moongit_web_dir: "~/projects/moongit/web/dist"
+
+# Rendered environment file consumed by the systemd unit. Keeps the
+# unit free of host-specific absolute paths.
+moongit_env_file: "~/.config/moongit/moongit.env"
