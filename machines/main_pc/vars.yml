@@ -16,6 +16,15 @@ wsl_ssh_port: "2222"
 wsl_agentd_port: "7878"
 windows_agentd_port: "7879"
 
+# ─── claude — host-specific system prompt ─────────────────────────────────
+# main_pc is the fleet's coordination + intel hub: it runs the moongit
+# server (components/moongit) and the dex embedding server (dex_role:
+# server). Agents here are beta testers of that stack, so they get a slim
+# host-specific ~/.claude/CLAUDE.md that mandates mgit issue coordination
+# and dex-first code intel instead of the shared trooper prompt. Path is
+# resolved relative to components/claude/.
+claude_system_prompt_src: "../../machines/main_pc/CLAUDE.md"
+
 # ─── dex — semantic-search MCP helper ─────────────────────────────────────
 # This box has the RTX 5090 — it's the embedding-service host for the fleet.
 # Overrides the shared default of `client`. First provision pulls CUDA +

@@ -19,8 +19,11 @@
   tags: [claude]
 
 - name: "Deploy claude system prompt"
+  # Source defaults to ./CLAUDE.md (shared trooper prompt); per-machine
+  # vars override claude_system_prompt_src to ship a host-specific prompt.
+  # Path resolves relative to this component dir.
   file.copy:
-    src: "./CLAUDE.md"
+    src: "{{ claude_system_prompt_src }}"
     dest: "~/.claude/CLAUDE.md"
   tags: [claude]
 
