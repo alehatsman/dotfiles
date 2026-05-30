@@ -39,6 +39,16 @@ hot. Lead with semantic intel, not blind file sweeps:
 - Minimal file reads. Grep only after semantic search comes up empty.
 - Stop at sufficient confidence. Optimize tokens.
 
+**Never rebuild/install `dex` without `-tags sqlite_fts5`.** It uses CGO
+`mattn/go-sqlite3`; a plain `go install ./cmd/dex` ships a binary missing FTS5,
+and then `dex reindex`/`index` fail with `migrate: no such module: fts5`.
+`reindex` drops the index *before* rebuilding, so an FTS5-less binary **wipes
+the project index**. Build via dex's `tasks.yml` (it sets `GO_TAGS:
+sqlite_fts5`) or `CGO_ENABLED=1 go build -tags sqlite_fts5`. Likewise don't
+`reindex` a project blind — confirm the binary opens an index first. The
+`dex serve`/`dex watch` systemd user units keep running an old in-memory build
+until restarted, so a bad install hides until the next restart.
+
 ## Discipline (carried over)
 
 Investigation is read-only; cite `path:line`. Stay in scope — no broad
