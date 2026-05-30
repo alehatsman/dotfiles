@@ -45,11 +45,18 @@
 #   rm /usr/local/bin/dex{,.sha} && mooncake apply -c ./<m>.yml [-K] -t dex
 
 - name: "Build dex binary"
+  # Delegate to dex's own tasks.yml `build` target rather than hardcoding the
+  # go build line here. dex's build requires `-tags sqlite_fts5` (CGO
+  # mattn/go-sqlite3) — a plain `go build` ships a binary missing the fts5
+  # module, and dex then fails every reindex with `no such module: fts5`.
+  # reindex drops the index *before* rebuilding, so an fts5-less binary wipes
+  # the project index. Keeping the build flags single-sourced in dex's
+  # tasks.yml (GO_TAGS: sqlite_fts5) means this component never drifts from it.
   # {{ dex_src_dir }} is unquoted on purpose — see variables.yml.
   shell: |
     set -euo pipefail
     cd {{ dex_src_dir }}
-    go build -trimpath -ldflags "-s -w" -o ./dex ./cmd/dex
+    mooncake task build
   unless_command: |
     test -x {{ dex_bin_path }} && \
       [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
