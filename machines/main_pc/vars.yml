@@ -51,11 +51,12 @@ dex_summary_concurrency: "4"
 # the chat model (14B) on the foreground path; a 5m idle unload makes it
 # pay a multi-second cold reload whenever an agent pauses between
 # queries. -1 keeps it (and embed-4B) resident so synthesis stays fast.
-# SAFETY: with -1, every model that loads stays loaded. The 14B (13G) +
-# embed-4B (3.9G) steady set fits the 32G card with headroom, but a full
-# summary run would also pin 3B+7B+32B and OOM. That's fine ONLY because
-# background summary draining is paused (DEX_POWER_SAVE) — do not run an
-# unpaused `dex index summarize` with the 32B repo tier while this is -1.
+# SAFETY: with -1, every model that loads stays resident. The full set —
+# embed-4B (3.9G), chat-14B (13G), and the summary tiers chunk-3B (3.1G)
+# + file-7B (6.3G) + package/repo-14B (shared with chat) — sums to ~26G,
+# fitting the 32G card BECAUSE the repo tier is capped at 14B (below). A
+# 32B tier would push the pinned set to OOM, so keep repo <= 14B while
+# this is -1.
 dex_ollama_keep_alive: "-1"
 
 # Per-tier summary model ladder — quality scales inversely with call
@@ -74,12 +75,18 @@ dex_package_summary_model: "qwen2.5-coder:14b"
 # still a strong repo-overview model and fits the pinned working set.
 dex_repo_summary_model: "qwen2.5-coder:14b"
 
-# Pause background summary draining on the GPU host: foreground `ask`
-# (and agent work) wins the GPU over summary freshness, and it's the
-# safety guard for the warm pin above. Summaries are backfilled manually
-# via `dex index summarize <path>` until the pacing fix (dex #17) lets
-# them run bounded. Index freshness is unaffected (embed reindex still runs).
-dex_power_save: "1"
+# Background summary draining is ON (dex_power_save empty = off). dex #17
+# made it safe on a shared GPU: a cross-process drain lock means only one
+# process drains a project at a time, and dex_summarize_yield makes the
+# drainer defer while a foreground query is in flight. Set dex_power_save
+# to "1" only to fully pause draining (e.g. debugging a GPU issue).
+dex_power_save: ""
+
+# Yield-to-foreground window: the summary drainer skips a tick if an
+# ask/search/symbol/graph query ran within this window, so background
+# work never starves interactive latency. Cross-process via a marker
+# file. Shared default is "" (off, fleet-wide); the GPU host turns it on.
+dex_summarize_yield: "10s"
 
 # Long-lived project roots to keep auto-reindexed via dex-watch@.
 # Adding a path here = enabled at next apply; removing it = disabled.
