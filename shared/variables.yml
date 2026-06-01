@@ -168,6 +168,13 @@ dex_serve_port: "7920"
 # concurrency caps that assume it.
 dex_ollama_num_parallel: "4"
 
+# OLLAMA_KEEP_ALIVE — how long ollama keeps a model resident after its
+# last request. Upstream default is 5m; kept here so it's explicit and
+# overridable per host. The GPU host pins models warm (-1) in
+# machines/main_pc/vars.yml — see the note there. Deployed as a systemd
+# drop-in (components/dex/templates/ollama-keep-alive.conf.j2).
+dex_ollama_keep_alive: "5m"
+
 # SSH alias for the GPU host — used by both the tunnel template and the
 # ssh-config step managed by the dex client install. The dex
 # component writes a Host block into ~/.ssh/config on client machines

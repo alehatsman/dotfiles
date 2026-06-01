@@ -45,6 +45,17 @@ dex_role: server
 # about swaps. The shared default is 4 (safe for any GPU host).
 dex_summary_concurrency: "16"
 
+# Pin models warm (no idle unload). Interactive `ask` synthesis runs on
+# the chat model (14B) on the foreground path; a 5m idle unload makes it
+# pay a multi-second cold reload whenever an agent pauses between
+# queries. -1 keeps it (and embed-4B) resident so synthesis stays fast.
+# SAFETY: with -1, every model that loads stays loaded. The 14B (13G) +
+# embed-4B (3.9G) steady set fits the 32G card with headroom, but a full
+# summary run would also pin 3B+7B+32B and OOM. That's fine ONLY because
+# background summary draining is paused (DEX_POWER_SAVE) — do not run an
+# unpaused `dex index summarize` with the 32B repo tier while this is -1.
+dex_ollama_keep_alive: "-1"
+
 # Per-tier summary model ladder — quality scales inversely with call
 # volume. Hundreds of chunk summaries on 3B (throughput wins), tens of
 # file summaries on 7B (balanced), ~dozens of package summaries on 14B
