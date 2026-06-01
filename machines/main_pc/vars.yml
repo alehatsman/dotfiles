@@ -39,11 +39,13 @@ claude_system_prompt_src: "../../machines/main_pc/CLAUDE.md"
 # the embedding container; confirm `nvidia-smi` works inside WSL first.
 dex_role: server
 
-# 32 GB VRAM lets chat (32B) + summary (7B) + embed (4B) all stay
-# resident, so the index-time summary fan-out doesn't fight chat for
-# VRAM. Push concurrency until the 7B saturates rather than worrying
-# about swaps. The shared default is 4 (safe for any GPU host).
-dex_summary_concurrency: "16"
+# Interactive-first: background summary draining must not starve
+# foreground `ask` on the shared GPU. 16-way parallel gen did exactly
+# that (drove ask latency to ~33s), so we keep the shared safe default
+# (4) here rather than an aggressive override. Moot while DEX_POWER_SAVE
+# pauses draining; the real GPU-aware pacing lands in dex #17. (Was 16,
+# from the old "saturate the 7B during indexing runs" philosophy.)
+dex_summary_concurrency: "4"
 
 # Pin models warm (no idle unload). Interactive `ask` synthesis runs on
 # the chat model (14B) on the foreground path; a 5m idle unload makes it
