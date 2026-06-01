@@ -66,7 +66,18 @@ dex_ollama_keep_alive: "-1"
 dex_chunk_summary_model: "qwen2.5-coder:3b"
 dex_file_summary_model: "qwen2.5-coder:7b"
 dex_package_summary_model: "qwen2.5-coder:14b"
-dex_repo_summary_model: "qwen2.5-coder:32b"
+# Repo tier capped at 14B (was 32B). With the warm pin (keep_alive=-1)
+# every loaded model stays resident; a 32B repo summary (19G) would
+# evict the pinned 14B+embed set and risk OOM on the 32G card. 14B is
+# still a strong repo-overview model and fits the pinned working set.
+dex_repo_summary_model: "qwen2.5-coder:14b"
+
+# Pause background summary draining on the GPU host: foreground `ask`
+# (and agent work) wins the GPU over summary freshness, and it's the
+# safety guard for the warm pin above. Summaries are backfilled manually
+# via `dex index summarize <path>` until the pacing fix (dex #17) lets
+# them run bounded. Index freshness is unaffected (embed reindex still runs).
+dex_power_save: "1"
 
 # Long-lived project roots to keep auto-reindexed via dex-watch@.
 # Adding a path here = enabled at next apply; removing it = disabled.
