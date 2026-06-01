@@ -184,6 +184,14 @@ dex_ollama_keep_alive: "5m"
 # the MCP registration (components/dex/index.yml) and the dex-serve unit.
 dex_power_save: ""
 
+# DEX_SUMMARIZE_YIELD — when set (e.g. "10s"), the background summary
+# drainer skips a tick if a foreground query (ask/search/symbol/graph)
+# ran within this window, so interactive latency wins over summary
+# freshness. Cross-process via a marker file (dex #17). Default off
+# (""). The GPU host turns it on. Wired into the MCP registration and
+# the dex-serve unit alongside DEX_POWER_SAVE.
+dex_summarize_yield: ""
+
 # SSH alias for the GPU host — used by both the tunnel template and the
 # ssh-config step managed by the dex client install. The dex
 # component writes a Host block into ~/.ssh/config on client machines

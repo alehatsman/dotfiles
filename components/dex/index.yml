@@ -151,6 +151,11 @@
     [[ -n '{{ dex_power_save }}' ]] && args+=(
       -e DEX_POWER_SAVE={{ dex_power_save }}
     )
+    # Yield-to-foreground: drainer defers while a query is in flight.
+    # Empty = off; only set on hosts that configure dex_summarize_yield.
+    [[ -n '{{ dex_summarize_yield }}' ]] && args+=(
+      -e DEX_SUMMARIZE_YIELD={{ dex_summarize_yield }}
+    )
     claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
   tags: [dex, claude]
 

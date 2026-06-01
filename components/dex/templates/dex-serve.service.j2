@@ -29,9 +29,11 @@ Environment=DEX_RERANK_STYLE={{ dex_rerank_style }}
 Environment=DEX_RERANK_MODEL={{ dex_rerank_model }}
 # Pause background summary draining (serve still keeps the index fresh via
 # embed and answers queries). Empty value = off; dex's envBool reads an
-# empty string as false, so non-GPU hosts are unaffected. On the GPU host
-# this is the safety guard for the warm ollama pin (no 32B summary load).
+# empty string as false, so non-GPU hosts are unaffected.
 Environment=DEX_POWER_SAVE={{ dex_power_save }}
+# Yield-to-foreground window: serve's drainer skips a tick if a query ran
+# within this window (dex #17). Empty = off.
+Environment=DEX_SUMMARIZE_YIELD={{ dex_summarize_yield }}
 # DEX_SERVE_PROJECTS (space-separated roots) comes from an EnvironmentFile
 # written by index.yml — NOT templated here, because file.template renders
 # single-pass and won't expand the {{ username }} nested inside
