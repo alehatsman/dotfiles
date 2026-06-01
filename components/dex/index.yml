@@ -145,6 +145,12 @@
       -e DEX_SUMMARY_CONCURRENCY={{ dex_summary_concurrency }}
       -e DEX_CHUNK_SUMMARY_MIN_LINES={{ dex_chunk_summary_min_lines }}
     )
+    # Power-save: pause background summary draining (index stays fresh via
+    # embed). Empty string = off, so only hosts that set dex_power_save
+    # (the GPU box) add the flag; the rest keep summarizing in the bg.
+    [[ -n '{{ dex_power_save }}' ]] && args+=(
+      -e DEX_POWER_SAVE={{ dex_power_save }}
+    )
     claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
   tags: [dex, claude]
 
