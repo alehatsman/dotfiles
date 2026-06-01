@@ -16,6 +16,14 @@ wsl_ssh_port: "2222"
 wsl_agentd_port: "7878"
 windows_agentd_port: "7879"
 
+# moongit server (components/moongit, MOONGIT_ADDR=:8080). moongitd binds
+# *:8080, so mirrored networking puts it on the Windows host's LAN IP —
+# but the Hyper-V VM defaults to DefaultInboundAction=Block, so reaching
+# it from another box needs BOTH a Windows Firewall rule AND a Hyper-V
+# Firewall rule (see bootstrap.yml), same as wsl_ssh_port/wsl_agentd_port.
+# Direct LAN access avoids the SSE-coalescing an `ssh -L 8080` tunnel adds.
+wsl_moongit_port: "8080"
+
 # ─── claude — host-specific system prompt ─────────────────────────────────
 # main_pc is the fleet's coordination + intel hub: it runs the moongit
 # server (components/moongit) and the dex embedding server (dex_role:

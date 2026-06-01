@@ -134,6 +134,34 @@
     protocol: tcp
     local_port: ["{{ wsl_agentd_port }}"]
 
+# moongit server: moongitd binds *:8080 inside WSL; mirrored networking
+# exposes it on the host NIC, so other boxes on the LAN can hit
+# http://<this-pc-ip>:8080 directly — no `ssh -L` tunnel (which coalesces
+# the SSE transcript stream). Same two-rule shape as SSH/agentd above:
+# the WinFW rule opens the host's NICs, the Hyper-V rule opens the VM
+# boundary. Both required under networkingMode=mirrored + firewall=true.
+- name: Add firewall rule for WSL moongit
+  windows.firewall_rule:
+    name: "WSL2 moongit"
+    description: "WSL moongit server (port exposed via mirrored networking)"
+    direction: inbound
+    protocol: tcp
+    local_port: ["{{ wsl_moongit_port }}"]
+    profile: [domain, private]
+  # Tagged so a fleet/local apply can target just these two rules without
+  # re-running the whole host bootstrap: --step-filter tag=moongit
+  # (fleet) or -t moongit (local mooncake.exe apply).
+  tags: [moongit, firewall]
+
+- name: Add Hyper-V firewall rule for WSL moongit
+  windows.hyperv_firewall_rule:
+    name: "WSL2 moongit"
+    description: "WSL moongit server (Hyper-V VM boundary; mirrored networking)"
+    direction: inbound
+    protocol: tcp
+    local_port: ["{{ wsl_moongit_port }}"]
+  tags: [moongit, firewall]
+
 # ---- Mooncake agentd on the Windows host: HANDLED BY THE CONTROLLER ------
 #
 # Earlier versions of this file deployed mooncake.exe to
