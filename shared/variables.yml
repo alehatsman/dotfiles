@@ -175,6 +175,15 @@ dex_ollama_num_parallel: "4"
 # drop-in (components/dex/templates/ollama-keep-alive.conf.j2).
 dex_ollama_keep_alive: "5m"
 
+# DEX_POWER_SAVE — when truthy, dex `serve` / `mcp` watchers keep the
+# index fresh (embed reindex) but skip background summary draining (no
+# chat-model gen). Default off (fleet behaviour unchanged). The GPU host
+# sets it on (machines/main_pc/vars.yml) so foreground `ask` isn't
+# starved by summary churn, and so the warm-pin (dex_ollama_keep_alive
+# = -1) can't be OOM'd by the summary model ladder loading. Wired into
+# the MCP registration (components/dex/index.yml) and the dex-serve unit.
+dex_power_save: ""
+
 # SSH alias for the GPU host — used by both the tunnel template and the
 # ssh-config step managed by the dex client install. The dex
 # component writes a Host block into ~/.ssh/config on client machines
