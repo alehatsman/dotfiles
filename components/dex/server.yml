@@ -40,9 +40,16 @@
   # working nvidia-smi, ollama silently falls back to CPU and the
   # wait.http probes below still pass — hiding a broken-but-running
   # server until query latency tanks in production.
+  #
+  # On WSL2 nvidia-smi lives at /usr/lib/wsl/lib (CUDA passthrough), which
+  # interactive shells add to PATH but a non-interactive apply (agentd /
+  # fleet / headless) does not — so a bare `nvidia-smi` would 127 and abort
+  # an otherwise-healthy apply. Try PATH first (native GPU hosts), fall back
+  # to the WSL absolute path; both failing still fails the assert correctly
+  # when the GPU is genuinely absent. cmd: runs via shell, so `||` works.
   assert:
     command:
-      cmd: nvidia-smi
+      cmd: nvidia-smi || /usr/lib/wsl/lib/nvidia-smi
   tags: [dex, server]
 
 - name: "Install ollama (also installs + enables ollama.service)"
