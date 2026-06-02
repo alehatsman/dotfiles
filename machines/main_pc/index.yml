@@ -74,3 +74,9 @@
 # see machines/main_pc/vars.yml for dex_role and watch paths.
 - import: ../../components/dex/index.yml
   tags: [tools, dex]
+
+# mooncake CI image only (mooncake-ci:latest = moongit-ci-dev + gomarkdoc).
+# Imported after moongit so its base image exists; this box runs mooncake's
+# server-side CI. mooncake itself isn't provisioned here. See mooncake#100.
+- import: ../../components/mooncake/index.yml
+  tags: [tools, mooncake]
