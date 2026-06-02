@@ -44,3 +44,16 @@ moongit_secret_env_file: "~/.config/moongit/moongit.secret.env"
 # token is shown only at mint time. Per-worktree tokens (gwc) override
 # MOONGIT_TOKEN on cd; this is the fallback identity for the main checkout.
 moongit_agent_env_file: "~/.config/moongit/agent.env"
+
+# Source checkout of mooncake. The ci-images step builds it into the CI
+# container images' bundled `mooncake` (the runner execs that binary inside
+# every CI job), so it must stay current enough to parse the repo's tasks.yml
+# syntax (the goq/* use-shorthand). Keeping the image's mooncake in step with
+# this source is the whole point of provisioning the rebuild — see moongit#193.
+mooncake_src_dir: "~/projects/mooncake"
+
+# Sidecar recording the combined (moongit HEAD + mooncake HEAD) the CI images
+# were last built from. The ci-images step rebuilds only when either moves, so
+# the bundled mooncake tracks both the parser and the tasks.yml it must parse,
+# instead of silently rotting until the quality gate fails on a YAML parse.
+moongit_ci_image_sha: "~/.local/share/moongit/ci-image.sha"
