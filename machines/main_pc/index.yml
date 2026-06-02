@@ -61,13 +61,16 @@
 - import: ../../components/nvim/index.yml
   tags: [editor, nvim]
 
+# Private self-hosted git host. Builds from ~/projects/moongit and runs
+# moongitd as a user systemd service (API + git + web UI on one port).
+# This box is the main server. Imported BEFORE dex because moongit builds
+# the moongit-ci-dev CI base image that dex-ci derives FROM (dex#27); the
+# two components are otherwise provisioning-independent (dex clones from
+# GitHub, moongit needs dex only at runtime).
+- import: ../../components/moongit/index.yml
+  tags: [tools, moongit]
+
 # Semantic-search MCP helper. Embedding endpoint runs on the local 5090;
 # see machines/main_pc/vars.yml for dex_role and watch paths.
 - import: ../../components/dex/index.yml
   tags: [tools, dex]
-
-# Private self-hosted git host. Builds from ~/projects/moongit and runs
-# moongitd as a user systemd service (API + git + web UI on one port).
-# This box is the main server.
-- import: ../../components/moongit/index.yml
-  tags: [tools, moongit]
