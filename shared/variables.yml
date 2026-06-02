@@ -209,3 +209,10 @@ dex_remote_user: "aleh"
 # instance through the zsh gwc/gwd helpers — only long-lived project
 # roots belong here.
 dex_watch_paths: ""
+
+# Source checkout of mooncake, shared by the moongit + dex CI-image build
+# steps: each bakes this mooncake into its CI container image (the runner
+# execs it inside every CI job), so it must stay current enough to parse the
+# repo's tasks.yml syntax. Shared (not component-local) so both components
+# resolve it regardless of apply order. See moongit#193 / dex#27.
+mooncake_src_dir: "~/projects/mooncake"

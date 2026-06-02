@@ -15,3 +15,11 @@ dex_src_url: "git@github.com:alehatsman/dex.git"
 # (no as_user: root) so ~ resolves to the same home consistently.
 dex_src_dir: "~/.local/share/dex-src"
 dex_bin_path: "~/.local/bin/dex"
+
+# Sidecar recording the combined (dex HEAD + mooncake HEAD) the dex-ci:latest
+# image was last built from. The ci-image step (server role) rebuilds only
+# when either moves, so dex-ci's bundled mooncake tracks the tasks.yml it must
+# parse and doesn't silently rot — the dex analog of moongit#193 (see dex#27).
+# dex-ci is FROM moongit-ci-dev, so the dex component is imported AFTER moongit
+# in the machine index to guarantee that base exists first.
+dex_ci_image_sha: "~/.local/share/dex-ci-image.sha"

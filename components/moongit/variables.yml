@@ -45,12 +45,9 @@ moongit_secret_env_file: "~/.config/moongit/moongit.secret.env"
 # MOONGIT_TOKEN on cd; this is the fallback identity for the main checkout.
 moongit_agent_env_file: "~/.config/moongit/agent.env"
 
-# Source checkout of mooncake. The ci-images step builds it into the CI
-# container images' bundled `mooncake` (the runner execs that binary inside
-# every CI job), so it must stay current enough to parse the repo's tasks.yml
-# syntax (the goq/* use-shorthand). Keeping the image's mooncake in step with
-# this source is the whole point of provisioning the rebuild — see moongit#193.
-mooncake_src_dir: "~/projects/mooncake"
+# mooncake_src_dir (the checkout baked into the CI images' bundled mooncake)
+# now lives in shared/variables.yml — both the moongit and dex CI-image steps
+# use it, so it belongs at the shared layer.
 
 # Sidecar recording the combined (moongit HEAD + mooncake HEAD) the CI images
 # were last built from. The ci-images step rebuilds only when either moves, so
