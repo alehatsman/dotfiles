@@ -229,9 +229,17 @@
 # ───────────────── AUTO-REINDEX (dex watch) ───────────────────────────
 #
 # A templated user systemd unit so each indexed project gets its own
-# fsnotify-driven watcher. Long-lived projects opt in declaratively via
-# dex_watch_paths in machine vars; ad-hoc worktrees pick up watches
-# automatically through the zsh gwc helper (components/zsh).
+# fsnotify-driven watcher. Ad-hoc worktrees pick up watches automatically
+# through the zsh gwc helper (components/zsh), which enables/disables
+# dex-watch@ instances and depends on this template existing — so the
+# template is deployed on every Linux box, server included.
+#
+# Long-lived projects (dex_watch_paths) are handled differently per role:
+#   client  declarative dex-watch@ instances (the sync step below)
+#   server  dex serve eager-watches its --project registry (== dex_watch_paths)
+#           at boot, so the standalone dex-watch@ instances for those paths
+#           are redundant and get retired in the SERVE section. On clients
+#           dex_watch_paths is empty, so the sync step is the additive no-op.
 #
 # Linux-only by design — mac clients have no equivalent watcher, since
 # long-lived projects live on the GPU host (main_pc) and the Mac is a
@@ -269,6 +277,12 @@
   tags: [dex, watch]
 
 - name: "Sync dex-watch instances against dex_watch_paths"
+  # Client-only: on the server the long-lived dex_watch_paths are owned by
+  # dex serve's eager-watch (see SERVE section), and gating this step out
+  # there also stops it from disabling gwc-driven ad-hoc worktree watchers
+  # as "stale". On clients dex_watch_paths is empty, so this is the
+  # additive no-op that leaves gwc's instances alone.
+  #
   # Pongo2 (mooncake's templater) treats `{#` as a block-comment opener,
   # so any literal `${#paths[@]}` blows up at parse time. Check the input
   # variable instead — same effect, no `{#` bigram.
@@ -307,7 +321,7 @@
         systemctl --user disable --now "$unit"
       fi
     done
-  when: os == 'linux'
+  when: os == 'linux' and dex_role != 'server'
   tags: [dex, watch]
 
 # ───────────────── SERVE (HTTP query API for moongit Intel) ─────────────────
@@ -343,6 +357,42 @@
     systemctl --user daemon-reload
     systemctl --user enable dex-serve.service
     systemctl --user restart dex-serve.service
+  when: dex_role == 'server' and os == 'linux'
+  changed_when: false
+  tags: [dex, serve]
+
+# Retire the standalone dex-watch@ instances for the long-lived serve
+# paths: dex serve now eager-watches its --project registry at boot
+# (DEX_SERVE_WATCH, default on), which is exactly dex_watch_paths, so a
+# separate watcher per path is redundant. Runs AFTER serve is (re)started
+# above so there's no window where nothing watches those roots. Only
+# touches the declared serve paths — gwc-driven ad-hoc worktree watchers
+# are left running.
+#
+# Ordering dependency: requires an installed dex binary that supports
+# eager-watch. The build step at the top of this component installs from
+# dex_src_url HEAD, so a fleet apply rebuilds before reaching here; a
+# tag-scoped `-t serve` apply against an old binary would disable the
+# watchers without a replacement — rebuild dex first in that case.
+- name: "Retire server-side dex-watch@ instances superseded by serve eager-watch"
+  shell: |
+    set -euo pipefail
+    declared='{{ dex_watch_paths }}'
+    if [[ -z "${declared// /}" ]]; then
+      echo "dex_watch_paths empty — nothing to retire"
+      exit 0
+    fi
+    declare -a paths
+    read -ra paths <<<"$declared"
+    for p in "${paths[@]}"; do
+      esc=$(systemd-escape "$p")
+      unit="dex-watch@${esc}.service"
+      if systemctl --user is-enabled "$unit" >/dev/null 2>&1 \
+         || systemctl --user is-active "$unit" >/dev/null 2>&1; then
+        echo "retiring $unit (covered by dex serve eager-watch)"
+        systemctl --user disable --now "$unit" || true
+      fi
+    done
   when: dex_role == 'server' and os == 'linux'
   changed_when: false
   tags: [dex, serve]
