@@ -42,3 +42,22 @@
   as_user: root
   when: os == "linux"
   tags: [core, sudo]
+
+# Docker Desktop's WSL integration writes `credsStore: desktop.exe` into
+# ~/.docker/config.json. That Windows credential helper isn't on PATH in this
+# Linux env, so any image pull dies with exit 127 (`docker-credential-
+# desktop.exe not found`) — which silently breaks server-side CI whenever a
+# runner image must be pulled (dotfiles#8, surfaced via dex#25/#63). Strip the
+# key so docker falls back to its default store. Idempotent: the gate skips the
+# step once the file is absent or no longer names the broken helper.
+- name: Drop the WSL2-broken Docker credsStore (desktop.exe) so image pulls work
+  shell: |
+    set -euo pipefail
+    cfg="$HOME/.docker/config.json"
+    tmp=$(mktemp)
+    jq 'del(.credsStore)' "$cfg" > "$tmp" && mv "$tmp" "$cfg"
+  unless_command: |
+    cfg="$HOME/.docker/config.json"
+    ! test -f "$cfg" || ! jq -e '.credsStore == "desktop.exe"' "$cfg" >/dev/null 2>&1
+  when: os == "linux"
+  tags: [core, docker]

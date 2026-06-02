@@ -257,3 +257,34 @@
       chmod 0600 "{{ moongit_agent_env_file | expanduser }}"
     creates: "{{ moongit_agent_env_file | expanduser }}"
   tags: [moongit, token]
+
+# ───────────────── CI CONTAINER IMAGES (sha-gated on mooncake + repo) ───────
+# moongitd runs each server-side CI job in a throwaway container off
+# moongit-ci:latest and execs `mooncake` inside it. The bundled mooncake must
+# understand the tasks.yml syntax the repo uses (the goq/* use-shorthand); it
+# silently rots when mooncake advances, turning the quality gate red on a YAML
+# parse error (moongit#193). Rebuild via the repo's own ci-images task, gated
+# on the combined HEAD of the mooncake source (the bundled binary) and the
+# moongit source (the tasks.yml it must parse), so the image's mooncake always
+# tracks both. Builds moongit-ci:latest + moongit-ci-dev:latest (dex-ci derives
+# FROM the latter — rebuild dex-ci after this moves; see the dex component).
+#
+# Force a rebuild:
+#   rm {{ moongit_ci_image_sha }} && mooncake apply -c ./main_pc.yml -t ci-images
+- name: "Build moongit CI container images (refresh when mooncake or the repo move)"
+  shell: |
+    set -euo pipefail
+    command -v docker >/dev/null 2>&1 || { echo "docker not found — skipping CI image build"; exit 0; }
+    vars=$(mktemp)
+    printf 'mooncake_src: %s\n' "{{ mooncake_src_dir | expanduser }}" > "$vars"
+    cd {{ moongit_src_dir }}
+    mooncake task ci-images --vars "$vars"
+    rm -f "$vars"
+    mkdir -p "$(dirname {{ moongit_ci_image_sha }})"
+    { git -C {{ moongit_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; } > {{ moongit_ci_image_sha }}
+  unless_command: |
+    docker image inspect moongit-ci:latest >/dev/null 2>&1 && \
+    docker image inspect moongit-ci-dev:latest >/dev/null 2>&1 && \
+    [ "$(cat {{ moongit_ci_image_sha }} 2>/dev/null)" = "$({ git -C {{ moongit_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; })" ]
+  timeout: 15m
+  tags: [moongit, ci-images]
