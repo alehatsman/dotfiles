@@ -19,6 +19,15 @@ moongit_repos_dir: "~/.local/share/moongit/repos"
 # and the built SPA all on this one port.
 moongit_addr: ":8080"
 
+# Shared run-concurrency budget (#293): max concurrent runs across CI +
+# agents, with a floor reserved for agents so a CI backlog can't lock out a
+# spawn. Kept conservative on this box: a CI *run* still fans into up to
+# MOONGIT_CI_JOB_CONCURRENCY job-containers, so 6 runs is a sane ceiling under
+# the local dex auto-CI load; raise once CI jobs are gated from the same
+# budget. The daemon defaults to runtime.NumCPU() when these are unset.
+moongit_max_concurrency: 6
+moongit_agent_reserved: 2
+
 # Built web UI served by moongitd (MOONGIT_WEB_DIR). Lives in the source
 # tree's web/dist, produced by the `vite build` step below.
 moongit_web_dir: "~/projects/moongit/web/dist"
