@@ -130,6 +130,8 @@
       MOONGIT_REPOS_DIR={{ moongit_repos_dir | expanduser }}
       MOONGIT_WEB_DIR={{ moongit_web_dir | expanduser }}
       MOONGIT_DEX_URL=http://127.0.0.1:{{ dex_serve_port }}
+      MOONGIT_MAX_CONCURRENCY={{ moongit_max_concurrency }}
+      MOONGIT_AGENT_RESERVED={{ moongit_agent_reserved }}
     mode: '0644'
   tags: [moongit, service]
 
