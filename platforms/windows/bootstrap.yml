@@ -215,6 +215,35 @@
       dont_stop_if_going_on_batteries: true
       start_when_available: true
 
+# Windows re-marks the LAN as Public (Unidentified) on most boots, and the
+# fleet firewall rules above are scoped Domain,Private only (opening a
+# control-plane daemon on Public is unsafe — mooncake #118). The net effect
+# without this: every fleet port (:2222/:7878/:7879/:8080) is filtered after
+# a reboot until someone sets the profile Private by hand. This boot task
+# flips any Public profile back to Private so the rules apply. Interface
+# index changes across boots, so match by category, not index.
+- name: Register Task Scheduler entry to pin LAN profile Private at boot
+  windows.scheduled_task:
+    name: Set-Network-Private
+    description: "Reclassify any Public connection profile to Private at boot (fleet rules are Domain,Private)"
+    triggers:
+      - type: boot
+    actions:
+      - execute: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+        arguments: >-
+          -NoProfile -Command "Get-NetConnectionProfile |
+          Where-Object { $_.NetworkCategory -eq 'Public' } |
+          Set-NetConnectionProfile -NetworkCategory Private"
+    principal:
+      user: "{{ username }}"
+      logon_type: s4u
+      run_level: highest
+    settings:
+      execution_time_limit: 2m
+      allow_start_if_on_batteries: true
+      dont_stop_if_going_on_batteries: true
+      start_when_available: true
+
 - name: Print next steps
   log:
     msg: |
