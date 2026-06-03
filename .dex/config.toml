@@ -1,0 +1,21 @@
+# dex indexing config. Indexing is opt-in: only paths matching an
+# include pattern below are indexed; everything else is skipped.
+# Patterns use gitignore grammar — a trailing slash matches a directory
+# subtree, `*.md` matches at any depth.
+#
+# Note: .j2 (jinja templates) and .vim are not in dex's indexable
+# extension allow-list, so they won't be indexed even when included
+# here; the meaningful searchable content is the yml/md/sh/toml configs.
+[index]
+include = [
+  "components/",
+  "machines/",
+  "platforms/",
+  "shared/",
+  "scripts/",
+  "docs/",
+  "*.yml",   # top-level machine manifests (main_pc.yml, mac.yml, x1.yml, …)
+  "*.md",
+]
+
+ignore = []

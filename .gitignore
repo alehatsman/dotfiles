@@ -2,6 +2,12 @@
 .sudo
 .claude/
 
+# dex: ignore the local index cache / generated artifacts but track the
+# committed opt-in config so a fresh checkout/reindex keeps a populated
+# index (dex indexes nothing without an [index].include list).
+.dex/*
+!.dex/config.toml
+
 # Mooncake — local state and plan artifacts
 .mooncake/
 *.plan.json
