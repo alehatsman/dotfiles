@@ -92,4 +92,7 @@ dex_summarize_yield: "10s"
 # Adding a path here = enabled at next apply; removing it = disabled.
 # Ad-hoc worktrees come and go through the zsh gwc/gwd helpers; only
 # durable checkouts belong in this list.
-dex_watch_paths: "/home/{{ username }}/dotfiles /home/{{ username }}/projects/mooncake /home/{{ username }}/projects/dex /home/{{ username }}/projects/moongit"
+# moongit is split into two dex roots: the Go module at repo root and the
+# TS frontend at web/ (own .dex/config.toml, separate graph) — both watched
+# + served (moongit #292 / dex #13).
+dex_watch_paths: "/home/{{ username }}/dotfiles /home/{{ username }}/projects/mooncake /home/{{ username }}/projects/dex /home/{{ username }}/projects/moongit /home/{{ username }}/projects/moongit/web"
