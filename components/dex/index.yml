@@ -409,23 +409,30 @@
 # moongit#193, the bundled mooncake (inherited from the moongit-ci-dev base)
 # silently rots when mooncake advances past dex's tasks.yml syntax, failing the
 # quality gate on a YAML parse. Rebuild via dex's own ci-image task, gated on
-# the combined dex+mooncake HEAD so it tracks both. Server role only (no CI on
-# client boxes). dex-ci is FROM moongit-ci-dev, so the dex component is imported
-# AFTER moongit in the machine index — that base is already built when this runs.
+# the combined dex+mooncake HEAD AND the moongit-ci-dev base image id — so a
+# base rebuild (e.g. a Go-toolchain bump landing via a moongit-side change)
+# also retriggers dex-ci. Without the base id the gate is blind to the base it
+# derives FROM: when moongit-ci-dev moved to go1.26.4, dex-ci stayed on 1.26.3
+# and dex CI broke (go.mod requires go>=1.26.4; GOTOOLCHAIN=local). Server role
+# only (no CI on client boxes). dex-ci is FROM moongit-ci-dev, so the dex
+# component is imported AFTER moongit in the machine index — that base is
+# already built when this runs. (NB: base id read via `docker images
+# --no-trunc -q`, not `inspect --format '{{.Id}}'`, to avoid colliding with
+# mooncake's own {{ }} templating.)
 #
 # Force a rebuild:
 #   rm {{ dex_ci_image_sha }} && mooncake apply -c ./main_pc.yml -t ci-images
-- name: "Build dex CI container image (refresh when dex or mooncake move)"
+- name: "Build dex CI container image (refresh when dex, mooncake, or the base image move)"
   shell: |
     set -euo pipefail
     command -v docker >/dev/null 2>&1 || { echo "docker not found — skipping dex CI image build"; exit 0; }
     cd {{ dex_src_dir }}
     mooncake task ci-image
     mkdir -p "$(dirname {{ dex_ci_image_sha }})"
-    { git -C {{ dex_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; } > {{ dex_ci_image_sha }}
+    { git -C {{ dex_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; } > {{ dex_ci_image_sha }}
   unless_command: |
     docker image inspect dex-ci:latest >/dev/null 2>&1 && \
-    [ "$(cat {{ dex_ci_image_sha }} 2>/dev/null)" = "$({ git -C {{ dex_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; })" ]
+    [ "$(cat {{ dex_ci_image_sha }} 2>/dev/null)" = "$({ git -C {{ dex_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; })" ]
   when: dex_role == 'server' and os == 'linux'
   timeout: 15m
   tags: [dex, ci-images]
