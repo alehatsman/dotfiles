@@ -244,6 +244,71 @@
       dont_stop_if_going_on_batteries: true
       start_when_available: true
 
+# ── NAT networking: portproxy + keepalive (wsl_networking_mode=nat only) ──
+# Under mirrored networking the guest's ports live on the host NIC directly,
+# so none of this runs. Under NAT the guest gets an internal IP, so we:
+#   (a) forward the host's LAN ports to it via netsh portproxy, refreshed on
+#       boot + every 5 min (the NAT IP changes per VM restart), and
+#   (b) hold a persistent `wsl` session so WSL2 doesn't tear down the guest's
+#       host-facing network when idle — the actual cure for the agentd
+#       reachability flap (VM + agentd stay healthy; only LAN exposure drops).
+# Diagnosis + proof in dotfiles #16 (1/18 → 18/18 stable LAN probes).
+- name: Deploy WSL portproxy refresh script (nat)
+  file.template:
+    src: ./templates/wsl-portproxy-refresh.ps1.j2
+    dest: "{{ user_home }}/wsl-portproxy-refresh.ps1"
+  when: wsl_networking_mode == 'nat'
+  tags: [wsl, windows, nat]
+
+- name: Register WSL portproxy refresh task (nat)
+  windows.scheduled_task:
+    name: WSL-PortProxy-Refresh
+    description: "Point netsh portproxy at the current WSL NAT IP (boot + 5-min)"
+    triggers:
+      - type: boot
+      - type: repetition
+        interval: 5m
+    actions:
+      - execute: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+        arguments: '-NoProfile -ExecutionPolicy Bypass -File "{{ user_home }}/wsl-portproxy-refresh.ps1"'
+    principal:
+      user: "{{ username }}"
+      logon_type: s4u
+      run_level: highest
+    settings:
+      execution_time_limit: 2m
+      allow_start_if_on_batteries: true
+      dont_stop_if_going_on_batteries: true
+      start_when_available: true
+  when: wsl_networking_mode == 'nat'
+  tags: [wsl, windows, nat]
+
+- name: Register WSL network keepalive task (nat)
+  # Persistent `wsl ... sleep infinity` session keeps WSL2 from tearing down
+  # the guest's host-facing network. Unbounded runtime (execution_time_limit
+  # 0 → PT0S); auto-restart if the session ever exits.
+  windows.scheduled_task:
+    name: WSL-Network-Keepalive
+    description: "Persistent wsl session so WSL2 keeps the guest network up (NAT reachability)"
+    triggers:
+      - type: boot
+    actions:
+      - execute: 'C:\Windows\System32\wsl.exe'
+        arguments: '-d {{ wsl_distro }} -u root -- sleep infinity'
+    principal:
+      user: "{{ username }}"
+      logon_type: s4u
+      run_level: highest
+    settings:
+      execution_time_limit: "0"
+      restart_count: 999
+      restart_interval: 1m
+      allow_start_if_on_batteries: true
+      dont_stop_if_going_on_batteries: true
+      start_when_available: true
+  when: wsl_networking_mode == 'nat'
+  tags: [wsl, windows, nat]
+
 - name: Print next steps
   log:
     msg: |

@@ -1,0 +1,13 @@
+# Refresh netsh portproxy: forward the Windows host's LAN ports to the
+# current WSL NAT IP, which changes on every VM restart. Run at boot and
+# every 5 min by the WSL-PortProxy-Refresh task. Managed by mooncake
+# (platforms/windows/bootstrap.yml) — do not edit by hand. dotfiles #16.
+$d = "{{ wsl_distro }}"
+$ip = (wsl -d $d -- hostname -I)
+if ($ip) { $ip = ([string]$ip).Trim().Split(" ")[0] }
+if ($ip) {
+  foreach ($p in {{ wsl_ssh_port }},{{ wsl_agentd_port }}) {
+    netsh interface portproxy delete v4tov4 listenport=$p listenaddress=0.0.0.0 2>$null | Out-Null
+    netsh interface portproxy add v4tov4 listenport=$p listenaddress=0.0.0.0 connectport=$p connectaddress=$ip | Out-Null
+  }
+}
