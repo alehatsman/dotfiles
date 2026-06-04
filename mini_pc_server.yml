@@ -1,0 +1,18 @@
+---
+# mini_pc — GPU-server profile (RTX 5080 as standalone dex embed host).
+#
+# Apply:  mooncake apply -c ./mini_pc_server.yml
+# Plan:   mooncake plan  -c ./mini_pc_server.yml
+#
+# Adds the RTX 5080 as a second fleet GPU node alongside main_pc's 5090.
+# Both machines run independent dex instances — separate indexes, no
+# shared backend or load-balancing. Use mini_pc.yml instead to run
+# mini_pc as a tunneled client of main_pc's 5090.
+#
+# Prerequisite: confirm `nvidia-smi` works inside WSL before first apply.
+#   nvidia-smi || /usr/lib/wsl/lib/nvidia-smi
+
+- vars.load: ./shared/variables.yml
+- vars.load: ./machines/mini_pc/vars.yml
+- vars.load: ./machines/mini_pc/profiles/gpu-server.yml
+- import: ./machines/mini_pc/index.yml
