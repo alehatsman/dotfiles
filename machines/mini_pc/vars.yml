@@ -4,6 +4,10 @@ is_wsl: true
 computer_name: mini_pc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
+# mirrored networking flaps the WSL guest's LAN exposure on this box; use NAT
+# + netsh portproxy + a persistent-session keepalive instead (dotfiles #16).
+# Enables the portproxy/keepalive steps in platforms/windows/bootstrap.yml.
+wsl_networking_mode: "nat"
 # moongit server port. mini_pc isn't the moongit host (main_pc is), but
 # the shared platforms/windows/bootstrap.yml opens this port uniformly on
 # every Windows box, so the var must be defined or the firewall step fails
