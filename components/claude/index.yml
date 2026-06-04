@@ -39,6 +39,11 @@
   creates: /usr/local/bin/claude-autoapprove
   tags: [claude]
 
+- name: "Register moongit MCP server"
+  shell: claude mcp add --scope user -e MOONGIT_TOKEN="$MOONGIT_TOKEN" -- moongit mgit mcp
+  unless_shell: claude mcp list 2>/dev/null | grep -q '^moongit'
+  tags: [claude]
+
 - name: "Install gopls LSP plugin"
   shell: claude plugins install gopls-lsp@claude-plugins-official --scope user
   unless_command: claude plugins list 2>/dev/null | grep -q 'gopls-lsp@claude-plugins-official'
