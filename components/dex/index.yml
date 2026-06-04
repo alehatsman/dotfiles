@@ -159,6 +159,41 @@
     claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
   tags: [dex, claude]
 
+- name: "Append dex usage block to ~/.claude/CLAUDE.md"
+  # Declarative nudge so the "query dex first" + FTS5 build protocol travels
+  # with the dex component to any box, instead of being hand-baked into a
+  # single machine's prompt. Marker-guarded (idempotent), same pattern as the
+  # SSH-config append below. Runs AFTER the claude component's whole-file
+  # file.copy of CLAUDE.md (claude is imported before dex in the machine
+  # index), so a re-apply re-establishes the block after the overwrite.
+  shell: |
+    set -euo pipefail
+    dest="$HOME/.claude/CLAUDE.md"
+    touch "$dest"
+    if ! grep -q '<!-- dex -->' "$dest"; then
+      cat >> "$dest" <<'DEXBLOCK'
+
+    <!-- dex -->
+    ## Pull intel from dex first (semantic code intel)
+
+    Lead with semantic intel, not blind sweeps:
+    - Query dex (`search_semantic`, `ask`, `search_symbol`, `graph_*`) **before**
+      grepping or reading broadly. `graph_*` only for architecture/call-flow.
+    - Minimal reads. Grep only after semantic search comes up empty. Stop at
+      sufficient confidence; optimize tokens. Fallback: `dex context . "$Q" --format json`.
+
+    **Never build/install `dex` without `-tags sqlite_fts5`.** CGO `mattn/go-sqlite3`;
+    a plain `go install ./cmd/dex` ships a binary missing FTS5, then `reindex`/`index`
+    fail (`migrate: no such module: fts5`). `reindex` drops the index *before*
+    rebuild, so an FTS5-less binary **wipes the project index**. Build via dex's
+    `tasks.yml` (`GO_TAGS: sqlite_fts5`) or `CGO_ENABLED=1 go build -tags sqlite_fts5`.
+    Don't `reindex` blind — confirm the binary opens an index first. The `dex serve`/
+    `dex watch` systemd user units run the old build until restarted.
+    <!-- /dex -->
+    DEXBLOCK
+    fi
+  tags: [dex, claude]
+
 - name: "Verify dex is on $PATH"
   assert:
     command:
