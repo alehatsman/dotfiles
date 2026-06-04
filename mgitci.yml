@@ -1,0 +1,50 @@
+# dotfiles CI — validates all machine configs and runs static plan dry-runs on every push.
+#
+# Schema (moongit internal/ci/ci.go): version "1"; `on.push.branches` gates
+# which refs trigger a run; `jobs` is a DAG wired by `needs`. Each job runs in a
+# throwaway container off `image:`, and moongitd execs every step as
+# `mooncake step '<yaml>'` inside it — so the image must carry `mooncake` on PATH.
+#
+# Two-stage gate:
+#   validate — `mooncake validate -c <machine>.yml` on all four machine configs.
+#              Pure YAML/schema check; no system state needed.
+#   plan     — `mooncake plan --no-inspect -c <machine>.yml` on all four configs.
+#              Static template expansion: catches undefined vars, bad imports,
+#              template render errors. --no-inspect skips unless:/when: checks
+#              that require the real target machine.
+#
+# Image: mooncake-ci:latest carries the mooncake binary and nothing else heavy.
+# No Go toolchain, no lint suite — dotfiles CI only needs mooncake itself.
+version: "1"
+on:
+  push:
+    branches:
+      [
+        main,
+        "feat/*",
+        "fix/*",
+        "chore/*",
+        "docs/*",
+        "refactor/*",
+        "test/*",
+        "build/*",
+        "ci/*",
+        "perf/*",
+      ]
+jobs:
+  validate:
+    image: mooncake-ci:latest
+    steps:
+      - run: mooncake validate -c ./main_pc.yml
+      - run: mooncake validate -c ./mini_pc.yml
+      - run: mooncake validate -c ./x1.yml
+      - run: mooncake validate -c ./mac.yml
+
+  plan:
+    image: mooncake-ci:latest
+    needs: [validate]
+    steps:
+      - run: mooncake plan --no-inspect -c ./main_pc.yml
+      - run: mooncake plan --no-inspect -c ./mini_pc.yml
+      - run: mooncake plan --no-inspect -c ./x1.yml
+      - run: mooncake plan --no-inspect -c ./mac.yml
