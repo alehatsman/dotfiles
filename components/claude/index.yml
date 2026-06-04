@@ -43,8 +43,11 @@
   shell: claude mcp list 2>/dev/null | grep -q '^moongit' || claude mcp add --scope user -e MOONGIT_TOKEN="$MOONGIT_TOKEN" -- moongit mgit mcp
   tags: [claude]
 
-- name: "Update claude plugin marketplace"
-  shell: claude plugin marketplace update claude-plugins-official
+- name: "Add and update claude-plugins-official marketplace"
+  shell: |
+    claude plugin marketplace list 2>/dev/null | grep -q 'claude-plugins-official' \
+      || claude plugin marketplace add anthropics/claude-plugins-official
+    claude plugin marketplace update claude-plugins-official
   tags: [claude]
 
 - name: "Install gopls LSP plugin"
