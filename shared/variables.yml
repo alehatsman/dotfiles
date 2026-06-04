@@ -10,6 +10,12 @@ FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
 use_win32yank: false
 
+# WSL2 networking mode for Windows hosts (platforms/windows). Default
+# "mirrored" (guest ports on the host NIC directly). Override per-machine to
+# "nat" to use an internal IP + netsh portproxy + a persistent-session
+# keepalive — more robust LAN reachability where mirrored flaps (dotfiles #16).
+wsl_networking_mode: "mirrored"
+
 # ─── claude — global system prompt (~/.claude/CLAUDE.md) ──────────────────
 # Source file the claude component deploys as the user-global system prompt.
 # Path is resolved relative to components/claude/. Default is the shared
