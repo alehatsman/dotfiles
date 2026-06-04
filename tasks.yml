@@ -9,6 +9,7 @@ version: '1'
 #                                 # (needed on x1 and mac; main_pc and
 #                                 # mini_pc have NOPASSWD sudo)
 #   mooncake task backup          # snapshot rc files to ~/.dotfiles-backup
+#   mooncake task ci              # local pre-push gate (mirrors mgitci.yml)
 #
 # Per-machine tasks use mooncake's native `import:` so the steps from
 # the machine yml expand inline at plan time. That means `--plan`
@@ -59,3 +60,22 @@ tasks:
               fi
             done
             echo "Backup complete in $dest/"
+
+  # ci mirrors the two-stage gate in mgitci.yml so you can run the same check
+  # locally before pushing. `validate` is pure YAML/schema; `plan --no-inspect`
+  # is static template expansion with no system-state reads.
+  ci:
+    desc: Pre-push gate — validate + static plan for all machine configs
+    steps:
+      - shell:
+          cmd: |
+            set -euo pipefail
+            for cfg in main_pc.yml mini_pc.yml x1.yml mac.yml; do
+              echo "==> validate $cfg"
+              mooncake validate -c "./$cfg"
+            done
+            for cfg in main_pc.yml mini_pc.yml x1.yml mac.yml; do
+              echo "==> plan --no-inspect $cfg"
+              mooncake plan --no-inspect -c "./$cfg"
+            done
+            echo "CI gate passed."
