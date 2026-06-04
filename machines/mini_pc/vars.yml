@@ -29,5 +29,9 @@ wsl_agentd_port: "7878"
 windows_agentd_port: "7879"
 
 # ─── dex — semantic-search MCP helper ─────────────────────────────────────
-# No discrete GPU here — inherits dex_role=client from shared. Same
-# `Host main_pc-wsl` SSH-alias prerequisite as x1 / mac.
+# Two provisioning profiles — pick the manifest that matches the desired role:
+#   mini_pc.yml        (this file only) — dex_role=client, inherits from
+#                      shared; tunnels to main_pc's 5090 via main_pc-wsl.
+#   mini_pc_server.yml (+ gpu-server profile) — dex_role=server; runs
+#                      ollama + rerank on the local RTX 5080 (16 GB VRAM).
+# See machines/mini_pc/profiles/gpu-server.yml for the 5080 VRAM budget.

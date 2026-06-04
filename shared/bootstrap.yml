@@ -19,7 +19,10 @@
 # no-op when already enabled.
 - name: Enable systemd linger for {{ username }} so user services survive logout
   shell: loginctl enable-linger {{ username }}
-  unless_command: loginctl show-user {{ username }} 2>/dev/null | grep -q '^Linger=yes$'
+  # agentd runs without DBUS_SESSION_BUS_ADDRESS so loginctl cannot talk to
+  # the bus; check the linger sentinel file directly instead (mooncake#21).
+  unless_command: test -f /var/lib/systemd/linger/{{ username }}
+  as_user: root
   when: os == "linux"
   tags: [core, systemd]
 

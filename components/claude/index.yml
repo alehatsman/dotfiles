@@ -43,6 +43,10 @@
   shell: claude mcp list 2>/dev/null | grep -q '^moongit' || claude mcp add --scope user -e MOONGIT_TOKEN="$MOONGIT_TOKEN" -- moongit mgit mcp
   tags: [claude]
 
+- name: "Register mooncake MCP server"
+  shell: claude mcp list 2>/dev/null | grep -q '^mooncake' || claude mcp add --scope user -- mooncake mooncake mcp
+  tags: [claude]
+
 - name: "Add and update claude-plugins-official marketplace"
   shell: |
     claude plugin marketplace list 2>/dev/null | grep -q 'claude-plugins-official' \

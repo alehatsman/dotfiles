@@ -46,6 +46,8 @@
 - import: ../../components/nvim/index.yml
   tags: [editor, nvim]
 
-# Semantic-search MCP helper. Disabled — uncomment to re-enable.
-# - import: ../../components/dex/index.yml
-#   tags: [tools, dex]
+# Semantic-search MCP helper. Role is controlled by vars:
+#   mini_pc.yml        → dex_role=client (tunneled to main_pc's 5090)
+#   mini_pc_server.yml → dex_role=server (local RTX 5080, gpu-server profile)
+- import: ../../components/dex/index.yml
+  tags: [tools, dex]

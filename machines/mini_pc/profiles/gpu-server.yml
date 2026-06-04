@@ -1,0 +1,59 @@
+---
+# mini_pc GPU-server profile — RTX 5080 as a standalone dex embedding host.
+#
+# Load after machines/mini_pc/vars.yml via mini_pc_server.yml:
+#   mooncake apply -c ./mini_pc_server.yml
+#
+# Design: each machine runs an independent dex instance on its own GPU
+# (no shared index, no load-balancing). This mirrors main_pc's setup but
+# is tuned for 16 GB VRAM instead of 32 GB.
+#
+# VRAM budget (keep_alive=-1, all pinned):
+#   embed-4b   3.9 G
+#   chat-14b   9.0 G  ← also used for package + repo summary (same slot)
+#   chunk-3b   2.0 G  ← also used for file/draft summary (same slot)
+#   ─────────────────
+#   total     14.9 G  (1.1 G headroom on 16 G card)
+#
+# Context compression (7b, ~5 G) and speculative draft (3b, same slot as chunk)
+# are disabled below — compress would push the pinned set to ~20 G (OOM).
+# A 7b package tier has the same problem; package and repo reuse chat-14b instead.
+
+dex_role: server
+
+# Pin embed + chat warm so interactive ask pays no cold-load penalty.
+# With the budget above all four model slots stay within 16 G.
+dex_ollama_keep_alive: "-1"
+
+# Graduated by volume, collapsed to two distinct model sizes to fit 16 G.
+# Hundreds of chunk calls → 3b (throughput wins).
+# Tens of file calls → same 3b (shares slot, zero extra VRAM).
+# Dozens of package calls → 14b (quality matters; shares chat slot).
+# One repo summary → 14b (same as package).
+dex_chunk_summary_model: "qwen2.5-coder:3b"
+dex_file_summary_model: "qwen2.5-coder:3b"
+dex_package_summary_model: "qwen2.5-coder:14b"
+dex_repo_summary_model: "qwen2.5-coder:14b"
+
+# Two workers instead of main_pc's four — smaller headroom means less slack
+# for simultaneous generation bursts.
+dex_summary_concurrency: "2"
+
+# Disable context compression and speculative draft — both are enabled by
+# default via shared dex_compress_port/dex_draft_port="11434". On 16 G:
+#   compress model (qwen2.5-coder:7b, ~5 G) would push pinned set to ~20 G (OOM).
+#   draft model (qwen2.5-coder:3b) shares the chunk slot so no extra VRAM,
+#   but disabled for symmetry until the compress budget is resolved.
+dex_compress_port: ""
+dex_draft_port: ""
+
+# Background draining ON. dex #17 drain lock + yield make it safe on a
+# shared GPU. Set to "1" to pause draining (e.g. while debugging GPU issues).
+dex_power_save: ""
+
+# Slightly wider yield window than main_pc (10s) to compensate for the
+# tighter VRAM headroom — a latency spike mid-drain is more likely on 16 G.
+dex_summarize_yield: "15s"
+
+# Projects to keep auto-reindexed on this box. Extend as needed.
+dex_watch_paths: "/home/{{ username }}/dotfiles"
