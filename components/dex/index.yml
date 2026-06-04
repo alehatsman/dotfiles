@@ -182,6 +182,26 @@
     - Minimal reads. Grep only after semantic search comes up empty. Stop at
       sufficient confidence; optimize tokens. Fallback: `dex context . "$Q" --format json`.
 
+    ## Prefer dex tools over native — token compression (MANDATORY)
+
+    dex tools return compact output. Use them instead of native equivalents; fall
+    back to native only for the caveats listed below.
+
+    | Instead of | Use | Key args |
+    |---|---|---|
+    | `Read` | `file_view` | `mode`: `signatures` (~10× smaller), `map` (imports+exports), `lines:N-M` (slice), `full` (LLM summary). Up to 10 `paths`/call. |
+    | `Grep`/`rg` | `search_grep` | `pattern` (RE2), `path`, `ext`, `max_results`. |
+    | `ls`/`find` | `file_tree` | `path`, `depth`; aggregates deep dirs. |
+    | `Bash` (build/test/log) | `ctx_shell` | `command`; auto-compresses output, reports `saved_pct`. |
+    | semantic→read chain | `search_context` / `ask` | one round-trip: hits + signatures + best symbol body. |
+
+    Fall back to NATIVE — don't force a dex tool that can't do the job:
+    - Writes, redirects (`>`/`>>`/`tee`), heredocs, or >60 s commands → native `Bash`
+      (`ctx_shell` blocks writes + times out at 60 s; auth/dev-server/watch pass through).
+    - Unindexed files, or full content >64 KB → native `Read` (`file_view` is
+      index-scoped; `full` caps at 64 KB).
+    - grep features `search_grep` lacks (context lines, fixed-string flags, etc.) → native `Grep`.
+
     **Never build/install `dex` without `-tags sqlite_fts5`.** CGO `mattn/go-sqlite3`;
     a plain `go install ./cmd/dex` ships a binary missing FTS5, then `reindex`/`index`
     fail (`migrate: no such module: fts5`). `reindex` drops the index *before*
