@@ -1,10 +1,16 @@
 [wsl2]
-networkingMode=mirrored
+networkingMode={{ wsl_networking_mode }}
 dnsTunneling=true
-firewall=true
-# Never idle-shut-down the VM. Without this, WSL exits after ~60s with
-# no live process and sshd on :2222 disappears with it.
+firewall={% if wsl_networking_mode == 'mirrored' %}true{% else %}false{% endif %}
+
+# Never idle-shut-down the VM. Without this, WSL exits after ~60s with no
+# live process and sshd on :{{ wsl_ssh_port }} disappears with it.
 vmIdleTimeout=-1
+{% if wsl_networking_mode == 'mirrored' %}
 
 [experimental]
+# Mirrored only: gradual reclaim pauses/compacts the idle VM and blips the
+# network. Harmless under mirrored, but under NAT+portproxy those blips
+# reset connections to the agentd — so it's omitted for nat (dotfiles #16).
 autoMemoryReclaim=gradual
+{% endif %}
