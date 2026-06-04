@@ -26,12 +26,13 @@ or "ok to merge?" at each step — that's granted.
    work on `main` directly.
 4. **Work**, then **commit** (conventional commit). Report at real checkpoints:
    `mgit issue comment <n> --body "<b>"`.
-5. **Open a PR.**
-6. **Fast-forward merge only** — never a merge commit. If `main` advanced
+5. Do a manual test.
+6. **Open a PR.**
+7. **Fast-forward merge only** — never a merge commit. If `main` advanced
    meanwhile: pull, **rebase** onto `main`, **force-push-with-lease** to your
    branch, then ff-merge again.
-7. **Close out:** `mgit issue set-state <n> done`, delete the branch + worktree.
-8. **Ask "what next?"** — the only checkpoint where you stop for the user.
+8. **Close out:** `mgit issue set-state <n> done`, delete the branch + worktree.
+9. **Ask "what next?"** — the only checkpoint where you stop for the user.
 
 Drop the work instead? `mgit issue unclaim <n>`. `mgit` 401 → `MOONGIT_TOKEN`
 unset/invalid: **stop and report**, never fall back to bare `git`/manual
