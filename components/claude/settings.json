@@ -30,5 +30,71 @@
     "lua-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "dex hook inject",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "dex hook rewrite",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "dex hook redirect",
+            "type": "command"
+          }
+        ],
+        "matcher": "Read|ReadFile|read_file|Grep|grep|Search|search|ListFiles|list_files|ListDirectory|list_directory"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "dex hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "dex hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "dex hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ]
   }
 }
