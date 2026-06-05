@@ -64,6 +64,45 @@
         Set-ItemProperty -Path $key -Name HiberbootEnabled -Value 0 -Type DWord
       }
 
+# Disable sleep and hibernate on AC power so WSL daemons (ssh, dex-serve,
+# ollama, agentd) stay reachable 24/7. Only runs when windows_prevent_sleep
+# is true (server boxes); laptops keep their own policy.
+- name: Disable sleep and hibernate on AC power
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      # Never sleep on AC
+      $acSleep = (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE |
+                  Select-String "Current AC Power Setting Index" |
+                  ForEach-Object { ($_ -split '\s+')[-1] })
+      if ($acSleep -eq '0x00000000') {
+        Write-Host "AC sleep already disabled"
+      } else {
+        Write-Host "Disabling AC sleep (was $acSleep)"
+        powercfg /change standby-timeout-ac 0
+      }
+      # Never hibernate on AC
+      $acHib = (powercfg /query SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE |
+                Select-String "Current AC Power Setting Index" |
+                ForEach-Object { ($_ -split '\s+')[-1] })
+      if ($acHib -eq '0x00000000') {
+        Write-Host "AC hibernate already disabled"
+      } else {
+        Write-Host "Disabling AC hibernate (was $acHib)"
+        powercfg /change hibernate-timeout-ac 0
+      }
+      # Disable hibernate file entirely (frees disk; machine stays on AC)
+      $hibEnabled = (powercfg /availablesleepstates 2>$null) -match "Hibernate:\s+Available"
+      if (-not $hibEnabled) {
+        Write-Host "Hibernate already off"
+      } else {
+        Write-Host "Disabling hibernate"
+        powercfg /hibernate off
+      }
+  when: windows_prevent_sleep
+  tags: [power, always-on]
+
 # Default OpenSSH server shell on Windows is cmd.exe, which makes any
 # remote PowerShell call go through a layer of cmd quoting hell. Set it
 # to powershell.exe so SSH lands directly in PowerShell — friendlier for
