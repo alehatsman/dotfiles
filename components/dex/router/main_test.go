@@ -61,6 +61,28 @@ func TestPick(t *testing.T) {
 	}
 }
 
+func TestFloodRoundRobin(t *testing.T) {
+	r := newRouter(t, "flood", "http://L", "http://R")
+	// Any model — flood ignores tier and alternates across both upstreams.
+	body := []byte(`{"model":"qwen2.5-coder:14b","messages":[]}`)
+	var local, remote int
+	for i := 0; i < 100; i++ {
+		_, leg := r.pick("POST", body)
+		if leg == "local" {
+			local++
+		} else {
+			remote++
+		}
+	}
+	if local != 50 || remote != 50 {
+		t.Fatalf("flood should split 50/50 over 100 calls, got local=%d remote=%d", local, remote)
+	}
+	// GETs still bypass to remote even in flood.
+	if _, leg := r.pick("GET", nil); leg != "remote" {
+		t.Fatalf("flood GET should go remote, got %q", leg)
+	}
+}
+
 // TestProxyStreaming wires two fake upstreams and asserts the router forwards
 // to the right one, preserves the body, and streams SSE chunks through.
 func TestProxyStreaming(t *testing.T) {

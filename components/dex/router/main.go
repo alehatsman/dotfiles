@@ -32,6 +32,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -102,6 +103,7 @@ func loadConfig() config {
 type router struct {
 	cfg    config
 	client *http.Client
+	rr     atomic.Uint64 // round-robin counter for flood mode
 }
 
 // mode reads the current mode fresh from disk. Missing/unreadable/unknown all
@@ -114,6 +116,8 @@ func (r *router) mode() string {
 	switch m := strings.ToLower(strings.TrimSpace(string(b))); m {
 	case "burst":
 		return "burst"
+	case "flood":
+		return "flood"
 	default:
 		return "steady"
 	}
@@ -171,16 +175,32 @@ func (r *router) handle(w http.ResponseWriter, req *http.Request) {
 
 // pick returns the upstream URL and a short leg label for logging.
 func (r *router) pick(method string, body []byte) (string, string) {
-	// Only model-bearing POSTs are candidates for LOCAL; everything else
-	// (and steady mode) goes REMOTE.
-	if method != http.MethodPost || r.mode() != "burst" {
+	// Non-POSTs (health checks, GETs) and steady mode always go REMOTE.
+	if method != http.MethodPost {
 		return r.cfg.remoteURL, "remote"
 	}
-	model := peekModel(body)
-	if model != "" && r.cfg.localModels[model] {
-		return r.cfg.localURL, "local"
+	switch r.mode() {
+	case "flood":
+		// Saturate BOTH GPUs: round-robin every request across the two
+		// upstreams regardless of tier. Assumes the local box's foreground
+		// model (32b) has been evicted (dex-summary-mode flood) so the 5090
+		// has VRAM for the heavier tiers. Alternating 1:1 with a high drain
+		// concurrency keeps both cards' parallel slots full.
+		if r.rr.Add(1)%2 == 0 {
+			return r.cfg.localURL, "local"
+		}
+		return r.cfg.remoteURL, "remote"
+	case "burst":
+		// Lend only the chunk tier (localModels, default 3b) to LOCAL; the
+		// heavier tiers stay REMOTE so the 32b ask model isn't evicted.
+		model := peekModel(body)
+		if model != "" && r.cfg.localModels[model] {
+			return r.cfg.localURL, "local"
+		}
+		return r.cfg.remoteURL, "remote"
+	default: // steady
+		return r.cfg.remoteURL, "remote"
 	}
-	return r.cfg.remoteURL, "remote"
 }
 
 // streamCopy copies the upstream body to the client, flushing after each chunk

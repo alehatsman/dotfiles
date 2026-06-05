@@ -82,8 +82,15 @@ dex_summary_port: "11436"
 
 # Enable the summary router on this box (it has both a local GPU and a remote
 # summary worker, so it's the only host where fan-out makes sense).
-# Flip burst/steady with `dex-summary-mode`.
+# Flip burst/flood/steady with `dex-summary-mode`.
 dex_summary_router: "1"
+
+# Flood mode: evict the 32b ask model to free the 5090 so the router can
+# round-robin all summary tiers onto it; on steady re-warm 32b and stop the
+# summary-only tiers left resident (3b chunk, 14b package/repo). 7b is NOT
+# listed — it's the pinned compress model and must stay warm.
+dex_summary_router_flood_evict: "qwen2.5-coder:32b"
+dex_summary_router_steady_stop: "qwen2.5-coder:3b qwen2.5-coder:14b"
 
 # Summary worker: mini_pc's 5080 handles steady-state background summarization.
 # dex-summary-tunnel.service (deployed by the dex component when this is

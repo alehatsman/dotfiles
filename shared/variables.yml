@@ -247,6 +247,15 @@ dex_summary_router_port: "11436"
 # comma-separated. Default: the high-volume chunk tier only — a 3b fits the
 # 5090's warm-pin headroom (~3 GB) without evicting the 32b ask model.
 dex_summary_router_local_models: "qwen2.5-coder:3b"
+# Flood mode (`dex-summary-mode flood`) — the router round-robins ALL summary
+# tiers across both GPUs at once for maximum catch-up throughput. To make room
+# on the local card it evicts dex_summary_router_flood_evict (the foreground
+# ask model); returning to steady re-warms it and stops the summary-only tiers
+# in dex_summary_router_steady_stop (kept separate so the 7b compress model
+# isn't dropped). Empty = no-op; only the GPU host with a local ask model sets
+# these (machines/main_pc/vars.yml). dotfiles #34.
+dex_summary_router_flood_evict: ""
+dex_summary_router_steady_stop: ""
 
 # Space-separated list of absolute project roots to auto-watch via
 # dex-watch@.service. The apply step enables one user systemd
