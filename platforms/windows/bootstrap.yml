@@ -348,6 +348,35 @@
   when: wsl_networking_mode == 'nat'
   tags: [wsl, windows, nat]
 
+# vmIdleTimeout=-1 in .wslconfig prevents idle-based shutdown but NOT
+# session-based shutdown: WSL exits when the last wsl.exe session closes,
+# regardless of timeout. On always-on server boxes (windows_prevent_sleep)
+# a persistent boot task holds a session open so all services stay reachable.
+# Same shape as WSL-Network-Keepalive (NAT mode) but unconditional on
+# networking mode — mirrored-networking boxes need this too.
+- name: Register WSL session keepalive task (always-on)
+  windows.scheduled_task:
+    name: WSL-Session-Keepalive
+    description: "Persistent wsl session so WSL2 never exits on session-based shutdown (server boxes)"
+    triggers:
+      - type: boot
+    actions:
+      - execute: 'C:\Windows\System32\wsl.exe'
+        arguments: '-d {{ wsl_distro }} -u root -- sleep infinity'
+    principal:
+      user: "{{ username }}"
+      logon_type: s4u
+      run_level: highest
+    settings:
+      execution_time_limit: "0"
+      restart_count: 999
+      restart_interval: 1m
+      allow_start_if_on_batteries: true
+      dont_stop_if_going_on_batteries: true
+      start_when_available: true
+  when: windows_prevent_sleep
+  tags: [wsl, windows, always-on]
+
 - name: Print next steps
   log:
     msg: |
