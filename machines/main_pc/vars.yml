@@ -34,59 +34,62 @@ wsl_moongit_port: "8080"
 claude_system_prompt_src: "../../machines/main_pc/CLAUDE.md"
 
 # ─── dex — semantic-search MCP helper ─────────────────────────────────────
-# This box has the RTX 5090 — it's the embedding-service host for the fleet.
+# This box has the RTX 5090 — embedding + interactive ask host for the fleet.
 # Overrides the shared default of `client`. First provision pulls CUDA +
 # the embedding container; confirm `nvidia-smi` works inside WSL first.
 dex_role: server
 
-# Interactive-first: background summary draining must not starve
-# foreground `ask` on the shared GPU. 16-way parallel gen did exactly
-# that (drove ask latency to ~33s), so we keep the shared safe default
-# (4) here rather than an aggressive override. Moot while DEX_POWER_SAVE
-# pauses draining; the real GPU-aware pacing lands in dex #17. (Was 16,
-# from the old "saturate the 7B during indexing runs" philosophy.)
-dex_summary_concurrency: "4"
+# Upgraded from 14b: summaries are offloaded to mini_pc's 5080 (see below),
+# freeing enough VRAM headroom to run 32b for interactive ask. Significant
+# quality improvement for all agentic ask_codebase and generate_code calls.
+dex_chat_model: "qwen2.5-coder:32b"
 
-# Pin models warm (no idle unload). Interactive `ask` synthesis runs on
-# the chat model (14B) on the foreground path; a 5m idle unload makes it
-# pay a multi-second cold reload whenever an agent pauses between
-# queries. -1 keeps it (and embed-4B) resident so synthesis stays fast.
-# SAFETY: with -1, every model that loads stays resident. The full set —
-# embed-4B (3.9G), chat-14B (13G), and the summary tiers chunk-3B (3.1G)
-# + file-7B (6.3G) + package/repo-14B (shared with chat) — sums to ~26G,
-# fitting the 32G card BECAUSE the repo tier is capped at 14B (below). A
-# 32B tier would push the pinned set to OOM, so keep repo <= 14B while
-# this is -1.
+# VRAM budget (keep_alive=-1, all pinned):
+#   embed-4b     3.9 G
+#   chat-32b    20.0 G  ← upgraded from 14b; also drives compress leg
+#   compress-7b  5.0 G  (context distillation before Claude injection)
+#   ───────────────────
+#   total       28.9 G  (3.1 G headroom on 32 G card)
+#
+# Draft (3b) disabled below: frees 2 G and is redundant at 32b quality.
+# Summary tiers (3b/7b/14b) run on mini_pc via the tunnel — not pinned here.
 dex_ollama_keep_alive: "-1"
 
-# Per-tier summary model ladder — quality scales inversely with call
-# volume. Hundreds of chunk summaries on 3B (throughput wins), tens of
-# file summaries on 7B (balanced), ~dozens of package summaries on 14B
-# (quality compounds into LLM_GUIDE.md), one repo summary on 32B (the
-# top-level overview is read most often and deserves the strongest
-# model we can fit). All four models stay pulled in ollama on this
-# box; cold-start hits amortize over the indexing run.
+# Disable speculative draft — at 32b, Claude's TTFT offers no hiding room
+# for a draft generation, and the 3b VRAM is needed for the 32b headroom.
+dex_draft_port: ""
+
+# Summary model names: dex requests these from DEX_SUMMARY_URL (mini_pc's
+# ollama via the SSH tunnel below). mini_pc has all four pulled.
 dex_chunk_summary_model: "qwen2.5-coder:3b"
 dex_file_summary_model: "qwen2.5-coder:7b"
 dex_package_summary_model: "qwen2.5-coder:14b"
-# Repo tier capped at 14B (was 32B). With the warm pin (keep_alive=-1)
-# every loaded model stays resident; a 32B repo summary (19G) would
-# evict the pinned 14B+embed set and risk OOM on the 32G card. 14B is
-# still a strong repo-overview model and fits the pinned working set.
 dex_repo_summary_model: "qwen2.5-coder:14b"
 
-# Background summary draining is ON (dex_power_save empty = off). dex #17
-# made it safe on a shared GPU: a cross-process drain lock means only one
-# process drains a project at a time, and dex_summarize_yield makes the
-# drainer defer while a foreground query is in flight. Set dex_power_save
-# to "1" only to fully pause draining (e.g. debugging a GPU issue).
-dex_power_save: ""
+# Concurrency for summary requests sent to mini_pc. mini_pc runs 8-parallel
+# ollama; 4 concurrent HTTP calls from dex keeps the pipeline full without
+# overwhelming the tunnel. Raise if monitoring shows mini_pc GPU idle.
+dex_summary_concurrency: "4"
 
-# Yield-to-foreground window: the summary drainer skips a tick if an
-# ask/search/symbol/graph query ran within this window, so background
-# work never starves interactive latency. Cross-process via a marker
-# file. Shared default is "" (off, fleet-wide); the GPU host turns it on.
-dex_summarize_yield: "10s"
+# Route DEX_SUMMARY_URL to mini_pc's ollama via SSH tunnel on port 11435.
+# Must match dex_summary_local_port so DEX_SUMMARY_URL=http://127.0.0.1:11435.
+dex_summary_port: "11435"
+
+# Summary worker: mini_pc's 5080 handles all background summarization.
+# dex-summary-tunnel.service (deployed by the dex component when this is
+# non-empty) maintains:  127.0.0.1:11435 → mini_pc-wsl:127.0.0.1:11434
+# Set dex_summary_host_ip to mini_pc's actual Windows host LAN IP.
+dex_summary_host: "mini_pc-wsl"
+dex_summary_host_ip: "192.168.50.2"
+
+# No yield: summaries run on mini_pc, not on this GPU. The 5090 is never
+# contended between foreground ask and background summarization.
+dex_summarize_yield: ""
+
+# Background draining ON. dex #17 drain lock still guards dex-serve's
+# eager-watch. Yield is gone since nothing local competes for the GPU.
+# Set to "1" to pause draining for debugging only.
+dex_power_save: ""
 
 # Long-lived project roots to keep auto-reindexed via dex-watch@.
 # Adding a path here = enabled at next apply; removing it = disabled.

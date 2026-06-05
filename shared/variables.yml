@@ -207,6 +207,19 @@ dex_remote_ip: "192.168.1.68"
 dex_remote_ssh_port: "2222"
 dex_remote_user: "aleh"
 
+# Remote summary worker — when dex_summary_host is non-empty, the GPU host
+# offloads all summary generation to a second machine (e.g. mini_pc's 5080)
+# via an SSH tunnel. DEX_SUMMARY_URL is pointed at the local tunnel port
+# (dex_summary_port, which the GPU host sets to dex_summary_local_port).
+# Empty = local ollama handles summaries (default fleet behaviour).
+dex_summary_host: ""
+dex_summary_host_ip: ""
+dex_summary_host_ssh_port: "2222"
+dex_summary_host_user: "aleh"
+# Local port the summary tunnel binds on the GPU host; must match
+# dex_summary_port on that machine so DEX_SUMMARY_URL resolves correctly.
+dex_summary_local_port: "11435"
+
 # Space-separated list of absolute project roots to auto-watch via
 # dex-watch@.service. The apply step enables one user systemd
 # instance per path and disables any orphaned instance no longer in the
