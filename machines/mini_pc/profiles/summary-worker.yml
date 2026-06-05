@@ -1,0 +1,34 @@
+---
+# mini_pc summary-worker profile — RTX 5080 as the fleet summary endpoint.
+#
+# mini_pc runs ollama at maximum throughput for background summary generation;
+# main_pc's 5090 is freed entirely for the latency-sensitive foreground path
+# (embed, ask, compress, rerank). main_pc tunnels DEX_SUMMARY_URL here via
+# dex-summary-tunnel.service (127.0.0.1:11435 → this box's ollama:11434).
+#
+# VRAM budget (5m keep_alive — tiers cycle, don't co-reside):
+#   chunk phase:   qwen2.5-coder:3b   2 GB
+#   file phase:    qwen2.5-coder:7b   5 GB
+#   package phase: qwen2.5-coder:14b  9 GB  ← peak
+#   repo phase:    qwen2.5-coder:14b  9 GB  (same model, same phase)
+#   ─────────────────────────────────────────
+#   peak:         9 GB of 16 GB (7 GB headroom)
+#
+# No -1 pin: with 5m keep_alive, the 3b unloads before the 14b loads —
+# peak VRAM is the single largest tier, not the sum of all tiers.
+
+# Summary tier models pulled and served on this box.
+dex_chunk_summary_model: "qwen2.5-coder:3b"
+dex_file_summary_model: "qwen2.5-coder:7b"
+dex_package_summary_model: "qwen2.5-coder:14b"
+dex_repo_summary_model: "qwen2.5-coder:14b"
+
+# High parallelism for chunk throughput (hundreds of short 3b calls).
+# 8 concurrent requests saturates the 5080 on small models without
+# exceeding VRAM during the chunk phase.
+dex_ollama_num_parallel: "8"
+
+# Tiers cycle through VRAM — 5m TTL lets each unload before the next loads.
+# Unlike main_pc (-1), we don't pin all tiers simultaneously: that would
+# require 2+5+9=16 GB (no headroom). Cycling keeps peak at 9 GB.
+dex_ollama_keep_alive: "5m"

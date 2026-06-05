@@ -452,6 +452,45 @@
   changed_when: false
   tags: [dex, serve]
 
+# ───────────────── SUMMARY TUNNEL (server + remote worker configured) ──────
+#
+# When dex_summary_host is non-empty the GPU server offloads all summary
+# generation to a second machine (mini_pc) over an SSH tunnel instead of
+# running summaries locally. DEX_SUMMARY_URL points at the tunnel's local
+# port (dex_summary_port = dex_summary_local_port on the GPU host).
+#
+# The tunnel mirrors the client-side dex-tunnel pattern: SSH port-forward
+# only, reuses existing key auth, never touches the LAN directly.
+
+- name: "Ensure {{ dex_summary_host }} SSH alias is in ~/.ssh/config"
+  shell: |
+    set -euo pipefail
+    config="$HOME/.ssh/config"
+    touch "$config" && chmod 0600 "$config"
+    if ! grep -q "^Host {{ dex_summary_host }}$" "$config"; then
+      printf '\nHost %s\n    HostName %s\n    Port %s\n    User %s\n' \
+        '{{ dex_summary_host }}' '{{ dex_summary_host_ip }}' \
+        '{{ dex_summary_host_ssh_port }}' '{{ dex_summary_host_user }}' >> "$config"
+    fi
+  unless_command: "grep -q '^Host {{ dex_summary_host }}$' ~/.ssh/config 2>/dev/null"
+  when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
+  tags: [dex, summary-tunnel]
+
+- name: "Deploy dex-summary-tunnel user systemd unit"
+  file.template:
+    src: ./templates/dex-summary-tunnel.service.j2
+    dest: "~/.config/systemd/user/dex-summary-tunnel.service"
+  when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
+  tags: [dex, summary-tunnel]
+
+- name: "Enable and start dex-summary-tunnel.service"
+  shell: |
+    set -euo pipefail
+    systemctl --user daemon-reload
+    systemctl --user enable --now dex-summary-tunnel.service
+  when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
+  tags: [dex, summary-tunnel]
+
 # ───────────────── SERVER (main_pc) ────────────────────────────────────────
 
 - import: ./server.yml

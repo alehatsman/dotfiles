@@ -1,0 +1,119 @@
+---
+# dex summary worker — ollama configured for background summary generation only.
+#
+# Pulls and serves only the summary model tiers (chunk/file/package/repo).
+# No dex binary, no embedding, no chat, no compress, no draft, no rerank,
+# no MCP registration. Exists solely to serve DEX_SUMMARY_URL for a remote
+# dex instance (main_pc) over an SSH tunnel.
+#
+# Import this component from a machine manifest (e.g. mini_pc_summary.yml)
+# instead of the full dex component.
+#
+# OLLAMA_NUM_PARALLEL is set to dex_ollama_num_parallel (override in profile).
+# OLLAMA_KEEP_ALIVE uses dex_ollama_keep_alive (set to 5m so tiers cycle;
+# unlike the GPU host, we don't pin all tiers permanently — peak is 14b, 9 G).
+
+- name: "Verify GPU is visible (nvidia-smi)"
+  assert:
+    command:
+      cmd: nvidia-smi || /usr/lib/wsl/lib/nvidia-smi
+  tags: [dex, summary-worker]
+
+- name: "Install ollama"
+  shell: |
+    set -euo pipefail
+    curl -fsSL https://ollama.com/install.sh | sh
+  unless_command: command -v ollama && systemctl is-active --quiet ollama.service
+  as_user: root
+  timeout: 10m
+  tags: [dex, summary-worker, ollama]
+
+- name: "Ensure /etc/systemd/system/ollama.service.d exists"
+  file.write:
+    path: /etc/systemd/system/ollama.service.d
+    state: directory
+  as_user: root
+  tags: [dex, summary-worker, ollama]
+
+- name: "Deploy ollama OLLAMA_NUM_PARALLEL drop-in"
+  file.template:
+    src: ./templates/ollama-num-parallel.conf.j2
+    dest: /etc/systemd/system/ollama.service.d/num-parallel.conf
+  as_user: root
+  tags: [dex, summary-worker, ollama]
+
+- name: "Deploy ollama OLLAMA_KEEP_ALIVE drop-in"
+  file.template:
+    src: ./templates/ollama-keep-alive.conf.j2
+    dest: /etc/systemd/system/ollama.service.d/keep-alive.conf
+  as_user: root
+  tags: [dex, summary-worker, ollama]
+
+- name: "Reload + restart ollama if env drop-ins drifted"
+  shell: |
+    set -euo pipefail
+    systemctl daemon-reload
+    pid=$(systemctl show ollama.service -p MainPID --value 2>/dev/null || echo 0)
+    cur=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null || true)
+    drift=0
+    for want in \
+      "OLLAMA_NUM_PARALLEL={{ dex_ollama_num_parallel }}" \
+      "OLLAMA_KEEP_ALIVE={{ dex_ollama_keep_alive }}"; do
+      printf '%s\n' "$cur" | grep -qx "$want" || drift=1
+    done
+    [ "$drift" -eq 1 ] && systemctl restart ollama.service || true
+  as_user: root
+  changed_when: false
+  tags: [dex, summary-worker, ollama]
+
+# Pull the distinct model files for each tier. The unless_command de-dupes
+# when multiple tier vars share the same model name (e.g. chunk + file at 3b,
+# package + repo at 14b) — same model name = same ollama blob, no re-download.
+- name: "Pull base summary model"
+  shell: ollama pull {{ dex_summary_model }}
+  unless_command: |
+    [ -z "{{ dex_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_summary_model }}'
+  timeout: 30m
+  tags: [dex, summary-worker]
+
+- name: "Pull chunk summary model"
+  shell: ollama pull {{ dex_chunk_summary_model }}
+  unless_command: |
+    [ -z "{{ dex_chunk_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_chunk_summary_model }}'
+  timeout: 20m
+  tags: [dex, summary-worker]
+
+- name: "Pull file summary model"
+  shell: ollama pull {{ dex_file_summary_model }}
+  unless_command: |
+    [ -z "{{ dex_file_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_file_summary_model }}'
+  timeout: 30m
+  tags: [dex, summary-worker]
+
+- name: "Pull package summary model"
+  shell: ollama pull {{ dex_package_summary_model }}
+  unless_command: |
+    [ -z "{{ dex_package_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_package_summary_model }}'
+  timeout: 30m
+  tags: [dex, summary-worker]
+
+- name: "Pull repo summary model"
+  shell: ollama pull {{ dex_repo_summary_model }}
+  unless_command: |
+    [ -z "{{ dex_repo_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_repo_summary_model }}'
+  timeout: 30m
+  tags: [dex, summary-worker]
+
+- name: "Wait for summary endpoint to become ready"
+  # Probe with the base summary model — it's always pulled and smaller than
+  # the package/repo tier, so first-request VRAM load is fast.
+  wait.http:
+    url: "http://127.0.0.1:11434/v1/chat/completions"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: '{"model":"{{ dex_summary_model }}","messages":[{"role":"user","content":"ping"}],"max_tokens":1}'
+    status: [200]
+    timeout: 10m
+    poll_interval: 5s
+  tags: [dex, summary-worker, verify]
