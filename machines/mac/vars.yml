@@ -8,3 +8,5 @@ computer_name: mac
 # component automatically writes the Host main_pc-wsl alias into
 # ~/.ssh/config (using dex_remote_ip/port/user from shared/variables.yml)
 # so the tunnel resolves without any manual prerequisite.
+
+dex_embed_model: "nomic-embed-text:latest"
