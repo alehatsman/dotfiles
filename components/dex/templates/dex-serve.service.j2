@@ -34,6 +34,25 @@ Environment=DEX_POWER_SAVE={{ dex_power_save }}
 # Yield-to-foreground window: serve's drainer skips a tick if a query ran
 # within this window (dex #17). Empty = off.
 Environment=DEX_SUMMARIZE_YIELD={{ dex_summarize_yield }}
+# Summary-offload block — mirrors the MCP registration (components/dex/index.yml).
+# Without it, serve's background drainer has no DEX_SUMMARY_* config and falls
+# back to DEX_CHAT_MODEL (the 32b on the local GPU) for every per-chunk/file/
+# package/repo summary, at default concurrency — slow, and contending with the
+# foreground ask path on the same card. On main_pc DEX_SUMMARY_URL points at
+# mini_pc's 5080 via the summary tunnel (dex_summary_port=11435); on a
+# self-contained server box it stays loopback (11434). Gated on dex_summary_port
+# being non-empty, exactly like the MCP path. (dotfiles #30)
+{% if dex_summary_port %}Environment=DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
+Environment=DEX_SUMMARY_MODEL={{ dex_summary_model }}
+{% endif %}# Per-tier model ladder. Empty = inherit DEX_SUMMARY_MODEL, so only hosts that
+# set the overrides (main_pc's 3b/7b/14b) route the heavier tiers through bigger
+# models; the rest are unaffected.
+{% if dex_chunk_summary_model %}Environment=DEX_CHUNK_SUMMARY_MODEL={{ dex_chunk_summary_model }}
+{% endif %}{% if dex_file_summary_model %}Environment=DEX_FILE_SUMMARY_MODEL={{ dex_file_summary_model }}
+{% endif %}{% if dex_package_summary_model %}Environment=DEX_PACKAGE_SUMMARY_MODEL={{ dex_package_summary_model }}
+{% endif %}{% if dex_repo_summary_model %}Environment=DEX_REPO_SUMMARY_MODEL={{ dex_repo_summary_model }}
+{% endif %}Environment=DEX_SUMMARY_CONCURRENCY={{ dex_summary_concurrency }}
+Environment=DEX_CHUNK_SUMMARY_MIN_LINES={{ dex_chunk_summary_min_lines }}
 # DEX_SERVE_PROJECTS (space-separated roots) comes from an EnvironmentFile
 # written by index.yml — NOT templated here, because file.template renders
 # single-pass and won't expand the {{ username }} nested inside
