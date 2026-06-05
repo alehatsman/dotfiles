@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# dex-summary-mode {steady|burst|status} — flip the dex summary router mode.
+#
+#   burst   summaries for the chunk tier are lent to this box's local GPU
+#           (the 5090) while the heavier tiers stay on the remote worker (5080).
+#           Use to push summary coverage to 100% across both GPUs after a big
+#           reindex.
+#   steady  all summaries go back to the remote worker. Because this box's
+#           ollama runs OLLAMA_KEEP_ALIVE=-1 (warm pin), a model lent during
+#           burst stays resident until explicitly stopped — so steady also
+#           `ollama stop`s the lent models to give the 32b ask path its
+#           headroom back.
+#   status  print the current mode.
+#
+# Deployed by components/dex/index.yml — do not edit by hand. dotfiles #32.
+set -euo pipefail
+
+MODE_FILE="${DEX_ROUTER_MODE_FILE:-$HOME/.config/dex/summary-router.mode}"
+LOCAL_MODELS="{{ dex_summary_router_local_models }}"
+
+case "${1:-status}" in
+  burst)
+    mkdir -p "$(dirname "$MODE_FILE")"
+    echo burst > "$MODE_FILE"
+    echo "summary router → burst (chunk tier → local GPU: ${LOCAL_MODELS})"
+    ;;
+  steady)
+    mkdir -p "$(dirname "$MODE_FILE")"
+    echo steady > "$MODE_FILE"
+    if command -v ollama >/dev/null 2>&1; then
+      IFS=',' read -ra _models <<< "$LOCAL_MODELS"
+      for _m in "${_models[@]}"; do
+        _m="$(echo "$_m" | xargs)"   # trim whitespace
+        [ -n "$_m" ] && ollama stop "$_m" >/dev/null 2>&1 || true
+      done
+    fi
+    echo "summary router → steady (all summaries → remote; lent models stopped)"
+    ;;
+  status|"")
+    echo "mode: $(cat "$MODE_FILE" 2>/dev/null || echo steady)  (file: $MODE_FILE)"
+    ;;
+  *)
+    echo "usage: dex-summary-mode {steady|burst|status}" >&2
+    exit 2
+    ;;
+esac
