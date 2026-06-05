@@ -69,30 +69,9 @@ fi
 
 export SSH_KEY_PATH=~/.ssh/rsa_id
 
-# dex — point ad-hoc CLI invocations at the same endpoint + model
-# that the MCP registration (components/dex/index.yml) and watch
-# units (dex-watch@.service.j2) use. Naked `dex status` /
-# `dex index` would otherwise fall back to the binary's compiled
-# defaults (8082 + Qwen/Qwen3-Embedding-4B), which don't match the
-# ollama deploy.
-export DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
-export DEX_EMBED_MODEL={{ dex_embed_model }}
-export DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
-export DEX_CHAT_MODEL={{ dex_chat_model }}
-export DEX_ASK_MODEL={{ dex_ask_model }}
-export DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
-export DEX_SUMMARY_MODEL={{ dex_summary_model }}
-export DEX_COMPRESS_URL=http://127.0.0.1:{{ dex_compress_port }}
-export DEX_COMPRESS_MODEL={{ dex_compress_model }}
-{% if dex_draft_port %}
-export DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
-export DEX_DRAFT_MODEL={{ dex_draft_model }}
-{% endif %}
-export DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
-export DEX_RERANK_STYLE={{ dex_rerank_style }}
-export DEX_RERANK_MODEL={{ dex_rerank_model }}
-export DEX_RERANK_POOL={{ dex_rerank_pool }}
-export DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
+# dex — the DEX_* client exports moved to ~/.zshenv (templates/.zshenv.j2) so
+# non-interactive shells (scripts, cron, agent tool-shells) get them too,
+# matching serve/MCP regardless of shell type (dotfiles #33). Nothing here.
 
 # moongit — agent.env (mooncake-seeded) exports MOONGIT_SERVER +
 # MOONGIT_DATA_DIR (and a baseline MOONGIT_TOKEN for ad-hoc interactive
