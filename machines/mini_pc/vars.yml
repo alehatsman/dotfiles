@@ -35,3 +35,5 @@ windows_agentd_port: "7879"
 #   mini_pc_server.yml (+ gpu-server profile) — dex_role=server; runs
 #                      ollama + rerank on the local RTX 5080 (16 GB VRAM).
 # See machines/mini_pc/profiles/gpu-server.yml for the 5080 VRAM budget.
+# moongit lives on main_pc (192.168.50.1); override the default localhost URL.
+dex_src_url: "http://192.168.50.1:8080/alehatsman/dex.git"
