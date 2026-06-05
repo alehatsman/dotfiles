@@ -71,13 +71,24 @@ dex_repo_summary_model: "qwen2.5-coder:14b"
 # overwhelming the tunnel. Raise if monitoring shows mini_pc GPU idle.
 dex_summary_concurrency: "4"
 
-# Route DEX_SUMMARY_URL to mini_pc's ollama via SSH tunnel on port 11435.
-# Must match dex_summary_local_port so DEX_SUMMARY_URL=http://127.0.0.1:11435.
-dex_summary_port: "11435"
+# Route DEX_SUMMARY_URL at the summary router (dotfiles #32), not directly at
+# the tunnel. The router sits in front and fans summary chat calls across both
+# GPUs: steady (default) → tunnel → mini_pc 5080 (identical to pointing here
+# straight at 11435); burst → chunk tier to the local 5090, heavier tiers to
+# 5080. So this must equal dex_summary_router_port (11436) — kept literal here
+# rather than a nested {{ }} ref since mooncake resolves vars single-pass — and
+# the router's REMOTE upstream is dex_summary_local_port (11435, the tunnel).
+dex_summary_port: "11436"
 
-# Summary worker: mini_pc's 5080 handles all background summarization.
+# Enable the summary router on this box (it has both a local GPU and a remote
+# summary worker, so it's the only host where fan-out makes sense).
+# Flip burst/steady with `dex-summary-mode`.
+dex_summary_router: "1"
+
+# Summary worker: mini_pc's 5080 handles steady-state background summarization.
 # dex-summary-tunnel.service (deployed by the dex component when this is
-# non-empty) maintains:  127.0.0.1:11435 → mini_pc-wsl:127.0.0.1:11434
+# non-empty) maintains:  127.0.0.1:11435 → mini_pc-wsl:127.0.0.1:11434  — which
+# is the router's REMOTE upstream.
 # Set dex_summary_host_ip to mini_pc's actual Windows host LAN IP.
 dex_summary_host: "mini_pc-wsl"
 dex_summary_host_ip: "192.168.50.2"

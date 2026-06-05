@@ -491,6 +491,89 @@
   when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
   tags: [dex, summary-tunnel]
 
+# ───────────────── SUMMARY ROUTER (server; dex_summary_router set) ──────────
+#
+# A model-name routing reverse proxy in front of DEX_SUMMARY_URL so the single
+# dex drainer can fan summary chat calls across both GPUs (dotfiles #32). The
+# host points dex_summary_port at the router (DEX_SUMMARY_URL → router); the
+# router's REMOTE upstream is the summary tunnel (5080) and LOCAL is this box's
+# ollama (5090). Steady mode is pure passthrough to REMOTE, so a brief
+# apply-time window where serve points at the router before it's up only
+# defers background summaries (the drainer retries; the queue is durable).
+
+- name: "Ensure summary-router source dir exists"
+  file.write:
+    path: "{{ dex_summary_router_src_dir }}"
+    state: directory
+  when: dex_summary_router != '' and os == 'linux'
+  tags: [dex, summary-router]
+
+- name: "Ship summary-router source (main.go)"
+  file.copy:
+    src: ./router/main.go
+    dest: "{{ dex_summary_router_src_dir }}/main.go"
+  when: dex_summary_router != '' and os == 'linux'
+  tags: [dex, summary-router]
+
+- name: "Ship summary-router source (go.mod)"
+  file.copy:
+    src: ./router/go.mod
+    dest: "{{ dex_summary_router_src_dir }}/go.mod"
+  when: dex_summary_router != '' and os == 'linux'
+  tags: [dex, summary-router]
+
+# Stdlib-only — plain `go build`, no -tags sqlite_fts5 (that's dex's CGO
+# requirement, not the router's). Rebuild gated on the combined source sha so
+# a fleet apply only rebuilds when main.go/go.mod actually change. Vars are
+# unquoted in the heredoc so bash expands the tilde (repo convention).
+- name: "Build + install dex-summary-router"
+  shell: |
+    set -euo pipefail
+    cd {{ dex_summary_router_src_dir }}
+    go build -o {{ dex_summary_router_bin }} .
+    cat {{ dex_summary_router_src_dir }}/main.go {{ dex_summary_router_src_dir }}/go.mod \
+      | sha256sum | awk '{print $1}' > {{ dex_summary_router_sha }}
+  unless_command: |
+    test -x {{ dex_summary_router_bin }} && \
+      [ "$(cat {{ dex_summary_router_sha }} 2>/dev/null)" = \
+        "$(cat {{ dex_summary_router_src_dir }}/main.go {{ dex_summary_router_src_dir }}/go.mod | sha256sum | awk '{print $1}')" ]
+  when: dex_summary_router != '' and os == 'linux'
+  tags: [dex, summary-router, build]
+
+- name: "Install dex-summary-mode helper"
+  file.template:
+    src: ./templates/dex-summary-mode.sh.j2
+    dest: "~/.local/bin/dex-summary-mode"
+  when: dex_summary_router != '' and os == 'linux'
+  tags: [dex, summary-router]
+
+- name: "Seed default summary-router mode (steady) + make helper executable"
+  shell: |
+    set -euo pipefail
+    mkdir -p ~/.config/dex
+    [ -f ~/.config/dex/summary-router.mode ] || echo steady > ~/.config/dex/summary-router.mode
+    chmod 0755 ~/.local/bin/dex-summary-mode
+  when: dex_summary_router != '' and os == 'linux'
+  changed_when: false
+  tags: [dex, summary-router]
+
+- name: "Deploy dex-summary-router user systemd unit"
+  file.template:
+    src: ./templates/dex-summary-router.service.j2
+    dest: "~/.config/systemd/user/dex-summary-router.service"
+  when: dex_summary_router != '' and os == 'linux'
+  tags: [dex, summary-router]
+
+- name: "Enable + (re)start dex-summary-router.service"
+  shell: |
+    set -euo pipefail
+    systemctl --user daemon-reload
+    systemctl --user enable dex-summary-router.service
+    systemctl --user restart dex-summary-router.service
+  when: dex_summary_router != '' and os == 'linux'
+  changed_when: false
+  tags: [dex, summary-router]
+
 # ───────────────── SERVER (main_pc) ────────────────────────────────────────
 
 - import: ./server.yml

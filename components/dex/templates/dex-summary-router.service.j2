@@ -1,0 +1,37 @@
+# dex-summary-router — model-name routing reverse proxy in front of
+# DEX_SUMMARY_URL. Lets the single dex drainer fan summary chat calls across
+# both GPUs without any dex code change:
+#   steady (default) → REMOTE upstream (the summary tunnel → mini_pc 5080).
+#                      Behaviourally identical to no router in the path.
+#   burst            → the chunk tier (DEX_ROUTER_LOCAL_MODELS) goes to LOCAL
+#                      (this box's ollama / 5090); heavier tiers stay REMOTE.
+# Mode is re-read per request from the mode file, so `dex-summary-mode burst`
+# / `… steady` flip it live with no restart.
+#
+# Managed by components/dex/index.yml — do not edit by hand. dotfiles #32.
+
+[Unit]
+Description=dex summary router (model-name fan-out across GPUs)
+# Wants/After the tunnel because the REMOTE upstream IS the tunnel's local
+# port — harmless when the tunnel unit is absent (systemd ignores missing
+# Wants), and the router's steady path is fail-safe regardless.
+After=network.target dex-summary-tunnel.service
+Wants=dex-summary-tunnel.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# %h is systemd's home specifier (it does NOT expand ~), so the bin path and
+# mode file are written with %h rather than the tilde-form vars.
+Environment=DEX_ROUTER_ADDR=127.0.0.1:{{ dex_summary_router_port }}
+Environment=DEX_ROUTER_LOCAL_URL=http://127.0.0.1:{{ dex_local_port }}
+Environment=DEX_ROUTER_REMOTE_URL=http://127.0.0.1:{{ dex_summary_local_port }}
+Environment=DEX_ROUTER_LOCAL_MODELS={{ dex_summary_router_local_models }}
+Environment=DEX_ROUTER_MODE_FILE=%h/.config/dex/summary-router.mode
+ExecStart=%h/.local/bin/dex-summary-router
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=default.target

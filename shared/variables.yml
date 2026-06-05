@@ -225,6 +225,29 @@ dex_summary_host_user: "aleh"
 # dex_summary_port on that machine so DEX_SUMMARY_URL resolves correctly.
 dex_summary_local_port: "11435"
 
+# Summary router — when dex_summary_router is truthy, the GPU host runs a
+# small model-name-routing reverse proxy (components/dex/router) in front of
+# DEX_SUMMARY_URL so the single dex drainer can fan summary chat calls across
+# BOTH GPUs. The host points dex_summary_port at the router; the router's
+# REMOTE upstream is the summary tunnel (dex_summary_local_port → 5080) and
+# its LOCAL upstream is this box's ollama (dex_local_port → 5090).
+#   steady (default): every call → REMOTE. Identical to no router in the path.
+#   burst:            the chunk tier (dex_summary_router_local_models) → LOCAL,
+#                     heavier tiers → REMOTE. Flip with `dex-summary-mode burst`
+#                     to push coverage to 100% across both GPUs after a reindex;
+#                     `dex-summary-mode steady` flips back and `ollama stop`s the
+#                     lent model to free the warm-pin headroom.
+# Empty = off (default fleet behaviour). dotfiles #32.
+dex_summary_router: ""
+# Loopback port the router listens on (distinct from the tunnel's 11435 and
+# ollama's 11434). When the router is enabled the GPU host sets
+# dex_summary_port to this so DEX_SUMMARY_URL resolves to the router.
+dex_summary_router_port: "11436"
+# Models routed to the LOCAL upstream (this box's GPU) in burst mode,
+# comma-separated. Default: the high-volume chunk tier only — a 3b fits the
+# 5090's warm-pin headroom (~3 GB) without evicting the 32b ask model.
+dex_summary_router_local_models: "qwen2.5-coder:3b"
+
 # Space-separated list of absolute project roots to auto-watch via
 # dex-watch@.service. The apply step enables one user systemd
 # instance per path and disables any orphaned instance no longer in the

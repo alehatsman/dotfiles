@@ -23,3 +23,12 @@ dex_bin_path: "~/.local/bin/dex"
 # dex-ci is FROM moongit-ci-dev, so the dex component is imported AFTER moongit
 # in the machine index to guarantee that base exists first.
 dex_ci_image_sha: "~/.local/share/dex-ci-image.sha"
+
+# Summary router (components/dex/router) — source is shipped from the
+# component into this build dir (file.copy), then `go build` (stdlib only,
+# no fts5/cgo). Rebuild is gated on the source sha so a fleet apply doesn't
+# rebuild every run. Enabled per host via dex_summary_router (shared default
+# off). dotfiles #32.
+dex_summary_router_src_dir: "~/.local/share/dex-summary-router-src"
+dex_summary_router_bin: "~/.local/bin/dex-summary-router"
+dex_summary_router_sha: "~/.local/share/dex-summary-router.sha"
