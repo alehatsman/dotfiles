@@ -79,6 +79,7 @@
       - postgresql-client
       - wl-clipboard
       - watchman
+      - zstd
   as_user: root
   timeout: 20m
   retry:
