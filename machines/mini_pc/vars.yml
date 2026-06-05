@@ -37,3 +37,7 @@ windows_agentd_port: "7879"
 # See machines/mini_pc/profiles/gpu-server.yml for the 5080 VRAM budget.
 # moongit lives on main_pc (192.168.50.1); override the default localhost URL.
 dex_src_url: "http://192.168.50.1:8080/alehatsman/dex.git"
+
+# Server box — never sleep on AC. Disables standby + hibernate so WSL and
+# its daemons (ssh, dex-serve, ollama) stay reachable 24/7.
+windows_prevent_sleep: true

@@ -16,6 +16,11 @@ use_win32yank: false
 # keepalive — more robust LAN reachability where mirrored flaps (dotfiles #16).
 wsl_networking_mode: "mirrored"
 
+# Disable Windows sleep and hibernate on AC power (server/always-on boxes).
+# Set true per-machine in machines/<m>/vars.yml. Default false (laptops keep
+# their power policy).
+windows_prevent_sleep: false
+
 # ─── claude — global system prompt (~/.claude/CLAUDE.md) ──────────────────
 # Source file the claude component deploys as the user-global system prompt.
 # Path is resolved relative to components/claude/. Default is the shared
