@@ -1,0 +1,34 @@
+# ~/.zshenv — sourced by EVERY zsh (interactive, non-interactive, scripts,
+# cron). Environment that must be present regardless of shell type lives here;
+# interactive-only setup (prompt, plugins, aliases) stays in ~/.zshrc.
+# Template-managed by components/zsh — single source of truth is
+# shared/variables.yml. Do not hand-edit.
+
+# Rust/cargo — guarded so a box without rustup doesn't error on every shell.
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# dex — point ad-hoc CLI invocations at the same endpoint + model that the MCP
+# registration (components/dex/index.yml) and the watch/serve units use. Lives
+# in .zshenv (not .zshrc) so NON-interactive shells — scripts, cron, agent
+# tool-shells, `zsh -c` — get them too; otherwise a bare `dex` there falls back
+# to the binary's compiled defaults (8082 + Qwen/Qwen3-Embedding-4B, 2560-dim),
+# which mismatch the nomic-built index (768-dim) and fail with a dim error
+# (dotfiles #33).
+export DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
+export DEX_EMBED_MODEL={{ dex_embed_model }}
+export DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
+export DEX_CHAT_MODEL={{ dex_chat_model }}
+export DEX_ASK_MODEL={{ dex_ask_model }}
+export DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
+export DEX_SUMMARY_MODEL={{ dex_summary_model }}
+export DEX_COMPRESS_URL=http://127.0.0.1:{{ dex_compress_port }}
+export DEX_COMPRESS_MODEL={{ dex_compress_model }}
+{% if dex_draft_port %}
+export DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
+export DEX_DRAFT_MODEL={{ dex_draft_model }}
+{% endif %}
+export DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
+export DEX_RERANK_STYLE={{ dex_rerank_style }}
+export DEX_RERANK_MODEL={{ dex_rerank_model }}
+export DEX_RERANK_POOL={{ dex_rerank_pool }}
+export DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}

@@ -31,6 +31,15 @@
 - vars.load: ./vars/macos_{{arch}}.yml
   when: os == "darwin"
 
+- name: Deploy .zshenv
+  # Sourced by ALL zsh (incl. non-interactive scripts/cron/agent shells) —
+  # holds env that must apply regardless of shell type (cargo, dex client
+  # vars). See templates/.zshenv.j2 (dotfiles #33).
+  file.template:
+    src: ./templates/.zshenv.j2
+    dest: ~/.zshenv
+  tags: [zsh, config]
+
 - name: Deploy .zshrc
   file.template:
     src: ./templates/.zshrc.j2
