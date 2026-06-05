@@ -84,8 +84,10 @@ export DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
 export DEX_SUMMARY_MODEL={{ dex_summary_model }}
 export DEX_COMPRESS_URL=http://127.0.0.1:{{ dex_compress_port }}
 export DEX_COMPRESS_MODEL={{ dex_compress_model }}
+{% if dex_draft_port %}
 export DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
 export DEX_DRAFT_MODEL={{ dex_draft_model }}
+{% endif %}
 export DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
 export DEX_RERANK_STYLE={{ dex_rerank_style }}
 export DEX_RERANK_MODEL={{ dex_rerank_model }}
