@@ -96,6 +96,11 @@ dex_rerank_style: "cohere"
 # Rerank model name forwarded to the backend.
 dex_rerank_model: "BAAI/bge-reranker-v2-m3"
 
+# Pass --gpus all to the Infinity rerank container. Set "" to run CPU-only
+# (acceptable for post-retrieval reranking of 10–50 candidates; frees GPU
+# VRAM for the embed model). Default "1" = GPU on all hosts unless overridden.
+dex_rerank_gpu: "1"
+
 # Candidate-pool cap fed to the reranker per query. Larger = better recall,
 # slower rerank. Binary clamps to [1, 100] and falls back to 40 on parse error.
 dex_rerank_pool: "40"

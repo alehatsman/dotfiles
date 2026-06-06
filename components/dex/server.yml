@@ -247,7 +247,25 @@
     runtime: docker
   tags: [dex, server, rerank]
 
-- name: "Run Infinity rerank container"
+# Remove the container when GPU mode has changed so the subsequent container
+# step recreates it with the correct --gpus flag. No-op when mode matches or
+# the container doesn't exist yet.
+- name: "Remove dex-rerank container if GPU mode changed"
+  # docker inspect --format uses Go template {{ }} which conflicts with Jinja2.
+  # Escape with {{ '{{' }} / {{ '}}' }} so mooncake passes the literal braces
+  # to the shell. DeviceRequests length > 0 means --gpus was set on creation.
+  shell: |
+    set -euo pipefail
+    docker inspect dex-rerank > /dev/null 2>&1 || exit 0
+    has=$(docker inspect dex-rerank --format '{{ '{{' }}len .HostConfig.DeviceRequests{{ '}}' }}' 2>/dev/null || echo 0)
+    want="{{ dex_rerank_gpu }}"
+    if [ -n "$want" ] && [ "$has" -eq 0 ]; then docker rm -f dex-rerank; fi
+    if [ -z "$want" ] && [ "$has" -gt 0 ]; then docker rm -f dex-rerank; fi
+  changed_when: false
+  tags: [dex, server, rerank]
+
+# GPU variant — skipped when dex_rerank_gpu is empty ([ -z '' ] succeeds).
+- name: "Run Infinity rerank container (GPU)"
   env:
     DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
   container:
@@ -271,6 +289,34 @@
       - "7997"
       - --engine
       - torch
+  unless_command: "[ -z '{{ dex_rerank_gpu }}' ]"
+  tags: [dex, server, rerank]
+
+# CPU variant — skipped when dex_rerank_gpu is set ([ -n '1' ] succeeds).
+- name: "Run Infinity rerank container (CPU)"
+  env:
+    DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
+  container:
+    name: dex-rerank
+    image: michaelf34/infinity:latest
+    runtime: docker
+    state: running
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ dex_rerank_remote_port }}:7997"
+    volumes:
+      - "{{ env.HOME }}/.cache/huggingface:/app/.cache"
+    env:
+      HF_HOME: /app/.cache
+    command:
+      - v2
+      - --model-id
+      - "{{ dex_rerank_model }}"
+      - --port
+      - "7997"
+      - --engine
+      - torch
+  unless_command: "[ -n '{{ dex_rerank_gpu }}' ]"
   tags: [dex, server, rerank]
 
 - name: "Wait for the rerank endpoint to become ready"
