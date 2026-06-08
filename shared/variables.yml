@@ -44,6 +44,15 @@ palette_variant: monokai_dark
 # component import from their machines/<m>/index.yml.
 dex_role: client
 
+# Source URL for the dex git repo. The component clones this into
+# dex_src_dir (components/dex/variables.yml) and builds from it.
+# Default is the moongit host loopback (main_pc: moongitd on :8080).
+# Non-server machines override this in machines/<m>/vars.yml to the
+# moongit host's LAN IP (e.g. mini_pc → 192.168.50.1:8080).
+# Lives here — not in components/dex/variables.yml — so machine overrides
+# win (component vars.load runs after machine vars and would clobber).
+dex_src_url: "http://127.0.0.1:8080/alehatsman/dex.git"
+
 # Embedding model. Code-retrieval quality vs VRAM trade-off documented in
 # components/dex/README.md. Ollama-style ref (vs HF-style for vLLM).
 dex_embed_model: "nomic-embed-text:latest"
