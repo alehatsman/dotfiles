@@ -103,6 +103,19 @@
   unless_command: "! lspci 2>/dev/null | grep -qi nvidia"
   timeout: 10m
 
+# WSL injects /usr/lib/wsl/lib (nvidia-smi, libcuda.so) only for interactive
+# login shells. Non-interactive SSH sessions, systemd units, and mooncake
+# agentd all skip that injection — bare `nvidia-smi` returns 127, causing
+# agents to incorrectly report no GPU driver. Adding the path to
+# /etc/environment makes it visible to all processes unconditionally.
+- name: Add /usr/lib/wsl/lib to PATH in /etc/environment (NVIDIA GPU)
+  shell: |
+    set -euo pipefail
+    sed -i 's|PATH="\(.*\)"|PATH="\1:/usr/lib/wsl/lib"|' /etc/environment
+  as_user: root
+  unless_command: "grep -q '/usr/lib/wsl/lib' /etc/environment || ! lspci 2>/dev/null | grep -qi nvidia"
+  tags: [wsl, gpu]
+
 # CUDA stays shell until mooncake's pkg.repo apt driver gains the
 # .deb-keyring-install pattern (the cuda-keyring_1.1-1_all.deb route
 # isn't a normal source-list-with-gpg-key flow — it's a single .deb
