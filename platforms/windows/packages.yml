@@ -81,6 +81,7 @@
       - watchman
       - zstd
       - bat
+      - fzf
   as_user: root
   timeout: 20m
   retry:
