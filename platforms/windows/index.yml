@@ -113,7 +113,7 @@
     set -euo pipefail
     sed -i 's|PATH="\(.*\)"|PATH="\1:/usr/lib/wsl/lib"|' /etc/environment
   as_user: root
-  unless_command: "grep -q '/usr/lib/wsl/lib' /etc/environment || ! lspci 2>/dev/null | grep -qi nvidia"
+  unless_command: "grep -q '/usr/lib/wsl/lib' /etc/environment || [ ! -f /usr/lib/wsl/lib/nvidia-smi ]"
   tags: [wsl, gpu]
 
 # CUDA stays shell until mooncake's pkg.repo apt driver gains the
