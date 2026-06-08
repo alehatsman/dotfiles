@@ -80,6 +80,7 @@
       - wl-clipboard
       - watchman
       - zstd
+      - fzf
   as_user: root
   timeout: 20m
   retry:
