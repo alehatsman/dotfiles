@@ -252,6 +252,10 @@ dex_summary_local_port: "11435"
 #                     lent model to free the warm-pin headroom.
 # Empty = off (default fleet behaviour). dotfiles #32.
 dex_summary_router: ""
+# Set on machines that serve as a remote summary worker for another host's
+# summary router tunnel. Causes the dex component to pull dex_summary_model
+# regardless of dex_role (client machines don't run server.yml model pulls).
+dex_summary_worker: ""
 # Loopback port the router listens on (distinct from the tunnel's 11435 and
 # ollama's 11434). When the router is enabled the GPU host sets
 # dex_summary_port to this so DEX_SUMMARY_URL resolves to the router.

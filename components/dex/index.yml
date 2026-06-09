@@ -198,6 +198,10 @@ props:
     type: string
     default: ""
     description: Space-separated models to stop in steady mode. Empty = none.
+  dex_summary_worker:
+    type: string
+    default: ""
+    description: "When non-empty: pull dex_summary_model regardless of dex_role. Set on machines that serve as a remote summary worker for another host."
 
 steps:
   - vars.load: ./variables.yml
@@ -252,6 +256,7 @@ steps:
       dex_summary_router_local_models: "{{ props.dex_summary_router_local_models }}"
       dex_summary_router_flood_evict: "{{ props.dex_summary_router_flood_evict }}"
       dex_summary_router_steady_stop: "{{ props.dex_summary_router_steady_stop }}"
+      dex_summary_worker: "{{ props.dex_summary_worker }}"
 
   # ───────────────── CLIENT (and server — server is a superset) ──────────────
 
@@ -620,6 +625,21 @@ steps:
       done
     when: os == 'linux' and dex_role != 'server'
     tags: [dex, watch]
+
+  # ───────────────── SUMMARY WORKER (client acting as remote summary target) ──
+  # When dex_summary_worker is set the machine runs a local ollama and serves
+  # as the SSH tunnel target for another host's summary router. Pull the summary
+  # model here so it's ready before the first drain request arrives.
+  # Runs regardless of dex_role so client machines (e.g. mini_pc) get the pull
+  # without being promoted to full server.
+
+  - name: "Pull summary model (summary worker)"
+    shell: ollama pull {{ dex_summary_model }}
+    unless_command: |
+      [ -z "{{ dex_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_summary_model }}'
+    timeout: 30m
+    when: dex_summary_worker != '' and os == 'linux'
+    tags: [dex, summary-worker]
 
   # ───────────────── SERVE (HTTP query API for moongit Intel) ─────────────────
   # A server-side `dex serve` daemon on loopback, consumed by moongit's Intel
