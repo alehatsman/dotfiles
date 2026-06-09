@@ -8,27 +8,35 @@
 #
 # mooncake itself isn't provisioned here; this is purely the CI-image refresh.
 
-- vars.load: ./variables.yml
+props:
+  mooncake_ci_image_sha:
+    type: string
+    default: "~/.local/share/mooncake-ci-image.sha"
+    description: >
+      Sidecar file recording the (mooncake HEAD + moongit-ci-dev base image id)
+      the mooncake-ci:latest image was last built from. Rebuild is skipped when
+      the sidecar matches both, so the image tracks its base without silent rot.
 
-# ───────────────── CI CONTAINER IMAGE (sha-gated) ───────────────────────────
-# Rebuild via mooncake's own ci-image task, gated on (mooncake HEAD + the
-# moongit-ci-dev base image id) so it refreshes when either the repo's
-# ci/Dockerfile or its base (carrying the bundled mooncake) changes — no silent
-# rot. Built locally so the runner never pulls (pulls fail here — dotfiles#8).
-#
-# Force a rebuild:
-#   rm {{ mooncake_ci_image_sha }} && mooncake apply -c ./main_pc.yml -t ci-images
-- name: "Build mooncake CI container image (refresh when mooncake or its base move)"
-  shell: |
-    set -euo pipefail
-    command -v docker >/dev/null 2>&1 || { echo "docker not found — skipping mooncake CI image build"; exit 0; }
-    cd {{ mooncake_src_dir }}
-    mooncake task ci-image
-    mkdir -p "$(dirname {{ mooncake_ci_image_sha }})"
-    { git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; } > {{ mooncake_ci_image_sha }}
-  unless_command: |
-    docker image inspect mooncake-ci:latest >/dev/null 2>&1 && \
-    [ "$(cat {{ mooncake_ci_image_sha }} 2>/dev/null)" = "$({ git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; })" ]
-  when: os == "linux"
-  timeout: 15m
-  tags: [mooncake, ci-images]
+steps:
+  # ───────────────── CI CONTAINER IMAGE (sha-gated) ───────────────────────────
+  # Rebuild via mooncake's own ci-image task, gated on (mooncake HEAD + the
+  # moongit-ci-dev base image id) so it refreshes when either the repo's
+  # ci/Dockerfile or its base (carrying the bundled mooncake) changes — no silent
+  # rot. Built locally so the runner never pulls (pulls fail here — dotfiles#8).
+  #
+  # Force a rebuild:
+  #   rm {{ props.mooncake_ci_image_sha }} && mooncake apply -c ./main_pc.yml -t ci-images
+  - name: "Build mooncake CI container image (refresh when mooncake or its base move)"
+    shell: |
+      set -euo pipefail
+      command -v docker >/dev/null 2>&1 || { echo "docker not found — skipping mooncake CI image build"; exit 0; }
+      cd {{ mooncake_src_dir }}
+      mooncake task ci-image
+      mkdir -p "$(dirname {{ props.mooncake_ci_image_sha }})"
+      { git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; } > {{ props.mooncake_ci_image_sha }}
+    unless_command: |
+      docker image inspect mooncake-ci:latest >/dev/null 2>&1 && \
+      [ "$(cat {{ props.mooncake_ci_image_sha }} 2>/dev/null)" = "$({ git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; })" ]
+    when: os == "linux"
+    timeout: 15m
+    tags: [mooncake, ci-images]

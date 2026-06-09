@@ -10,3 +10,4 @@ computer_name: mac
 # so the tunnel resolves without any manual prerequisite.
 
 dex_embed_model: "nomic-embed-text:latest"
+dex_chat_model: "qwen2.5-coder:32b"

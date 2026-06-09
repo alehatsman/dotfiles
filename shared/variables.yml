@@ -55,7 +55,10 @@ dex_src_url: "http://127.0.0.1:8080/alehatsman/dex.git"
 
 # Embedding model. Code-retrieval quality vs VRAM trade-off documented in
 # components/dex/README.md. Ollama-style ref (vs HF-style for vLLM).
-dex_embed_model: "nomic-embed-text:latest"
+# No default here — every machine sets this in its own vars.yml so that
+# any apply path (agentd, partial tag filter, etc.) renders the right model
+# rather than silently falling through to a stale shared value.
+# dex_embed_model: "nomic-embed-text:latest"   ← set per machine
 
 # Chat-completion model powering dex's `generate_code` MCP tool +
 # `dex generate` CLI. Served by the same ollama instance as the
@@ -63,7 +66,8 @@ dex_embed_model: "nomic-embed-text:latest"
 # 32B Q4_K_M is ~20 GB, comfortably fits alongside the 4B embedder on
 # a 5090 (32 GB VRAM); step down to qwen2.5-coder:14b (~9 GB) or :7b
 # on smaller GPUs.
-dex_chat_model: "qwen2.5-coder:14b"
+# No default here — set per machine (same reason as dex_embed_model above).
+# dex_chat_model: "qwen2.5-coder:14b"          ← set per machine
 
 # Optional second chat model used only by ask_codebase. Plumbing is
 # in place but no local model tested so far (qwen2.5-coder:32b,

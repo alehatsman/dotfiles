@@ -12,10 +12,12 @@
 #             -d '{"plan_path":"<abs>/main_pc.yml",
 #                  "base_dir":"<abs>"}' http://localhost/v1/runs
 #
-# The vars: step below pins machine-identity values so the agentd path
-# (which doesn't accept -v files yet) works even if a caller bypasses
-# main_pc.yml. CLI invocations get the same values via main_pc.yml's
-# vars.load of machines/main_pc/vars.yml.
+# vars.load chain mirrors main_pc.yml so the agentd path (which invokes
+# this file directly) sees the same var context as a CLI apply. Order:
+# shared defaults first, machine overrides second, inline identity block
+# last so is_wsl/wsl_distro/wsl_ssh_port always win regardless of source.
+- vars.load: ../../shared/variables.yml
+- vars.load: ./vars.yml
 
 - vars:
     is_wsl: true
@@ -51,14 +53,34 @@
 - import: ../../components/clojure/index.yml
   tags: [dev, clojure, config]
 
-- import: ../../components/zsh/index.yml
+- name: Use zsh component
+  use: ../../components/zsh/index.yml
+  props:
+    dex_local_port: "{{ dex_local_port }}"
+    dex_embed_model: "{{ dex_embed_model }}"
+    dex_chat_model: "{{ dex_chat_model }}"
+    dex_ask_model: "{{ dex_ask_model }}"
+    dex_summary_port: "{{ dex_summary_port }}"
+    dex_summary_model: "{{ dex_summary_model }}"
+    dex_compress_port: "{{ dex_compress_port }}"
+    dex_compress_model: "{{ dex_compress_model }}"
+    dex_draft_port: "{{ dex_draft_port }}"
+    dex_draft_model: "{{ dex_draft_model }}"
+    dex_rerank_local_port: "{{ dex_rerank_local_port }}"
+    dex_rerank_style: "{{ dex_rerank_style }}"
+    dex_rerank_model: "{{ dex_rerank_model }}"
+    dex_rerank_pool: "{{ dex_rerank_pool }}"
+    dex_rerank_concurrency: "{{ dex_rerank_concurrency }}"
   tags: [core, shell]
 
 
 - import: ../../components/tmux/index.yml
   tags: [tools, tmux]
 
-- import: ../../components/nvim/index.yml
+- name: Use nvim component
+  use: ../../components/nvim/index.yml
+  props:
+    use_win32yank: "true"
   tags: [editor, nvim]
 
 # Private self-hosted git host. Builds from ~/projects/moongit and runs
@@ -67,16 +89,69 @@
 # the moongit-ci-dev CI base image that dex-ci derives FROM (dex#27); the
 # two components are otherwise provisioning-independent (dex clones from
 # GitHub, moongit needs dex only at runtime).
-- import: ../../components/moongit/index.yml
+- name: Use moongit component
+  use: ../../components/moongit/index.yml
+  props:
+    dex_serve_port: "{{ dex_serve_port }}"
   tags: [tools, moongit]
 
 # Semantic-search MCP helper. Embedding endpoint runs on the local 5090;
 # see machines/main_pc/vars.yml for dex_role and watch paths.
-- import: ../../components/dex/index.yml
+- name: Use dex component
+  use: ../../components/dex/index.yml
+  props:
+    dex_role: "{{ dex_role }}"
+    dex_src_url: "{{ dex_src_url }}"
+    dex_local_port: "{{ dex_local_port }}"
+    dex_embed_model: "{{ dex_embed_model }}"
+    dex_embed_batch: "{{ dex_embed_batch }}"
+    dex_chat_model: "{{ dex_chat_model }}"
+    dex_ask_model: "{{ dex_ask_model }}"
+    dex_rerank_local_port: "{{ dex_rerank_local_port }}"
+    dex_rerank_remote_port: "{{ dex_rerank_remote_port }}"
+    dex_rerank_style: "{{ dex_rerank_style }}"
+    dex_rerank_model: "{{ dex_rerank_model }}"
+    dex_rerank_pool: "{{ dex_rerank_pool }}"
+    dex_rerank_gpu: "{{ dex_rerank_gpu }}"
+    dex_rerank_concurrency: "{{ dex_rerank_concurrency }}"
+    dex_compress_port: "{{ dex_compress_port }}"
+    dex_compress_model: "{{ dex_compress_model }}"
+    dex_draft_port: "{{ dex_draft_port }}"
+    dex_draft_model: "{{ dex_draft_model }}"
+    dex_summary_port: "{{ dex_summary_port }}"
+    dex_summary_model: "{{ dex_summary_model }}"
+    dex_chunk_summary_model: "{{ dex_chunk_summary_model }}"
+    dex_file_summary_model: "{{ dex_file_summary_model }}"
+    dex_package_summary_model: "{{ dex_package_summary_model }}"
+    dex_repo_summary_model: "{{ dex_repo_summary_model }}"
+    dex_summary_concurrency: "{{ dex_summary_concurrency }}"
+    dex_chunk_summary_min_lines: "{{ dex_chunk_summary_min_lines }}"
+    dex_power_save: "{{ dex_power_save }}"
+    dex_summarize_yield: "{{ dex_summarize_yield }}"
+    dex_remote_host: "{{ dex_remote_host }}"
+    dex_remote_ip: "{{ dex_remote_ip }}"
+    dex_remote_port: "{{ dex_remote_port }}"
+    dex_remote_ssh_port: "{{ dex_remote_ssh_port }}"
+    dex_remote_user: "{{ dex_remote_user }}"
+    dex_serve_port: "{{ dex_serve_port }}"
+    dex_watch_paths: "{{ dex_watch_paths }}"
+    dex_ollama_keep_alive: "{{ dex_ollama_keep_alive }}"
+    dex_ollama_num_parallel: "{{ dex_ollama_num_parallel }}"
+    dex_summary_host: "{{ dex_summary_host }}"
+    dex_summary_host_ip: "{{ dex_summary_host_ip }}"
+    dex_summary_host_ssh_port: "{{ dex_summary_host_ssh_port }}"
+    dex_summary_host_user: "{{ dex_summary_host_user }}"
+    dex_summary_local_port: "{{ dex_summary_local_port }}"
+    dex_summary_router: "{{ dex_summary_router }}"
+    dex_summary_router_port: "{{ dex_summary_router_port }}"
+    dex_summary_router_local_models: "{{ dex_summary_router_local_models }}"
+    dex_summary_router_flood_evict: "{{ dex_summary_router_flood_evict }}"
+    dex_summary_router_steady_stop: "{{ dex_summary_router_steady_stop }}"
   tags: [tools, dex]
 
 # mooncake CI image only (mooncake-ci:latest = moongit-ci-dev + gomarkdoc).
 # Imported after moongit so its base image exists; this box runs mooncake's
 # server-side CI. mooncake itself isn't provisioned here. See mooncake#100.
-- import: ../../components/mooncake/index.yml
+- name: Use mooncake component
+  use: ../../components/mooncake/index.yml
   tags: [tools, mooncake]
