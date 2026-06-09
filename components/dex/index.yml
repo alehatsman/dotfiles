@@ -198,6 +198,14 @@ props:
     type: string
     default: ""
     description: Space-separated models to stop in steady mode. Empty = none.
+  dex_summary_flood_concurrency:
+    type: string
+    default: "8"
+    description: DEX_SUMMARY_CONCURRENCY applied while flood mode is active.
+  dex_summary_flood_batch:
+    type: string
+    default: "100"
+    description: DEX_SUMMARIZE_BATCH applied while flood mode is active.
   dex_summary_worker:
     type: string
     default: ""
@@ -256,6 +264,8 @@ steps:
       dex_summary_router_local_models: "{{ props.dex_summary_router_local_models }}"
       dex_summary_router_flood_evict: "{{ props.dex_summary_router_flood_evict }}"
       dex_summary_router_steady_stop: "{{ props.dex_summary_router_steady_stop }}"
+      dex_summary_flood_concurrency: "{{ props.dex_summary_flood_concurrency }}"
+      dex_summary_flood_batch: "{{ props.dex_summary_flood_batch }}"
       dex_summary_worker: "{{ props.dex_summary_worker }}"
 
   # ───────────────── CLIENT (and server — server is a superset) ──────────────
