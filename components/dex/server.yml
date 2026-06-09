@@ -269,26 +269,30 @@
 
 # Remove the existing container when either the backend type (Infinity ↔ vLLM)
 # or the GPU mode has changed — the subsequent run step recreates it correctly.
-# docker inspect --format uses Go template {{ }} which conflicts with Jinja2;
-# escape with {{ '{{' }} / {{ '}}' }} so mooncake passes literal braces.
+# Avoids Go template {{ }} syntax entirely (docker inspect --format '{{...}}'
+# conflicts with Jinja2 when '.' immediately follows '}}'); uses grep on the
+# raw JSON output instead.
 - name: "Remove dex-rerank container if backend type or GPU mode changed"
   shell: |
     set -euo pipefail
     docker inspect dex-rerank > /dev/null 2>&1 || exit 0
-    img=$(docker inspect dex-rerank --format '{{ '{{' }}.Config.Image{{ '}}' }}' 2>/dev/null || echo "")
+    inspect=$(docker inspect dex-rerank 2>/dev/null)
     style="{{ dex_rerank_style }}"
-    # Backend type changed (Infinity ↔ vLLM)?
-    if [ "$style" = "chat-vllm" ] && ! echo "$img" | grep -q vllm; then
+    # Backend type check: grep image name from raw JSON.
+    is_vllm=0
+    echo "$inspect" | grep -qi '"Image".*vllm' && is_vllm=1 || true
+    if [ "$style" = "chat-vllm" ] && [ "$is_vllm" -eq 0 ]; then
       docker rm -f dex-rerank; exit 0
     fi
-    if [ "$style" != "chat-vllm" ] && echo "$img" | grep -q vllm; then
+    if [ "$style" != "chat-vllm" ] && [ "$is_vllm" -eq 1 ]; then
       docker rm -f dex-rerank; exit 0
     fi
-    # GPU mode changed within the same backend (Infinity only)?
-    has=$(docker inspect dex-rerank --format '{{ '{{' }}len .HostConfig.DeviceRequests{{ '}}' }}' 2>/dev/null || echo 0)
+    # GPU mode check: DeviceRequests is null/[] when CPU-only.
+    has_gpu=0
+    echo "$inspect" | grep -qE '"Driver"\s*:\s*"nvidia"' && has_gpu=1 || true
     want="{{ dex_rerank_gpu }}"
-    if [ -n "$want" ] && [ "$has" -eq 0 ]; then docker rm -f dex-rerank; fi
-    if [ -z "$want" ] && [ "$has" -gt 0 ]; then docker rm -f dex-rerank; fi
+    if [ -n "$want" ] && [ "$has_gpu" -eq 0 ]; then docker rm -f dex-rerank; fi
+    if [ -z "$want" ] && [ "$has_gpu" -eq 1 ]; then docker rm -f dex-rerank; fi
   changed_when: false
   tags: [dex, server, rerank]
 
