@@ -417,7 +417,8 @@
           --served-model-name "{{ dex_rerank_model }}" \
           --dtype float16 \
           --port 7997 \
-          --max-model-len 4096
+          --max-model-len 4096 \
+          --gpu-memory-utilization 0.25
   unless_command: "[ '{{ dex_rerank_style }}' != 'chat-vllm' ]"
   tags: [dex, server, rerank]
 
