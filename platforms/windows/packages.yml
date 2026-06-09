@@ -80,8 +80,18 @@
       - wl-clipboard
       - watchman
       - zstd
+      - bat
   as_user: root
   timeout: 20m
   retry:
     attempts: 3
     delay: 10s
+
+# Ubuntu installs bat as batcat to avoid a naming conflict; symlink it
+# into ~/.local/bin so `bat` works and the zshrc alias resolves.
+- name: Symlink batcat → bat
+  shell: |
+    set -euo pipefail
+    mkdir -p ~/.local/bin
+    ln -sf /usr/bin/batcat ~/.local/bin/bat
+  unless_command: "command -v bat"
