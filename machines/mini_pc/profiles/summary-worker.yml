@@ -6,29 +6,27 @@
 # (embed, ask, compress, rerank). main_pc tunnels DEX_SUMMARY_URL here via
 # dex-summary-tunnel.service (127.0.0.1:11435 → this box's ollama:11434).
 #
-# VRAM budget (5m keep_alive — tiers cycle, don't co-reside):
-#   chunk phase:   qwen2.5-coder:3b   2 GB
-#   file phase:    qwen2.5-coder:7b   5 GB
-#   package phase: qwen2.5-coder:14b  9 GB  ← peak
-#   repo phase:    qwen2.5-coder:14b  9 GB  (same model, same phase)
-#   ─────────────────────────────────────────
-#   peak:         9 GB of 16 GB (7 GB headroom)
+# VRAM budget (5m keep_alive):
+#   all tiers: qwen3:14b  ~8.7 GB Q4_K_M (Ollama default)
+#                         ~12.9 GB Q5_K_M (pull explicitly for better quality)
+#   ─────────────────────────────────────────────────────
+#   peak:      ~8.7–12.9 GB of 16 GB (3–7 GB headroom)
 #
-# No -1 pin: with 5m keep_alive, the 3b unloads before the 14b loads —
-# peak VRAM is the single largest tier, not the sum of all tiers.
+# Single model for all tiers — no cycling needed. Model stays loaded across
+# the whole drain since all tiers use the same name. Qwen3-14B matches
+# Qwen2.5-32B quality on coding benchmarks (~59 t/s on RTX 5080).
+# Non-thinking mode mandatory for 1–4 sentence summaries.
 
 # Summary tier models pulled and served on this box.
-dex_chunk_summary_model: "qwen2.5-coder:3b"
-dex_file_summary_model: "qwen2.5-coder:7b"
-dex_package_summary_model: "qwen2.5-coder:14b"
-dex_repo_summary_model: "qwen2.5-coder:14b"
+dex_chunk_summary_model: "qwen3:14b"
+dex_file_summary_model: "qwen3:14b"
+dex_package_summary_model: "qwen3:14b"
+dex_repo_summary_model: "qwen3:14b"
 
-# High parallelism for chunk throughput (hundreds of short 3b calls).
-# 8 concurrent requests saturates the 5080 on small models without
-# exceeding VRAM during the chunk phase.
-dex_ollama_num_parallel: "8"
+# 4 concurrent requests — single model stays resident so no cold-load
+# overhead; 4 workers keeps the 5080 saturated at ~59 t/s.
+dex_ollama_num_parallel: "4"
 
-# Tiers cycle through VRAM — 5m TTL lets each unload before the next loads.
-# Unlike main_pc (-1), we don't pin all tiers simultaneously: that would
-# require 2+5+9=16 GB (no headroom). Cycling keeps peak at 9 GB.
+# Single model stays warm — 5m TTL is effectively a no-op since all tiers
+# hit the same qwen3:14b. Set -1 to pin permanently if memory allows.
 dex_ollama_keep_alive: "5m"
