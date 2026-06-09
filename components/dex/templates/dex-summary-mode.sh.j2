@@ -65,18 +65,20 @@ case "${1:-status}" in
     ;;
   flood)
     mkdir -p "$(dirname "$MODE_FILE")"
+    docker stop dex-rerank 2>/dev/null || true   # free ~24 GB VRAM (vLLM float16 pre-alloc) before ollama loads
     _stop "$FLOOD_EVICT"          # free the 5090 before loading the summary tier
     _warm "$LOCAL_MODELS"         # pre-load summary model so first batch doesn't cold-start under timeout
     _apply_flood_drainer          # bump concurrency + batch; restarts dex-serve
     echo flood > "$MODE_FILE"
-    echo "summary router → flood (BOTH GPUs; evicted: ${FLOOD_EVICT}; concurrency=${FLOOD_CONCURRENCY} batch=${FLOOD_BATCH}; ask paused until steady)"
+    echo "summary router → flood (BOTH GPUs; evicted: ${FLOOD_EVICT}; reranker stopped; concurrency=${FLOOD_CONCURRENCY} batch=${FLOOD_BATCH}; ask paused until steady)"
     ;;
   steady)
     mkdir -p "$(dirname "$MODE_FILE")"; echo steady > "$MODE_FILE"
     _clear_flood_drainer          # restore default concurrency + batch; restarts dex-serve
     _stop "$LOCAL_MODELS $STEADY_STOP"   # drop summary-only tiers left on the 5090
     _warm "$FLOOD_EVICT"                  # re-pin the ask model
-    echo "summary router → steady (all → remote; re-warmed: ${FLOOD_EVICT})"
+    docker start dex-rerank 2>/dev/null || true  # restore reranker now that flood VRAM is freed
+    echo "summary router → steady (all → remote; re-warmed: ${FLOOD_EVICT}; reranker restored)"
     ;;
   status|"")
     echo "mode: $(cat "$MODE_FILE" 2>/dev/null || echo steady)  (file: $MODE_FILE)"
