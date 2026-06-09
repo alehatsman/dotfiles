@@ -63,8 +63,8 @@ dex_ollama_keep_alive: "-1"
 # Re-enable GPU for the reranker: Qwen3-Reranker-4B needs GPU for 1–2s latency
 # on 40 candidates. At ~3 GB Q4 it fits within the VRAM budget above.
 # NOTE: server.yml deploys an Infinity container for the reranker; Infinity may
-# not support Qwen3ForSequenceClassification — may need a vLLM container step
-# instead. Track in dex issue #256.
+# not support Qwen3ForSequenceClassification — server.yml needs a vLLM container
+# step instead of (or alongside) the Infinity step.
 dex_rerank_gpu: "1"
 
 # Summary model names: dex requests these from DEX_SUMMARY_URL (mini_pc's
