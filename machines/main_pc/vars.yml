@@ -39,39 +39,43 @@ claude_system_prompt_src: "../../machines/main_pc/CLAUDE.md"
 # the embedding container; confirm `nvidia-smi` works inside WSL first.
 dex_role: server
 
-# Upgraded from 14b: summaries are offloaded to mini_pc's 5080 (see below),
-# freeing enough VRAM headroom to run 32b for interactive ask. Significant
-# quality improvement for all agentic ask_codebase and generate_code calls.
-dex_chat_model: "qwen2.5-coder:32b"
+# Upgraded from Qwen2.5-Coder-32B: Qwen3-Coder-30B-A3B (MoE, 3B active params)
+# uses the same VRAM slot (~22 G Q5_K_M vs 27.8 G Q4_K_M for 32b) but runs at
+# ~220 t/s vs 48–62 t/s — 4× faster TTFT, 2× usable context (64K+), and
+# 20+ points better on code benchmarks (86.6% EvalPlus vs ~66%).
+# Use non-thinking mode (/no_think or enable_thinking=False) for ask/chat.
+dex_chat_model: "qwen3-coder:30b-a3b"
 
-# qwen3-embedding:4b — code-specific 4B embedding model (~4 G). Replaced
-# nomic-embed-text (generic, 0.3 G, poor code recall). Enabled by moving
-# the Infinity rerank container to CPU (dex_rerank_gpu: ""), which freed
-# the ~6 G it was consuming (1.1 G model + ~5 G Docker/PyTorch overhead).
+# qwen3-embedding:4b — code-specific 4B embedding model (~4 G, MTEB-Code 80.06).
 dex_embed_model: "qwen3-embedding:4b"
 
 # VRAM budget (keep_alive=-1, all pinned):
-#   embed-4b   ~4.0 G  (qwen3-embedding:4b)
-#   chat-32b   ~25 G   (Q4_K_M; 19 G weights + KV cache + CUDA workspace)
-#   ───────────────────
-#   total      ~29 G   (3 G headroom on 32 G card)
+#   embed-4b        ~4 G  (qwen3-embedding:4b)
+#   chat-30b-a3b   ~22 G  (Q5_K_M; MoE 3B active — fast + 64K ctx headroom)
+#   reranker-4b     ~3 G  (Qwen3-Reranker-4B Q4; GPU — 1–2s for 40 docs)
+#   ──────────────────────
+#   total          ~29 G  (3 G headroom on 32 G card)
 #
-# Infinity rerank runs CPU-only (dex_rerank_gpu: "") — post-retrieval rerank
-# on 10–50 candidates is fine at CPU latency; frees the ~6 G the container
-# was burning on GPU. Summary tiers (3b/7b/14b) run on mini_pc via tunnel.
-# compress/draft are dead code in dex — not wired into any call path.
+# Sequential pipeline (embed→rerank→ask) means these never all fire at once;
+# the budget is for the warm-pin worst case. Summary tiers run on mini_pc.
 dex_ollama_keep_alive: "-1"
 
-# Run Infinity rerank container on CPU — freed 6 G of GPU VRAM for the 4b
-# embed model. Rerank latency on 10–50 candidates is acceptable at CPU speed.
-dex_rerank_gpu: ""
+# Re-enable GPU for the reranker: Qwen3-Reranker-4B needs GPU for 1–2s latency
+# on 40 candidates. At ~3 GB Q4 it fits within the VRAM budget above.
+# NOTE: server.yml deploys an Infinity container for the reranker; Infinity may
+# not support Qwen3ForSequenceClassification — may need a vLLM container step
+# instead. Track in dex issue #256.
+dex_rerank_gpu: "1"
 
 # Summary model names: dex requests these from DEX_SUMMARY_URL (mini_pc's
-# ollama via the SSH tunnel below). mini_pc has all four pulled.
-dex_chunk_summary_model: "qwen2.5-coder:3b"
-dex_file_summary_model: "qwen2.5-coder:7b"
-dex_package_summary_model: "qwen2.5-coder:14b"
-dex_repo_summary_model: "qwen2.5-coder:14b"
+# ollama via the SSH tunnel below). All tiers use qwen3:14b on mini_pc
+# (Q5_K_M ~12.9 G, ~59 t/s, matches Qwen2.5-32B quality). Non-thinking mode.
+# Repo summary routes to the local 5090 (30b-a3b) via the flood router path
+# for maximum one-call quality.
+dex_chunk_summary_model: "qwen3:14b"
+dex_file_summary_model: "qwen3:14b"
+dex_package_summary_model: "qwen3:14b"
+dex_repo_summary_model: "qwen3-coder:30b-a3b"
 
 # Concurrency for summary requests sent to mini_pc. mini_pc runs 8-parallel
 # ollama; 4 concurrent HTTP calls from dex keeps the pipeline full without
@@ -92,11 +96,10 @@ dex_summary_port: "11436"
 # Flip burst/flood/steady with `dex-summary-mode`.
 dex_summary_router: "1"
 
-# Flood mode: evict the 32b ask model to free the 5090 so the router can
-# round-robin all summary tiers onto it; on steady re-warm 32b and stop the
-# summary-only tiers left resident (3b chunk, 14b package/repo).
-dex_summary_router_flood_evict: "qwen2.5-coder:32b"
-dex_summary_router_steady_stop: "qwen2.5-coder:3b qwen2.5-coder:14b"
+# Flood mode: evict the 30b-a3b ask model to free the 5090 for summaries;
+# on steady re-warm 30b-a3b and unload qwen3:14b (loaded for flood summaries).
+dex_summary_router_flood_evict: "qwen3-coder:30b-a3b"
+dex_summary_router_steady_stop: "qwen3:14b"
 
 # Summary worker: mini_pc's 5080 handles steady-state background summarization.
 # dex-summary-tunnel.service (deployed by the dex component when this is

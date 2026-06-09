@@ -90,24 +90,28 @@ dex_local_port: "11434"
 # Cross-encoder rerank endpoint. ollama doesn't expose /v1/rerank, so
 # this is a separate service on the GPU host. Two styles are supported:
 #
-#   cohere (default): Cohere-compatible /rerank endpoint — use TEI or
-#     Infinity serving bge-reranker-v2-m3 (~1.2 GB, classic cross-encoder).
+#   cohere: Cohere-compatible /rerank endpoint — TEI or Infinity serving
+#     a cross-encoder (bge-reranker-v2-m3 etc.).
 #
-#   chat: decoder-style via /v1/chat/completions + logprobs — use vLLM
-#     serving Qwen/Qwen3-Reranker-4B (~2.5 GB, stronger on code). Set
-#     dex_rerank_style to "chat" and point the URL at the vLLM port.
+#   chat-vllm (default): vLLM pointwise scorer via /v1/chat/completions with
+#     empty <think>\n\n</think> prefill — Qwen3-Reranker-4B (~3 GB Q4,
+#     MTEB-Code 81.20 vs 41.38 for bge-v2-m3). Requires a vLLM server with
+#     task="score" serving Qwen3ForSequenceClassification.
+#     NOTE: server.yml currently manages an Infinity container for the cohere
+#     style; switching to chat-vllm needs a vLLM container step there.
 #
 # The SSH tunnel forwards both this port and the ollama port over the same
 # connection — see dex-tunnel.service.j2.
 dex_rerank_remote_port: "8082"
 dex_rerank_local_port: "8082"
 
-# Rerank backend style: "cohere" (Cohere-compatible /rerank endpoint) or
-# "chat" (decoder-style via chat completions + logprobs for Qwen3-Reranker-4B).
-dex_rerank_style: "cohere"
+# Rerank backend style: "cohere" or "chat-vllm" (see comment above).
+dex_rerank_style: "chat-vllm"
 
 # Rerank model name forwarded to the backend.
-dex_rerank_model: "BAAI/bge-reranker-v2-m3"
+# Qwen3-Reranker-4B: MTEB-Code 81.20 vs 41.38 for the old bge-reranker-v2-m3.
+# ~3 GB Q4_K_M GGUF; ~10 GB BF16. Use Mungert/Qwen3-Reranker-4B-GGUF for GGUF.
+dex_rerank_model: "Qwen/Qwen3-Reranker-4B"
 
 # Pass --gpus all to the Infinity rerank container. Set "" to run CPU-only
 # (acceptable for post-retrieval reranking of 10–50 candidates; frees GPU
@@ -127,39 +131,28 @@ dex_rerank_concurrency: "8"
 # Context compression — distils retrieved chunks into a ≤350-word prose
 # summary before injecting them into the chat model's context window.
 # Reduces tokens sent to Claude by 4–5× per ask_codebase / generate_code
-# call at the cost of one extra local-model round-trip. Quality-bound
-# (the compressed output feeds Claude as RAG context, so a bad distil
-# silently misleads downstream), but 7B is well above the floor —
-# 32B would just sit on the GPU longer for no quality gain. Shares the
-# 7B file with the summary leg, so no extra VRAM beyond what indexing
-# already loads. Set port to "" to disable on machines without the tunnel.
+# call at the cost of one extra local-model round-trip. Qwen3-8B at ~185 t/s
+# on RTX 5090 (Q4_K_M, ~4.8 GB) — fast, fits alongside the 30B-A3B ask model
+# under time-multiplexing. Set port to "" to disable on machines without
+# the tunnel.
 dex_compress_port: "11434"
-dex_compress_model: "qwen2.5-coder:7b"
+dex_compress_model: "qwen3:8b"
 
 # Speculative local draft — pre-generates a code implementation with a
 # small coder model before Claude refines it. The whole point is that
 # draft latency hides behind Claude's network/thinking RTT, so the
-# draft must be MUCH faster than chat: 3B finishes a ~200-tok candidate
-# in ~2 s on the 5090, well inside Claude's TTFT window. 7B+ defeats
-# the speculative pipeline; 1.5B risks hallucinated APIs that waste
-# Claude's refinement cycles. Set port to "" to disable.
+# draft must be MUCH faster than chat. Qwen3-8B shares the compress slot
+# so no extra VRAM. Set port to "" to disable.
 dex_draft_port: "11434"
-dex_draft_model: "qwen2.5-coder:3b"
+dex_draft_model: "qwen3:8b"
 
 # Index-time summary model — overrides the chat leg used during indexing
-# (file / chunk / package / repo summaries). Outputs are 1–4 sentences,
-# so a smaller coder model nearly matches the 32B on quality at 4–5×
-# the throughput. Cold indexes on a large repo can mean hundreds of
-# sequential 32B generations; this is the biggest GPU-time lever during
-# indexing. Set port to "" to fall back to dex_chat_model.
-# Concurrency caps in-flight chunk-summary chat calls per file —
-# raise it as far as the local server can serve concurrent /chat
-# requests without VRAM thrashing.
-# Min-lines drops short structural chunks from summary generation
-# entirely (default in dex is 30; we raise to 50 for less noise
-# and lower cost on Go codebases full of small helpers).
+# (file / chunk / package / repo summaries). Outputs are 1–4 sentences.
+# Qwen3-14B Q5_K_M (~12.9 GB) matches Qwen2.5-32B on coding benchmarks
+# at ~59 t/s on RTX 5080. Non-thinking mode mandatory for summaries.
+# Set port to "" to fall back to dex_chat_model.
 dex_summary_port: "11434"
-dex_summary_model: "qwen2.5-coder:7b"
+dex_summary_model: "qwen3:14b"
 # Per-tier summary model overrides. Empty = inherit dex_summary_model.
 # Lets boxes with VRAM headroom (e.g. 5090) route the dozen package
 # summaries and the single repo summary that compound into LLM_GUIDE.md
@@ -264,7 +257,7 @@ dex_summary_router_port: "11436"
 # Models routed to the LOCAL upstream (this box's GPU) in burst mode,
 # comma-separated. Default: the high-volume chunk tier only — a 3b fits the
 # 5090's warm-pin headroom (~3 GB) without evicting the 32b ask model.
-dex_summary_router_local_models: "qwen2.5-coder:3b"
+dex_summary_router_local_models: "qwen3:14b"
 # Flood mode (`dex-summary-mode flood`) — the router round-robins ALL summary
 # tiers across both GPUs at once for maximum catch-up throughput. To make room
 # on the local card it evicts dex_summary_router_flood_evict (the foreground
