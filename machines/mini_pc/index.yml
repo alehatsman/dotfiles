@@ -122,4 +122,5 @@
     dex_summary_router_local_models: "{{ dex_summary_router_local_models }}"
     dex_summary_router_flood_evict: "{{ dex_summary_router_flood_evict }}"
     dex_summary_router_steady_stop: "{{ dex_summary_router_steady_stop }}"
+    dex_summary_worker: "{{ dex_summary_worker }}"
   tags: [tools, dex]
