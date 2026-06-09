@@ -95,10 +95,8 @@ dex_local_port: "11434"
 #
 #   chat-vllm (default): vLLM pointwise scorer via /v1/chat/completions with
 #     empty <think>\n\n</think> prefill — Qwen3-Reranker-4B (~3 GB Q4,
-#     MTEB-Code 81.20 vs 41.38 for bge-v2-m3). Requires a vLLM server with
-#     task="score" serving Qwen3ForSequenceClassification.
-#     NOTE: server.yml currently manages an Infinity container for the cohere
-#     style; switching to chat-vllm needs a vLLM container step there.
+#     MTEB-Code 81.20 vs 41.38 for bge-v2-m3). server.yml deploys a vLLM
+#     container (vllm/vllm-openai) loading the GGUF via --load-format gguf.
 #
 # The SSH tunnel forwards both this port and the ollama port over the same
 # connection — see dex-tunnel.service.j2.
@@ -108,14 +106,18 @@ dex_rerank_local_port: "8082"
 # Rerank backend style: "cohere" or "chat-vllm" (see comment above).
 dex_rerank_style: "chat-vllm"
 
-# Rerank model name forwarded to the backend.
+# Rerank model name (HuggingFace repo, tokenizer) passed to the backend.
 # Qwen3-Reranker-4B: MTEB-Code 81.20 vs 41.38 for the old bge-reranker-v2-m3.
-# ~3 GB Q4_K_M GGUF; ~10 GB BF16. Use Mungert/Qwen3-Reranker-4B-GGUF for GGUF.
 dex_rerank_model: "Qwen/Qwen3-Reranker-4B"
 
-# Pass --gpus all to the Infinity rerank container. Set "" to run CPU-only
-# (acceptable for post-retrieval reranking of 10–50 candidates; frees GPU
-# VRAM for the embed model). Default "1" = GPU on all hosts unless overridden.
+# GGUF variant for chat-vllm style — separate repo + file so the tokenizer
+# (dex_rerank_model above) stays as the canonical model reference for dex.
+dex_rerank_gguf_repo: "Mungert/Qwen3-Reranker-4B-GGUF"
+dex_rerank_gguf_file: "Qwen3-Reranker-4B-Q4_K_M.gguf"
+
+# Pass --gpus all to the rerank container (Infinity or vLLM). Set "" to run
+# CPU-only (acceptable for 10–50 candidates post-retrieval; frees VRAM).
+# Default "1" = GPU on all hosts unless overridden.
 dex_rerank_gpu: "1"
 
 # Candidate-pool cap fed to the reranker per query. Larger = better recall,

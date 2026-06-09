@@ -215,12 +215,20 @@
     poll_interval: 5s
   tags: [dex, server, verify]
 
-# ───────────────── RERANK (Cohere-shape /rerank server) ───────────────────
+# ─────────────────── RERANK (backend-switchable container) ────────────────
 #
-# ollama doesn't serve cross-encoders, so we run a dedicated rerank
-# container alongside it on the GPU host. Infinity is the lightest
-# Cohere-compatible option — single docker image, native /rerank
-# endpoint, supports BGE/Qwen/Jina cross-encoders out of the box.
+# Two rerank backends share the same container name (dex-rerank) and port
+# (dex_rerank_remote_port). Which one runs is determined by dex_rerank_style:
+#
+#   cohere     → Infinity (michaelf34/infinity:latest)
+#                Native /rerank endpoint, Cohere shape, suited for
+#                cross-encoder models (BGE, Jina, older Qwen2 variants).
+#
+#   chat-vllm  → vLLM (vllm/vllm-openai:latest) with GGUF loading
+#                Serves /v1/chat/completions; ChatReranker in dex uses
+#                ThinkingPrefill for Qwen3-Reranker-4B (MTEB-Code 81.20,
+#                ~3 GB Q4_K_M). Tokenizer = dex_rerank_model; weights from
+#                dex_rerank_gguf_repo + dex_rerank_gguf_file.
 #
 # Port mapping is loopback-only to mirror ollama; clients reach the
 # endpoint via the second -L in dex-tunnel.service.j2.
@@ -239,24 +247,44 @@
     content: "{}\n"
   tags: [dex, server, rerank]
 
-- name: "Pull Infinity rerank image"
+# Pull whichever image matches the configured style.
+
+- name: "Pull Infinity rerank image (cohere style)"
   env:
     DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
   container.image:
     name: michaelf34/infinity:latest
     runtime: docker
+  unless_command: "[ '{{ dex_rerank_style }}' = 'chat-vllm' ]"
   tags: [dex, server, rerank]
 
-# Remove the container when GPU mode has changed so the subsequent container
-# step recreates it with the correct --gpus flag. No-op when mode matches or
-# the container doesn't exist yet.
-- name: "Remove dex-rerank container if GPU mode changed"
-  # docker inspect --format uses Go template {{ }} which conflicts with Jinja2.
-  # Escape with {{ '{{' }} / {{ '}}' }} so mooncake passes the literal braces
-  # to the shell. DeviceRequests length > 0 means --gpus was set on creation.
+- name: "Pull vLLM rerank image (chat-vllm style)"
+  env:
+    DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
+  container.image:
+    name: vllm/vllm-openai:latest
+    runtime: docker
+  unless_command: "[ '{{ dex_rerank_style }}' != 'chat-vllm' ]"
+  tags: [dex, server, rerank]
+
+# Remove the existing container when either the backend type (Infinity ↔ vLLM)
+# or the GPU mode has changed — the subsequent run step recreates it correctly.
+# docker inspect --format uses Go template {{ }} which conflicts with Jinja2;
+# escape with {{ '{{' }} / {{ '}}' }} so mooncake passes literal braces.
+- name: "Remove dex-rerank container if backend type or GPU mode changed"
   shell: |
     set -euo pipefail
     docker inspect dex-rerank > /dev/null 2>&1 || exit 0
+    img=$(docker inspect dex-rerank --format '{{ '{{' }}.Config.Image{{ '}}' }}' 2>/dev/null || echo "")
+    style="{{ dex_rerank_style }}"
+    # Backend type changed (Infinity ↔ vLLM)?
+    if [ "$style" = "chat-vllm" ] && ! echo "$img" | grep -q vllm; then
+      docker rm -f dex-rerank; exit 0
+    fi
+    if [ "$style" != "chat-vllm" ] && echo "$img" | grep -q vllm; then
+      docker rm -f dex-rerank; exit 0
+    fi
+    # GPU mode changed within the same backend (Infinity only)?
     has=$(docker inspect dex-rerank --format '{{ '{{' }}len .HostConfig.DeviceRequests{{ '}}' }}' 2>/dev/null || echo 0)
     want="{{ dex_rerank_gpu }}"
     if [ -n "$want" ] && [ "$has" -eq 0 ]; then docker rm -f dex-rerank; fi
@@ -264,8 +292,10 @@
   changed_when: false
   tags: [dex, server, rerank]
 
-# GPU variant — skipped when dex_rerank_gpu is empty ([ -z '' ] succeeds).
-- name: "Run Infinity rerank container (GPU)"
+# ── Infinity (cohere style) ────────────────────────────────────────────────
+
+# GPU variant — skipped when dex_rerank_gpu is empty or style is chat-vllm.
+- name: "Run Infinity rerank container (GPU, cohere)"
   env:
     DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
   container:
@@ -289,11 +319,11 @@
       - "7997"
       - --engine
       - torch
-  unless_command: "[ -z '{{ dex_rerank_gpu }}' ]"
+  unless_command: "[ -z '{{ dex_rerank_gpu }}' ] || [ '{{ dex_rerank_style }}' = 'chat-vllm' ]"
   tags: [dex, server, rerank]
 
-# CPU variant — skipped when dex_rerank_gpu is set ([ -n '1' ] succeeds).
-- name: "Run Infinity rerank container (CPU)"
+# CPU variant — skipped when dex_rerank_gpu is set or style is chat-vllm.
+- name: "Run Infinity rerank container (CPU, cohere)"
   env:
     DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
   container:
@@ -316,13 +346,56 @@
       - "7997"
       - --engine
       - torch
-  unless_command: "[ -n '{{ dex_rerank_gpu }}' ]"
+  unless_command: "[ -n '{{ dex_rerank_gpu }}' ] || [ '{{ dex_rerank_style }}' = 'chat-vllm' ]"
+  tags: [dex, server, rerank]
+
+# ── vLLM (chat-vllm style) ─────────────────────────────────────────────────
+#
+# Loads Qwen3-Reranker-4B from a GGUF repo so we get Q4_K_M (~3 GB VRAM)
+# instead of the default BF16 (~10 GB). The GGUF repo (dex_rerank_gguf_repo)
+# holds the weights; the canonical tokenizer repo (dex_rerank_model) is passed
+# separately so dex's model-name bookkeeping stays consistent.
+#
+# --task generate (not score/classify): dex's ChatReranker uses
+# /v1/chat/completions + ThinkingPrefill, not a scoring endpoint.
+
+- name: "Run vLLM rerank container (chat-vllm)"
+  env:
+    DOCKER_CONFIG: "{{ env.HOME }}/.docker-anon"
+  container:
+    name: dex-rerank
+    image: vllm/vllm-openai:latest
+    runtime: docker
+    state: running
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ dex_rerank_remote_port }}:7997"
+    volumes:
+      - "{{ env.HOME }}/.cache/huggingface:/root/.cache/huggingface"
+    env:
+      HF_HOME: /root/.cache/huggingface
+    extra: ["--gpus", "all"]
+    command:
+      - serve
+      - "{{ dex_rerank_gguf_repo }}"
+      - --tokenizer
+      - "{{ dex_rerank_model }}"
+      - --load-format
+      - gguf
+      - --gguf-file
+      - "{{ dex_rerank_gguf_file }}"
+      - --task
+      - generate
+      - --port
+      - "7997"
+      - --max-model-len
+      - "4096"
+  unless_command: "[ '{{ dex_rerank_style }}' != 'chat-vllm' ]"
   tags: [dex, server, rerank]
 
 - name: "Wait for the rerank endpoint to become ready"
-  # First request triggers model download (~1.2 GB for bge-reranker-v2-m3)
-  # plus VRAM load — give it 10 min on a cold start. /health is the
-  # cheapest readiness probe; /rerank itself would also warm the model.
+  # Both Infinity (/health) and vLLM (/health) respond on this path.
+  # First start may trigger a HuggingFace download — allow 10 min.
   wait.http:
     url: "http://127.0.0.1:{{ dex_rerank_remote_port }}/health"
     status: [200]

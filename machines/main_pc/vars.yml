@@ -60,11 +60,9 @@ dex_embed_model: "qwen3-embedding:4b"
 # the budget is for the warm-pin worst case. Summary tiers run on mini_pc.
 dex_ollama_keep_alive: "-1"
 
-# Re-enable GPU for the reranker: Qwen3-Reranker-4B needs GPU for 1–2s latency
-# on 40 candidates. At ~3 GB Q4 it fits within the VRAM budget above.
-# NOTE: server.yml deploys an Infinity container for the reranker; Infinity may
-# not support Qwen3ForSequenceClassification — server.yml needs a vLLM container
-# step instead of (or alongside) the Infinity step.
+# GPU for the reranker: Qwen3-Reranker-4B needs GPU for 1–2s latency on 40
+# candidates. At ~3 GB Q4_K_M GGUF it fits within the VRAM budget above.
+# server.yml runs vLLM (chat-vllm style) when dex_rerank_style=chat-vllm.
 dex_rerank_gpu: "1"
 
 # Summary model names: dex requests these from DEX_SUMMARY_URL (mini_pc's
