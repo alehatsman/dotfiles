@@ -65,7 +65,8 @@ case "${1:-status}" in
     ;;
   flood)
     mkdir -p "$(dirname "$MODE_FILE")"
-    _stop "$FLOOD_EVICT"          # free the 5090 before round-robining heavy tiers onto it
+    _stop "$FLOOD_EVICT"          # free the 5090 before loading the summary tier
+    _warm "$LOCAL_MODELS"         # pre-load summary model so first batch doesn't cold-start under timeout
     _apply_flood_drainer          # bump concurrency + batch; restarts dex-serve
     echo flood > "$MODE_FILE"
     echo "summary router → flood (BOTH GPUs; evicted: ${FLOOD_EVICT}; concurrency=${FLOOD_CONCURRENCY} batch=${FLOOD_BATCH}; ask paused until steady)"
