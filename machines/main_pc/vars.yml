@@ -98,6 +98,12 @@ dex_summary_router: "1"
 # on steady re-warm 30b-a3b and unload qwen3:14b (loaded for flood summaries).
 dex_summary_router_flood_evict: "qwen3-coder:30b-a3b-q4_K_M"
 dex_summary_router_steady_stop: "qwen3:14b"
+# Drainer overrides for flood: 8 workers saturate both GPUs (5090 32GB + 5080
+# 16GB, ~3-4 and ~1-2 concurrent 14b instances respectively); batch=100 keeps
+# the pipeline full across tunnel round-trip latency. Workaround for mooncake
+# #166 (schema-default props not reaching file.template renderer).
+dex_summary_flood_concurrency: "8"
+dex_summary_flood_batch: "100"
 
 # Summary worker: mini_pc's 5080 handles steady-state background summarization.
 # dex-summary-tunnel.service (deployed by the dex component when this is
