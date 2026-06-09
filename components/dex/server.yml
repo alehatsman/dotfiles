@@ -228,7 +228,7 @@
 #                Serves /v1/chat/completions; ChatReranker in dex uses
 #                ThinkingPrefill for Qwen3-Reranker-4B (MTEB-Code 81.20,
 #                ~3 GB Q4_K_M). Tokenizer = dex_rerank_model; weights from
-#                dex_rerank_gguf_repo + dex_rerank_gguf_file.
+#                dex_rerank_gguf_repo + dex_rerank_gguf_quant.
 #
 # Port mapping is loopback-only to mirror ollama; clients reach the
 # endpoint via the second -L in dex-tunnel.service.j2.
@@ -355,13 +355,23 @@
 
 # ── vLLM (chat-vllm style) ─────────────────────────────────────────────────
 #
-# Loads Qwen3-Reranker-4B from a GGUF repo so we get Q4_K_M (~3 GB VRAM)
-# instead of the default BF16 (~10 GB). The GGUF repo (dex_rerank_gguf_repo)
-# holds the weights; the canonical tokenizer repo (dex_rerank_model) is passed
-# separately so dex's model-name bookkeeping stays consistent.
+# vLLM 0.22+ uses "repo:quant_type" syntax for remote GGUF loading.
+# Two WSL2-specific bugs in 0.22.1 require a patched entrypoint:
 #
-# --task generate (not score/classify): dex's ChatReranker uses
-# /v1/chat/completions + ThinkingPrefill, not a scoring endpoint.
+#   Bug 1 — UVA unavailable in WSL2: is_pin_memory_available() returns False,
+#     so is_uva_available() → False, causing UvaBuffer to raise on init.
+#     Pin memory actually WORKS on RTX 5090 / WSL2 mirrored networking.
+#     Fix: patch interface.py to make in_wsl() return False inside container.
+#
+#   Bug 2 — case mismatch: vLLM globs *-Q4_K_M.gguf (uppercase from quant
+#     type spec) but Mungert's repo uses lowercase (q4_k_m.gguf). Fix: add
+#     lowercase variants to the allow_patterns in weight_utils.py.
+#
+# Both patches are applied at container startup via sed/python before vllm
+# serve is exec'd. They affect only the container's own copy of vLLM and
+# survive subprocess spawning (file-level patch, not in-memory).
+#
+# Remove this block if/when vLLM fixes these upstream.
 
 - name: "Run vLLM rerank container (chat-vllm)"
   env:
@@ -378,22 +388,36 @@
       - "{{ env.HOME }}/.cache/huggingface:/root/.cache/huggingface"
     env:
       HF_HOME: /root/.cache/huggingface
-    extra: ["--gpus", "all"]
+    extra: ["--gpus", "all", "--entrypoint", "bash"]
     command:
-      - serve
-      - "{{ dex_rerank_gguf_repo }}"
-      - --tokenizer
-      - "{{ dex_rerank_model }}"
-      - --load-format
-      - gguf
-      - --gguf-file
-      - "{{ dex_rerank_gguf_file }}"
-      - --task
-      - generate
-      - --port
-      - "7997"
-      - --max-model-len
-      - "4096"
+      - "-c"
+      - |
+        set -e
+        PY=/usr/local/lib/python3.12/dist-packages/vllm
+        # Bug 1: make in_wsl() return False so pin_memory / UVA are allowed
+        sed -i 's/return "microsoft" in/return False and "microsoft" in/' \
+          "$PY/platforms/interface.py"
+        # Bug 2: add lowercase quant-type variants to GGUF glob patterns
+        python3 - <<'EOF'
+        import re, pathlib
+        f = pathlib.Path('/usr/local/lib/python3.12/dist-packages/vllm/model_executor/model_loader/weight_utils.py')
+        t = f.read_text()
+        old = '        f"*-{quant_type}.gguf",\n        f"*-{quant_type}-*.gguf",\n        f"*/*-{quant_type}.gguf",\n        f"*/*-{quant_type}-*.gguf",'
+        new = '        f"*-{quant_type}.gguf", f"*-{quant_type.lower()}.gguf",\n        f"*-{quant_type}-*.gguf", f"*-{quant_type.lower()}-*.gguf",\n        f"*/*-{quant_type}.gguf", f"*/*-{quant_type.lower()}.gguf",\n        f"*/*-{quant_type}-*.gguf", f"*/*-{quant_type.lower()}-*.gguf",'
+        if old in t:
+            f.write_text(t.replace(old, new))
+            print('weight_utils patched')
+        else:
+            print('weight_utils: pattern not found, skipping (may already be patched or changed upstream)')
+        EOF
+        exec vllm serve \
+          "{{ dex_rerank_gguf_repo }}:{{ dex_rerank_gguf_quant }}" \
+          --hf-config-path "{{ dex_rerank_model }}" \
+          --tokenizer "{{ dex_rerank_model }}" \
+          --served-model-name "{{ dex_rerank_model }}" \
+          --dtype float16 \
+          --port 7997 \
+          --max-model-len 4096
   unless_command: "[ '{{ dex_rerank_style }}' != 'chat-vllm' ]"
   tags: [dex, server, rerank]
 

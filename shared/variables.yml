@@ -110,10 +110,10 @@ dex_rerank_style: "chat-vllm"
 # Qwen3-Reranker-4B: MTEB-Code 81.20 vs 41.38 for the old bge-reranker-v2-m3.
 dex_rerank_model: "Qwen/Qwen3-Reranker-4B"
 
-# GGUF variant for chat-vllm style — separate repo + file so the tokenizer
-# (dex_rerank_model above) stays as the canonical model reference for dex.
+# GGUF variant for chat-vllm style. vLLM 0.22+ uses "repo:quant_type" syntax
+# (e.g. Mungert/Qwen3-Reranker-4B-GGUF:Q4_K_M); --gguf-file is gone.
 dex_rerank_gguf_repo: "Mungert/Qwen3-Reranker-4B-GGUF"
-dex_rerank_gguf_file: "Qwen3-Reranker-4B-Q4_K_M.gguf"
+dex_rerank_gguf_quant: "Q4_K_M"
 
 # Pass --gpus all to the rerank container (Infinity or vLLM). Set "" to run
 # CPU-only (acceptable for 10–50 candidates post-retrieval; frees VRAM).
