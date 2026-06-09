@@ -32,3 +32,9 @@ dex_ci_image_sha: "~/.local/share/dex-ci-image.sha"
 dex_summary_router_src_dir: "~/.local/share/dex-summary-router-src"
 dex_summary_router_bin: "~/.local/bin/dex-summary-router"
 dex_summary_router_sha: "~/.local/share/dex-summary-router.sha"
+
+# Drainer overrides applied while flood mode is active (both GPUs running).
+# Higher concurrency saturates both cards; larger batch keeps the pipeline
+# full across round-trip latency to the remote worker. Restored on steady.
+dex_summary_flood_concurrency: "8"
+dex_summary_flood_batch: "100"
