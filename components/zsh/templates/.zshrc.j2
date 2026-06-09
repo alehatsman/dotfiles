@@ -155,7 +155,9 @@ alias e="$EDITOR"
 alias sed=gsed
 {% endif %}
 
-alias cat="bat --theme 'Monokai Extended Origin'"
+if command -v bat &>/dev/null; then
+  alias cat="bat --theme 'Monokai Extended Origin'"
+fi
 alias ls="lsd --icon never"
 
 alias l="ls -1"
