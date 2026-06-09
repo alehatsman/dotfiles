@@ -27,8 +27,10 @@ export DEX_COMPRESS_MODEL={{ props.dex_compress_model }}
 export DEX_DRAFT_URL=http://127.0.0.1:{{ props.dex_draft_port }}
 export DEX_DRAFT_MODEL={{ props.dex_draft_model }}
 {% endif %}
+{% if props.dex_rerank_local_port %}
 export DEX_RERANK_URL=http://127.0.0.1:{{ props.dex_rerank_local_port }}
 export DEX_RERANK_STYLE={{ props.dex_rerank_style }}
 export DEX_RERANK_MODEL={{ props.dex_rerank_model }}
 export DEX_RERANK_POOL={{ props.dex_rerank_pool }}
 export DEX_RERANK_CONCURRENCY={{ props.dex_rerank_concurrency }}
+{% endif %}
