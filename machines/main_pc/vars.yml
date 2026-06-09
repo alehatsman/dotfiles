@@ -44,17 +44,17 @@ dex_role: server
 # ~220 t/s vs 48–62 t/s — 4× faster TTFT, 2× usable context (64K+), and
 # 20+ points better on code benchmarks (86.6% EvalPlus vs ~66%).
 # Use non-thinking mode (/no_think or enable_thinking=False) for ask/chat.
-dex_chat_model: "qwen3-coder:30b-a3b"
+dex_chat_model: "qwen3-coder:30b-a3b-q4_K_M"
 
 # qwen3-embedding:4b — code-specific 4B embedding model (~4 G, MTEB-Code 80.06).
 dex_embed_model: "qwen3-embedding:4b"
 
 # VRAM budget (keep_alive=-1, all pinned):
 #   embed-4b        ~4 G  (qwen3-embedding:4b)
-#   chat-30b-a3b   ~22 G  (Q5_K_M; MoE 3B active — fast + 64K ctx headroom)
+#   chat-30b-a3b   ~19 G  (Q4_K_M; MoE 3B active — fast + 64K ctx headroom)
 #   reranker-4b     ~3 G  (Qwen3-Reranker-4B Q4; GPU — 1–2s for 40 docs)
 #   ──────────────────────
-#   total          ~29 G  (3 G headroom on 32 G card)
+#   total          ~26 G  (6 G headroom on 32 G card)
 #
 # Sequential pipeline (embed→rerank→ask) means these never all fire at once;
 # the budget is for the warm-pin worst case. Summary tiers run on mini_pc.
@@ -73,7 +73,7 @@ dex_rerank_gpu: "1"
 dex_chunk_summary_model: "qwen3:14b"
 dex_file_summary_model: "qwen3:14b"
 dex_package_summary_model: "qwen3:14b"
-dex_repo_summary_model: "qwen3-coder:30b-a3b"
+dex_repo_summary_model: "qwen3-coder:30b-a3b-q4_K_M"
 
 # Concurrency for summary requests sent to mini_pc. mini_pc runs 8-parallel
 # ollama; 4 concurrent HTTP calls from dex keeps the pipeline full without
@@ -96,7 +96,7 @@ dex_summary_router: "1"
 
 # Flood mode: evict the 30b-a3b ask model to free the 5090 for summaries;
 # on steady re-warm 30b-a3b and unload qwen3:14b (loaded for flood summaries).
-dex_summary_router_flood_evict: "qwen3-coder:30b-a3b"
+dex_summary_router_flood_evict: "qwen3-coder:30b-a3b-q4_K_M"
 dex_summary_router_steady_stop: "qwen3:14b"
 
 # Summary worker: mini_pc's 5080 handles steady-state background summarization.
