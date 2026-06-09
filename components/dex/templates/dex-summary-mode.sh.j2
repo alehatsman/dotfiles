@@ -7,8 +7,9 @@
 #           helps at a time (the drainer runs file then chunk phases).
 #   flood   BOTH GPUs run the full tier mix at once: the 32b ask model is
 #           evicted to free the 5090, and the router round-robins every summary
-#           across both cards. Maximum summary throughput; interactive `ask` on
-#           the 5090 PAUSES until you return to steady. Use for a big catch-up.
+#           across both cards. Drainer concurrency and batch size are bumped via
+#           a systemd drop-in so both cards stay saturated. Maximum summary
+#           throughput; interactive `ask` on the 5090 PAUSES until steady.
 #   steady  All summaries go back to the remote worker (the default). Re-warms
 #           the evicted ask model and stops the summary-only tiers left resident
 #           on the 5090 (this box's ollama runs OLLAMA_KEEP_ALIVE=-1, so lent
@@ -24,6 +25,9 @@ EMBED_URL="${DEX_EMBED_URL:-http://127.0.0.1:{{ dex_local_port }}}"
 LOCAL_MODELS="{{ dex_summary_router_local_models }}"
 FLOOD_EVICT="{{ dex_summary_router_flood_evict }}"   # freed on flood, re-warmed on steady
 STEADY_STOP="{{ dex_summary_router_steady_stop }}"   # summary-only tiers freed on steady
+FLOOD_CONCURRENCY="{{ dex_summary_flood_concurrency }}"
+FLOOD_BATCH="{{ dex_summary_flood_batch }}"
+DROPIN_FILE="${HOME}/.config/systemd/user/dex-serve.service.d/flood-override.conf"
 
 _stop() {  # space/comma-separated model list -> ollama stop each
   command -v ollama >/dev/null 2>&1 || return 0
@@ -40,6 +44,20 @@ _warm() {  # load + pin (keep_alive -1) each model so foreground ask is hot
   done
 }
 
+_apply_flood_drainer() {
+  mkdir -p "$(dirname "$DROPIN_FILE")"
+  printf '[Service]\nEnvironment=DEX_SUMMARY_CONCURRENCY=%s\nEnvironment=DEX_SUMMARIZE_BATCH=%s\n' \
+    "$FLOOD_CONCURRENCY" "$FLOOD_BATCH" > "$DROPIN_FILE"
+  systemctl --user daemon-reload
+  systemctl --user restart dex-serve.service
+}
+
+_clear_flood_drainer() {
+  rm -f "$DROPIN_FILE"
+  systemctl --user daemon-reload
+  systemctl --user restart dex-serve.service
+}
+
 case "${1:-status}" in
   burst)
     mkdir -p "$(dirname "$MODE_FILE")"; echo burst > "$MODE_FILE"
@@ -48,11 +66,13 @@ case "${1:-status}" in
   flood)
     mkdir -p "$(dirname "$MODE_FILE")"
     _stop "$FLOOD_EVICT"          # free the 5090 before round-robining heavy tiers onto it
+    _apply_flood_drainer          # bump concurrency + batch; restarts dex-serve
     echo flood > "$MODE_FILE"
-    echo "summary router → flood (BOTH GPUs; evicted: ${FLOOD_EVICT}; ask paused until steady)"
+    echo "summary router → flood (BOTH GPUs; evicted: ${FLOOD_EVICT}; concurrency=${FLOOD_CONCURRENCY} batch=${FLOOD_BATCH}; ask paused until steady)"
     ;;
   steady)
     mkdir -p "$(dirname "$MODE_FILE")"; echo steady > "$MODE_FILE"
+    _clear_flood_drainer          # restore default concurrency + batch; restarts dex-serve
     _stop "$LOCAL_MODELS $STEADY_STOP"   # drop summary-only tiers left on the 5090
     _warm "$FLOOD_EVICT"                  # re-pin the ask model
     echo "summary router → steady (all → remote; re-warmed: ${FLOOD_EVICT})"
