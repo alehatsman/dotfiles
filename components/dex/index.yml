@@ -6,610 +6,852 @@
 #   dex_role=server  additionally bring up the embedding service in WSL
 #
 # Default is client (see shared/variables.yml); main_pc overrides to server.
-# Machines that don't want dex at all simply omit the import line.
+# Machines that don't want dex at all simply omit the use: line.
 # See components/dex/server.yml for server-side steps.
 
-- vars.load: ./variables.yml
+props:
+  dex_role:
+    type: string
+    default: "client"
+    description: "client=MCP+tunnel only; server=additionally runs embedding service"
+  dex_src_url:
+    type: string
+    default: "http://127.0.0.1:8080/alehatsman/dex.git"
+    description: Git remote to clone/update dex source from.
+  dex_local_port:
+    type: string
+    default: "11434"
+    description: Local ollama port for embed + chat.
+  dex_embed_model:
+    type: string
+    default: ""
+    description: Embedding model name. Empty = binary compiled default.
+  dex_embed_batch:
+    type: string
+    default: "128"
+    description: Embedding batch size.
+  dex_chat_model:
+    type: string
+    default: ""
+    description: Chat model name. Empty = binary compiled default.
+  dex_ask_model:
+    type: string
+    default: ""
+    description: Ask/routing model override. Empty = falls back to dex_chat_model.
+  dex_rerank_local_port:
+    type: string
+    default: "8082"
+    description: Local reranker port.
+  dex_rerank_remote_port:
+    type: string
+    default: "8082"
+    description: Remote reranker port (for SSH tunnel in server role).
+  dex_rerank_style:
+    type: string
+    default: "cohere"
+    description: Reranker API style (cohere or chat).
+  dex_rerank_model:
+    type: string
+    default: "BAAI/bge-reranker-v2-m3"
+    description: Reranker model name.
+  dex_rerank_pool:
+    type: string
+    default: "40"
+    description: Reranker candidate pool size.
+  dex_rerank_gpu:
+    type: string
+    default: "1"
+    description: GPU index for the reranker container (empty = no GPU).
+  dex_rerank_concurrency:
+    type: string
+    default: "8"
+    description: Reranker request concurrency.
+  dex_compress_port:
+    type: string
+    default: "11434"
+    description: Ollama port for context compression.
+  dex_compress_model:
+    type: string
+    default: "qwen2.5-coder:7b"
+    description: Compression model name.
+  dex_draft_port:
+    type: string
+    default: "11434"
+    description: Ollama port for speculative draft generation. Empty = disabled.
+  dex_draft_model:
+    type: string
+    default: "qwen2.5-coder:3b"
+    description: Draft model name.
+  dex_summary_port:
+    type: string
+    default: "11434"
+    description: Ollama port for the summary worker.
+  dex_summary_model:
+    type: string
+    default: "qwen2.5-coder:7b"
+    description: Default summary model.
+  dex_chunk_summary_model:
+    type: string
+    default: ""
+    description: Per-chunk summary model override. Empty = inherit dex_summary_model.
+  dex_file_summary_model:
+    type: string
+    default: ""
+    description: Per-file summary model override. Empty = inherit dex_summary_model.
+  dex_package_summary_model:
+    type: string
+    default: ""
+    description: Per-package summary model override. Empty = inherit dex_summary_model.
+  dex_repo_summary_model:
+    type: string
+    default: ""
+    description: Per-repo summary model override. Empty = inherit dex_summary_model.
+  dex_summary_concurrency:
+    type: string
+    default: "4"
+    description: Number of concurrent summary requests.
+  dex_chunk_summary_min_lines:
+    type: string
+    default: "50"
+    description: Min lines in a chunk to warrant summarization.
+  dex_power_save:
+    type: string
+    default: ""
+    description: Pause background summary draining when set. Empty = off.
+  dex_summarize_yield:
+    type: string
+    default: ""
+    description: Drainer defers while a query is in flight. Empty = off.
+  dex_remote_host:
+    type: string
+    default: "main_pc-wsl"
+    description: SSH hostname alias for the remote embedding server.
+  dex_remote_ip:
+    type: string
+    default: "192.168.1.68"
+    description: LAN IP of the remote embedding server.
+  dex_remote_port:
+    type: string
+    default: "11434"
+    description: Remote ollama port to forward via the SSH tunnel.
+  dex_remote_ssh_port:
+    type: string
+    default: "2222"
+    description: SSH port on the remote embedding server.
+  dex_remote_user:
+    type: string
+    default: "aleh"
+    description: SSH user on the remote embedding server.
+  dex_serve_port:
+    type: string
+    default: "7920"
+    description: Local port for dex serve (HTTP query API for moongit Intel tab).
+  dex_watch_paths:
+    type: string
+    default: ""
+    description: Space-separated list of paths for dex-watch@ instances. Empty = additive mode.
+  dex_ollama_keep_alive:
+    type: string
+    default: "5m"
+    description: Ollama model keep-alive duration (-1 = forever).
+  dex_ollama_num_parallel:
+    type: string
+    default: "4"
+    description: Ollama parallel request slots.
+  dex_summary_host:
+    type: string
+    default: ""
+    description: SSH hostname alias for the remote summary worker. Empty = no tunnel.
+  dex_summary_host_ip:
+    type: string
+    default: ""
+    description: LAN IP of the remote summary worker.
+  dex_summary_host_ssh_port:
+    type: string
+    default: "2222"
+    description: SSH port on the remote summary worker host.
+  dex_summary_host_user:
+    type: string
+    default: "aleh"
+    description: SSH user on the remote summary worker host.
+  dex_summary_local_port:
+    type: string
+    default: "11435"
+    description: Local port the summary SSH tunnel listens on.
+  dex_summary_router:
+    type: string
+    default: ""
+    description: Enable the summary router when non-empty.
+  dex_summary_router_port:
+    type: string
+    default: "11436"
+    description: Port the summary router listens on.
+  dex_summary_router_local_models:
+    type: string
+    default: "qwen2.5-coder:3b"
+    description: Models served locally (not routed to remote).
+  dex_summary_router_flood_evict:
+    type: string
+    default: ""
+    description: Model to evict from GPU in flood mode. Empty = no eviction.
+  dex_summary_router_steady_stop:
+    type: string
+    default: ""
+    description: Space-separated models to stop in steady mode. Empty = none.
 
-# ───────────────── CLIENT (and server — server is a superset) ──────────────
+steps:
+  - vars.load: ./variables.yml
 
-- name: "Ensure Go toolchain is installed (for building dex)"
-  # Expected to be provided by components/languages — this is just a
-  # fail-fast guard so the build step doesn't error out cryptically.
-  assert:
-    command:
-      cmd: command -v go
-  tags: [dex, build]
+  # Inject all props into global scope so sub-imports (server.yml,
+  # summary-worker.yml) and templates can continue using {{ dex_* }}.
+  - vars:
+      dex_role: "{{ props.dex_role }}"
+      dex_src_url: "{{ props.dex_src_url }}"
+      dex_local_port: "{{ props.dex_local_port }}"
+      dex_embed_model: "{{ props.dex_embed_model }}"
+      dex_embed_batch: "{{ props.dex_embed_batch }}"
+      dex_chat_model: "{{ props.dex_chat_model }}"
+      dex_ask_model: "{{ props.dex_ask_model }}"
+      dex_rerank_local_port: "{{ props.dex_rerank_local_port }}"
+      dex_rerank_remote_port: "{{ props.dex_rerank_remote_port }}"
+      dex_rerank_style: "{{ props.dex_rerank_style }}"
+      dex_rerank_model: "{{ props.dex_rerank_model }}"
+      dex_rerank_pool: "{{ props.dex_rerank_pool }}"
+      dex_rerank_gpu: "{{ props.dex_rerank_gpu }}"
+      dex_rerank_concurrency: "{{ props.dex_rerank_concurrency }}"
+      dex_compress_port: "{{ props.dex_compress_port }}"
+      dex_compress_model: "{{ props.dex_compress_model }}"
+      dex_draft_port: "{{ props.dex_draft_port }}"
+      dex_draft_model: "{{ props.dex_draft_model }}"
+      dex_summary_port: "{{ props.dex_summary_port }}"
+      dex_summary_model: "{{ props.dex_summary_model }}"
+      dex_chunk_summary_model: "{{ props.dex_chunk_summary_model }}"
+      dex_file_summary_model: "{{ props.dex_file_summary_model }}"
+      dex_package_summary_model: "{{ props.dex_package_summary_model }}"
+      dex_repo_summary_model: "{{ props.dex_repo_summary_model }}"
+      dex_summary_concurrency: "{{ props.dex_summary_concurrency }}"
+      dex_chunk_summary_min_lines: "{{ props.dex_chunk_summary_min_lines }}"
+      dex_power_save: "{{ props.dex_power_save }}"
+      dex_summarize_yield: "{{ props.dex_summarize_yield }}"
+      dex_remote_host: "{{ props.dex_remote_host }}"
+      dex_remote_ip: "{{ props.dex_remote_ip }}"
+      dex_remote_port: "{{ props.dex_remote_port }}"
+      dex_remote_ssh_port: "{{ props.dex_remote_ssh_port }}"
+      dex_remote_user: "{{ props.dex_remote_user }}"
+      dex_serve_port: "{{ props.dex_serve_port }}"
+      dex_watch_paths: "{{ props.dex_watch_paths }}"
+      dex_ollama_keep_alive: "{{ props.dex_ollama_keep_alive }}"
+      dex_ollama_num_parallel: "{{ props.dex_ollama_num_parallel }}"
+      dex_summary_host: "{{ props.dex_summary_host }}"
+      dex_summary_host_ip: "{{ props.dex_summary_host_ip }}"
+      dex_summary_host_ssh_port: "{{ props.dex_summary_host_ssh_port }}"
+      dex_summary_host_user: "{{ props.dex_summary_host_user }}"
+      dex_summary_local_port: "{{ props.dex_summary_local_port }}"
+      dex_summary_router: "{{ props.dex_summary_router }}"
+      dex_summary_router_port: "{{ props.dex_summary_router_port }}"
+      dex_summary_router_local_models: "{{ props.dex_summary_router_local_models }}"
+      dex_summary_router_flood_evict: "{{ props.dex_summary_router_flood_evict }}"
+      dex_summary_router_steady_stop: "{{ props.dex_summary_router_steady_stop }}"
 
-- name: "Ensure ~/.local/bin exists"
-  file.write:
-    path: ~/.local/bin
-    state: directory
-  tags: [dex, build]
+  # ───────────────── CLIENT (and server — server is a superset) ──────────────
 
-- name: "Clone or update dex source"
-  # update:true is safe here because dex_src_dir is under
-  # ~/.local/share/ — kept distinct from any dev checkout in ~/projects/.
-  # If somehow this checkout diverges, mooncake refuses with a clear error
-  # instead of silently trampling work.
-  git.clone:
-    repo: "{{ dex_src_url }}"
-    dest: "{{ dex_src_dir }}"
-    update: true
-    force: true
-  tags: [dex, build]
+  - name: "Ensure Go toolchain is installed (for building dex)"
+    # Expected to be provided by components/languages — this is just a
+    # fail-fast guard so the build step doesn't error out cryptically.
+    assert:
+      command:
+        cmd: command -v go
+    tags: [dex, build]
 
-# Both build + install are skipped when the installed binary's sidecar SHA
-# matches the source HEAD — otherwise every apply rebuilds and re-installs
-# and plan-mode reports a change every run. Force rebuild via:
-#   rm /usr/local/bin/dex{,.sha} && mooncake apply -c ./<m>.yml [-K] -t dex
+  - name: "Ensure ~/.local/bin exists"
+    file.write:
+      path: ~/.local/bin
+      state: directory
+    tags: [dex, build]
 
-- name: "Build dex binary"
-  # Delegate to dex's own tasks.yml `build` target rather than hardcoding the
-  # go build line here. dex's build requires `-tags sqlite_fts5` (CGO
-  # mattn/go-sqlite3) — a plain `go build` ships a binary missing the fts5
-  # module, and dex then fails every reindex with `no such module: fts5`.
-  # reindex drops the index *before* rebuilding, so an fts5-less binary wipes
-  # the project index. Keeping the build flags single-sourced in dex's
-  # tasks.yml (GO_TAGS: sqlite_fts5) means this component never drifts from it.
-  # {{ dex_src_dir }} is unquoted on purpose — see variables.yml.
-  shell: |
-    set -euo pipefail
-    cd {{ dex_src_dir }}
-    mooncake task build
-  unless_command: |
-    test -x {{ dex_bin_path }} && \
-      [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
-  tags: [dex, build]
+  - name: "Clone or update dex source"
+    # update:true is safe here because dex_src_dir is under
+    # ~/.local/share/ — kept distinct from any dev checkout in ~/projects/.
+    # If somehow this checkout diverges, mooncake refuses with a clear error
+    # instead of silently trampling work.
+    git.clone:
+      repo: "{{ dex_src_url }}"
+      dest: "{{ dex_src_dir }}"
+      update: true
+      force: true
+    tags: [dex, build]
 
-- name: "Install dex to {{ dex_bin_path }}"
-  # Runs as the user (no as_user: root) so ~ resolves to the same home
-  # the build step used.
-  shell: |
-    set -euo pipefail
-    install -m 0755 {{ dex_src_dir }}/dex {{ dex_bin_path }}
-    git -C {{ dex_src_dir }} rev-parse HEAD > {{ dex_bin_path }}.sha
-    chmod 0644 {{ dex_bin_path }}.sha
-  unless_command: |
-    test -x {{ dex_bin_path }} && \
-      [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
-  tags: [dex, build]
+  # Both build + install are skipped when the installed binary's sidecar SHA
+  # matches the source HEAD — otherwise every apply rebuilds and re-installs
+  # and plan-mode reports a change every run. Force rebuild via:
+  #   rm /usr/local/bin/dex{,.sha} && mooncake apply -c ./<m>.yml [-K] -t dex
 
-- name: "Register dex with Claude Code (user scope)"
-  # remove-then-add keeps the command/args in lockstep with this template
-  # so future arg changes propagate cleanly. Env vars are passed via
-  # `claude mcp add -e` rather than relying on shell defaults — the
-  # ollama-served model names + non-standard port all differ from the
-  # dex binary's compiled-in defaults, so leaving them implicit
-  # would silently 4xx against both endpoints. EMBED_* drives both
-  # semantic_search and the RAG leg of generate_code; CHAT_* drives the
-  # generation leg of generate_code.
-  shell: |
-    set -euo pipefail
-    claude mcp remove dex --scope user 2>/dev/null || true
-    # Build arg list in a bash array so optional features (compress, draft)
-    # can be conditionally appended without multi-line continuation gymnastics.
-    args=(
-      -e DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
-      -e DEX_EMBED_MODEL={{ dex_embed_model }}
-      -e DEX_EMBED_BATCH={{ dex_embed_batch }}
-      -e DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
-      -e DEX_CHAT_MODEL={{ dex_chat_model }}
-      -e DEX_ASK_MODEL={{ dex_ask_model }}
-      -e DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
-      -e DEX_RERANK_STYLE={{ dex_rerank_style }}
-      -e DEX_RERANK_MODEL={{ dex_rerank_model }}
-      -e DEX_RERANK_POOL={{ dex_rerank_pool }}
-      -e DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
-    )
-    # Context compression: distils retrieved chunks before injecting into
-    # Claude's context window (4–5× token savings). Disabled when port is "".
-    [[ -n '{{ dex_compress_port }}' ]] && args+=(
-      -e DEX_COMPRESS_URL=http://127.0.0.1:{{ dex_compress_port }}
-      -e DEX_COMPRESS_MODEL={{ dex_compress_model }}
-    )
-    # Speculative local draft: pre-generates code so Claude refines rather
-    # than writes from scratch (3–10× generation token savings). Disabled when port is "".
-    [[ -n '{{ dex_draft_port }}' ]] && args+=(
-      -e DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
-      -e DEX_DRAFT_MODEL={{ dex_draft_model }}
-    )
-    # Index-time summary leg: smaller, faster model for per-file /
-    # per-chunk / per-package summaries generated during `dex index`.
-    # SUMMARY_URL disabled when port is "" (summaries fall back to the
-    # main chat leg). Concurrency + min-lines always apply.
-    [[ -n '{{ dex_summary_port }}' ]] && args+=(
-      -e DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
-      -e DEX_SUMMARY_MODEL={{ dex_summary_model }}
-    )
-    # Per-tier model overrides. Each empty string means "inherit
-    # DEX_SUMMARY_MODEL", so the default fleet behavior is unchanged;
-    # only boxes with VRAM headroom (main_pc) override and route the
-    # higher tiers through bigger models. These also flow through the
-    # MCP server into the auto-watcher's drainer, so summaries
-    # regenerated in the background use the same ladder as inline
-    # `dex index`.
-    [[ -n '{{ dex_chunk_summary_model }}' ]] && args+=(
-      -e DEX_CHUNK_SUMMARY_MODEL={{ dex_chunk_summary_model }}
-    )
-    [[ -n '{{ dex_file_summary_model }}' ]] && args+=(
-      -e DEX_FILE_SUMMARY_MODEL={{ dex_file_summary_model }}
-    )
-    [[ -n '{{ dex_package_summary_model }}' ]] && args+=(
-      -e DEX_PACKAGE_SUMMARY_MODEL={{ dex_package_summary_model }}
-    )
-    [[ -n '{{ dex_repo_summary_model }}' ]] && args+=(
-      -e DEX_REPO_SUMMARY_MODEL={{ dex_repo_summary_model }}
-    )
-    args+=(
-      -e DEX_SUMMARY_CONCURRENCY={{ dex_summary_concurrency }}
-      -e DEX_CHUNK_SUMMARY_MIN_LINES={{ dex_chunk_summary_min_lines }}
-    )
-    # Power-save: pause background summary draining (index stays fresh via
-    # embed). Empty string = off, so only hosts that set dex_power_save
-    # (the GPU box) add the flag; the rest keep summarizing in the bg.
-    [[ -n '{{ dex_power_save }}' ]] && args+=(
-      -e DEX_POWER_SAVE={{ dex_power_save }}
-    )
-    # Yield-to-foreground: drainer defers while a query is in flight.
-    # Empty = off; only set on hosts that configure dex_summarize_yield.
-    [[ -n '{{ dex_summarize_yield }}' ]] && args+=(
-      -e DEX_SUMMARIZE_YIELD={{ dex_summarize_yield }}
-    )
-    claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
-  tags: [dex, claude]
+  - name: "Build dex binary"
+    # Delegate to dex's own tasks.yml `build` target rather than hardcoding the
+    # go build line here. dex's build requires `-tags sqlite_fts5` (CGO
+    # mattn/go-sqlite3) — a plain `go build` ships a binary missing the fts5
+    # module, and dex then fails every reindex with `no such module: fts5`.
+    # reindex drops the index *before* rebuilding, so an fts5-less binary wipes
+    # the project index. Keeping the build flags single-sourced in dex's
+    # tasks.yml (GO_TAGS: sqlite_fts5) means this component never drifts from it.
+    # {{ dex_src_dir }} is unquoted on purpose — see variables.yml.
+    shell: |
+      set -euo pipefail
+      cd {{ dex_src_dir }}
+      mooncake task build
+    unless_command: |
+      test -x {{ dex_bin_path }} && \
+        [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
+    tags: [dex, build]
 
-- name: "Append dex usage block to ~/.claude/CLAUDE.md"
-  # Declarative nudge so the "query dex first" + FTS5 build protocol travels
-  # with the dex component to any box, instead of being hand-baked into a
-  # single machine's prompt. Marker-guarded (idempotent), same pattern as the
-  # SSH-config append below. Runs AFTER the claude component's whole-file
-  # file.copy of CLAUDE.md (claude is imported before dex in the machine
-  # index), so a re-apply re-establishes the block after the overwrite.
-  shell: |
-    set -euo pipefail
-    dest="$HOME/.claude/CLAUDE.md"
-    touch "$dest"
-    if ! grep -q '<!-- dex -->' "$dest"; then
-      cat >> "$dest" <<'DEXBLOCK'
+  - name: "Install dex to {{ dex_bin_path }}"
+    # Runs as the user (no as_user: root) so ~ resolves to the same home
+    # the build step used.
+    shell: |
+      set -euo pipefail
+      install -m 0755 {{ dex_src_dir }}/dex {{ dex_bin_path }}
+      git -C {{ dex_src_dir }} rev-parse HEAD > {{ dex_bin_path }}.sha
+      chmod 0644 {{ dex_bin_path }}.sha
+    unless_command: |
+      test -x {{ dex_bin_path }} && \
+        [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
+    tags: [dex, build]
 
-    <!-- dex -->
-    ## Pull intel from dex first (semantic code intel)
+  - name: "Register dex with Claude Code (user scope)"
+    # remove-then-add keeps the command/args in lockstep with this template
+    # so future arg changes propagate cleanly. Env vars are passed via
+    # `claude mcp add -e` rather than relying on shell defaults — the
+    # ollama-served model names + non-standard port all differ from the
+    # dex binary's compiled-in defaults, so leaving them implicit
+    # would silently 4xx against both endpoints. EMBED_* drives both
+    # semantic_search and the RAG leg of generate_code; CHAT_* drives the
+    # generation leg of generate_code.
+    shell: |
+      set -euo pipefail
+      claude mcp remove dex --scope user 2>/dev/null || true
+      # Build arg list in a bash array so optional features (compress, draft)
+      # can be conditionally appended without multi-line continuation gymnastics.
+      args=(
+        -e DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
+        -e DEX_EMBED_MODEL={{ dex_embed_model }}
+        -e DEX_EMBED_BATCH={{ dex_embed_batch }}
+        -e DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
+        -e DEX_CHAT_MODEL={{ dex_chat_model }}
+        -e DEX_ASK_MODEL={{ dex_ask_model }}
+        -e DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
+        -e DEX_RERANK_STYLE={{ dex_rerank_style }}
+        -e DEX_RERANK_MODEL={{ dex_rerank_model }}
+        -e DEX_RERANK_POOL={{ dex_rerank_pool }}
+        -e DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
+      )
+      # Context compression: distils retrieved chunks before injecting into
+      # Claude's context window (4–5× token savings). Disabled when port is "".
+      [[ -n '{{ dex_compress_port }}' ]] && args+=(
+        -e DEX_COMPRESS_URL=http://127.0.0.1:{{ dex_compress_port }}
+        -e DEX_COMPRESS_MODEL={{ dex_compress_model }}
+      )
+      # Speculative local draft: pre-generates code so Claude refines rather
+      # than writes from scratch (3–10× generation token savings). Disabled when port is "".
+      [[ -n '{{ dex_draft_port }}' ]] && args+=(
+        -e DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
+        -e DEX_DRAFT_MODEL={{ dex_draft_model }}
+      )
+      # Index-time summary leg: smaller, faster model for per-file /
+      # per-chunk / per-package summaries generated during `dex index`.
+      # SUMMARY_URL disabled when port is "" (summaries fall back to the
+      # main chat leg). Concurrency + min-lines always apply.
+      [[ -n '{{ dex_summary_port }}' ]] && args+=(
+        -e DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
+        -e DEX_SUMMARY_MODEL={{ dex_summary_model }}
+      )
+      # Per-tier model overrides. Each empty string means "inherit
+      # DEX_SUMMARY_MODEL", so the default fleet behavior is unchanged;
+      # only boxes with VRAM headroom (main_pc) override and route the
+      # higher tiers through bigger models. These also flow through the
+      # MCP server into the auto-watcher's drainer, so summaries
+      # regenerated in the background use the same ladder as inline
+      # `dex index`.
+      [[ -n '{{ dex_chunk_summary_model }}' ]] && args+=(
+        -e DEX_CHUNK_SUMMARY_MODEL={{ dex_chunk_summary_model }}
+      )
+      [[ -n '{{ dex_file_summary_model }}' ]] && args+=(
+        -e DEX_FILE_SUMMARY_MODEL={{ dex_file_summary_model }}
+      )
+      [[ -n '{{ dex_package_summary_model }}' ]] && args+=(
+        -e DEX_PACKAGE_SUMMARY_MODEL={{ dex_package_summary_model }}
+      )
+      [[ -n '{{ dex_repo_summary_model }}' ]] && args+=(
+        -e DEX_REPO_SUMMARY_MODEL={{ dex_repo_summary_model }}
+      )
+      args+=(
+        -e DEX_SUMMARY_CONCURRENCY={{ dex_summary_concurrency }}
+        -e DEX_CHUNK_SUMMARY_MIN_LINES={{ dex_chunk_summary_min_lines }}
+      )
+      # Power-save: pause background summary draining (index stays fresh via
+      # embed). Empty string = off, so only hosts that set dex_power_save
+      # (the GPU box) add the flag; the rest keep summarizing in the bg.
+      [[ -n '{{ dex_power_save }}' ]] && args+=(
+        -e DEX_POWER_SAVE={{ dex_power_save }}
+      )
+      # Yield-to-foreground: drainer defers while a query is in flight.
+      # Empty = off; only set on hosts that configure dex_summarize_yield.
+      [[ -n '{{ dex_summarize_yield }}' ]] && args+=(
+        -e DEX_SUMMARIZE_YIELD={{ dex_summarize_yield }}
+      )
+      claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
+    tags: [dex, claude]
 
-    Lead with semantic intel, not blind sweeps:
-    - Query dex (`search_semantic`, `ask`, `search_symbol`, `graph_*`) **before**
-      grepping or reading broadly. `graph_*` only for architecture/call-flow.
-    - Minimal reads. Grep only after semantic search comes up empty. Stop at
-      sufficient confidence; optimize tokens. Fallback: `dex context . "$Q" --format json`.
+  - name: "Append dex usage block to ~/.claude/CLAUDE.md"
+    # Declarative nudge so the "query dex first" + FTS5 build protocol travels
+    # with the dex component to any box, instead of being hand-baked into a
+    # single machine's prompt. Marker-guarded (idempotent), same pattern as the
+    # SSH-config append below. Runs AFTER the claude component's whole-file
+    # file.copy of CLAUDE.md (claude is imported before dex in the machine
+    # index), so a re-apply re-establishes the block after the overwrite.
+    shell: |
+      set -euo pipefail
+      dest="$HOME/.claude/CLAUDE.md"
+      touch "$dest"
+      if ! grep -q '<!-- dex -->' "$dest"; then
+        cat >> "$dest" <<'DEXBLOCK'
 
-    ## Prefer dex tools over native — token compression (MANDATORY)
+      <!-- dex -->
+      ## Pull intel from dex first (semantic code intel)
 
-    dex tools return compact output. Use them instead of native equivalents; fall
-    back to native only for the caveats listed below.
+      Lead with semantic intel, not blind sweeps:
+      - Query dex (`search_semantic`, `ask`, `search_symbol`, `graph_*`) **before**
+        grepping or reading broadly. `graph_*` only for architecture/call-flow.
+      - Minimal reads. Grep only after semantic search comes up empty. Stop at
+        sufficient confidence; optimize tokens. Fallback: `dex context . "$Q" --format json`.
 
-    | Instead of | Use | Key args |
-    |---|---|---|
-    | `Read` | `file_view` | `mode`: `signatures` (~10× smaller), `map` (imports+exports), `lines:N-M` (slice), `full` (LLM summary). Up to 10 `paths`/call. |
-    | `Grep`/`rg` | `search_grep` | `pattern` (RE2), `path`, `ext`, `max_results`. |
-    | `ls`/`find` | `file_tree` | `path`, `depth`; aggregates deep dirs. |
-    | `Bash` (build/test/log) | `ctx_shell` | `command`; auto-compresses output, reports `saved_pct`. |
-    | semantic→read chain | `search_context` / `ask` | one round-trip: hits + signatures + best symbol body. |
+      ## Prefer dex tools over native — token compression (MANDATORY)
 
-    Fall back to NATIVE — don't force a dex tool that can't do the job:
-    - Writes, redirects (`>`/`>>`/`tee`), heredocs, or >60 s commands → native `Bash`
-      (`ctx_shell` blocks writes + times out at 60 s; auth/dev-server/watch pass through).
-    - Unindexed files, or full content >64 KB → native `Read` (`file_view` is
-      index-scoped; `full` caps at 64 KB).
-    - grep features `search_grep` lacks (context lines, fixed-string flags, etc.) → native `Grep`.
+      dex tools return compact output. Use them instead of native equivalents; fall
+      back to native only for the caveats listed below.
 
-    **Never build/install `dex` without `-tags sqlite_fts5`.** CGO `mattn/go-sqlite3`;
-    a plain `go install ./cmd/dex` ships a binary missing FTS5, then `reindex`/`index`
-    fail (`migrate: no such module: fts5`). `reindex` drops the index *before*
-    rebuild, so an FTS5-less binary **wipes the project index**. Build via dex's
-    `tasks.yml` (`GO_TAGS: sqlite_fts5`) or `CGO_ENABLED=1 go build -tags sqlite_fts5`.
-    Don't `reindex` blind — confirm the binary opens an index first. The `dex serve`/
-    `dex watch` systemd user units run the old build until restarted.
-    <!-- /dex -->
-    DEXBLOCK
-    fi
-  tags: [dex, claude]
+      | Instead of | Use | Key args |
+      |---|---|---|
+      | `Read` | `file_view` | `mode`: `signatures` (~10× smaller), `map` (imports+exports), `lines:N-M` (slice), `full` (LLM summary). Up to 10 `paths`/call. |
+      | `Grep`/`rg` | `search_grep` | `pattern` (RE2), `path`, `ext`, `max_results`. |
+      | `ls`/`find` | `file_tree` | `path`, `depth`; aggregates deep dirs. |
+      | `Bash` (build/test/log) | `ctx_shell` | `command`; auto-compresses output, reports `saved_pct`. |
+      | semantic→read chain | `search_context` / `ask` | one round-trip: hits + signatures + best symbol body. |
 
-- name: "Verify dex is on $PATH"
-  assert:
-    command:
-      cmd: which dex
-  tags: [dex, verify]
+      Fall back to NATIVE — don't force a dex tool that can't do the job:
+      - Writes, redirects (`>`/`>>`/`tee`), heredocs, or >60 s commands → native `Bash`
+        (`ctx_shell` blocks writes + times out at 60 s; auth/dev-server/watch pass through).
+      - Unindexed files, or full content >64 KB → native `Read` (`file_view` is
+        index-scoped; `full` caps at 64 KB).
+      - grep features `search_grep` lacks (context lines, fixed-string flags, etc.) → native `Grep`.
 
-- name: "Verify dex is registered with Claude Code"
-  assert:
-    command:
-      cmd: "claude mcp list | grep -q '^dex: '"
-  tags: [dex, verify]
+      **Never build/install `dex` without `-tags sqlite_fts5`.** CGO `mattn/go-sqlite3`;
+      a plain `go install ./cmd/dex` ships a binary missing FTS5, then `reindex`/`index`
+      fail (`migrate: no such module: fts5`). `reindex` drops the index *before*
+      rebuild, so an FTS5-less binary **wipes the project index**. Build via dex's
+      `tasks.yml` (`GO_TAGS: sqlite_fts5`) or `CGO_ENABLED=1 go build -tags sqlite_fts5`.
+      Don't `reindex` blind — confirm the binary opens an index first. The `dex serve`/
+      `dex watch` systemd user units run the old build until restarted.
+      <!-- /dex -->
+      DEXBLOCK
+      fi
+    tags: [dex, claude]
 
-# ───────────────── CLIENT-ONLY TUNNEL (Linux + macOS) ──────────────────────
-#
-# Server hosts skip the tunnel — they reach the embedding endpoint over
-# loopback (dex is fine pointing at the same 127.0.0.1:8082 that the
-# server publishes).
+  - name: "Verify dex is on $PATH"
+    assert:
+      command:
+        cmd: which dex
+    tags: [dex, verify]
 
-- name: "Ensure {{ dex_remote_host }} SSH alias is in ~/.ssh/config"
-  # The tunnel template (and the ssh binary launched by launchd/systemd)
-  # resolves `dex_remote_host` as a hostname alias. Without this Host
-  # block the tunnel fails with "nodename nor servname provided". The step
-  # is idempotent — it exits early if the block is already present.
-  shell: |
-    set -euo pipefail
-    config="$HOME/.ssh/config"
-    touch "$config" && chmod 0600 "$config"
-    if ! grep -q "^Host {{ dex_remote_host }}$" "$config"; then
-      printf '\nHost %s\n    HostName %s\n    Port %s\n    User %s\n' \
-        '{{ dex_remote_host }}' '{{ dex_remote_ip }}' \
-        '{{ dex_remote_ssh_port }}' '{{ dex_remote_user }}' >> "$config"
-    fi
-  unless_command: "grep -q '^Host {{ dex_remote_host }}$' ~/.ssh/config 2>/dev/null"
-  when: dex_role == 'client'
-  tags: [dex, tunnel]
+  - name: "Verify dex is registered with Claude Code"
+    assert:
+      command:
+        cmd: "claude mcp list | grep -q '^dex: '"
+    tags: [dex, verify]
 
-- name: "Deploy dex-tunnel user systemd unit"
-  file.template:
-    src: ./templates/dex-tunnel.service.j2
-    dest: "~/.config/systemd/user/dex-tunnel.service"
-  when: dex_role == 'client' and os == 'linux'
-  tags: [dex, tunnel]
-
-- name: "Enable and start dex-tunnel.service"
-  shell: |
-    set -euo pipefail
-    systemctl --user daemon-reload
-    systemctl --user enable --now dex-tunnel.service
-  when: dex_role == 'client' and os == 'linux'
-  tags: [dex, tunnel]
-
-- name: "Deploy dex-tunnel launchd plist (mac)"
-  file.template:
-    src: ./templates/dex-tunnel.plist.j2
-    dest: "~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist"
-  when: dex_role == 'client' and os == 'darwin'
-  tags: [dex, tunnel]
-
-- name: "Load dex-tunnel launchd plist (mac)"
-  shell: |
-    set -euo pipefail
-    plist=~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist
-    launchctl unload "$plist" 2>/dev/null || true
-    launchctl load "$plist"
-  when: dex_role == 'client' and os == 'darwin'
-  tags: [dex, tunnel]
-
-# ───────────────── AUTO-REINDEX (dex watch) ───────────────────────────
-#
-# A templated user systemd unit so each indexed project gets its own
-# fsnotify-driven watcher. Ad-hoc worktrees pick up watches automatically
-# through the zsh gwc helper (components/zsh), which enables/disables
-# dex-watch@ instances and depends on this template existing — so the
-# template is deployed on every Linux box, server included.
-#
-# Long-lived projects (dex_watch_paths) are handled differently per role:
-#   client  declarative dex-watch@ instances (the sync step below)
-#   server  dex serve eager-watches its --project registry (== dex_watch_paths)
-#           at boot, so the standalone dex-watch@ instances for those paths
-#           are redundant and get retired in the SERVE section. On clients
-#           dex_watch_paths is empty, so the sync step is the additive no-op.
-#
-# Linux-only by design — mac clients have no equivalent watcher, since
-# long-lived projects live on the GPU host (main_pc) and the Mac is a
-# read-only consumer over the tunnel.
-
-- name: "Deploy dex-watch@ templated systemd unit"
-  file.template:
-    src: ./templates/dex-watch@.service.j2
-    dest: "~/.config/systemd/user/dex-watch@.service"
-  when: os == 'linux'
-  tags: [dex, watch]
-
-- name: "Reload user systemd so dex-watch@ is discoverable"
-  shell: systemctl --user daemon-reload
-  when: os == 'linux'
-  changed_when: false
-  tags: [dex, watch]
-
-# Empty dex_watch_paths = additive mode (leave existing instances
-# alone). Listing one or more paths flips into declarative mode: enable
-# each, disable any other dex-watch@* instance.
-# Existing watch instances cache their ExecStart from when they were
-# started, so a template change (e.g. dex_bin_path moves) doesn't
-# propagate until the instance is restarted. try-restart only acts on
-# running units, so this is a no-op when nothing's enabled.
-- name: "Restart any running dex-watch@* to pick up new template"
-  shell: |
-    set -euo pipefail
-    instances=$(systemctl --user list-units --type=service --no-legend 'dex-watch@*' 2>/dev/null | awk '{print $1}')
-    for u in $instances; do
-      systemctl --user try-restart "$u" || true
-    done
-  when: os == 'linux'
-  changed_when: false
-  tags: [dex, watch]
-
-- name: "Sync dex-watch instances against dex_watch_paths"
-  # Client-only: on the server the long-lived dex_watch_paths are owned by
-  # dex serve's eager-watch (see SERVE section), and gating this step out
-  # there also stops it from disabling gwc-driven ad-hoc worktree watchers
-  # as "stale". On clients dex_watch_paths is empty, so this is the
-  # additive no-op that leaves gwc's instances alone.
+  # ───────────────── CLIENT-ONLY TUNNEL (Linux + macOS) ──────────────────────
   #
-  # Pongo2 (mooncake's templater) treats `{#` as a block-comment opener,
-  # so any literal `${#paths[@]}` blows up at parse time. Check the input
-  # variable instead — same effect, no `{#` bigram.
-  shell: |
-    set -euo pipefail
-    declared='{{ dex_watch_paths }}'
-    if [[ -z "${declared// /}" ]]; then
-      echo "dex_watch_paths empty — leaving existing watch instances alone"
-      exit 0
-    fi
-    declare -a paths
-    read -ra paths <<<"$declared"
-    for p in "${paths[@]}"; do
-      esc=$(systemd-escape "$p")
-      systemctl --user enable --now "dex-watch@${esc}.service"
-    done
-    wants_dir="$HOME/.config/systemd/user/default.target.wants"
-    [[ -d "$wants_dir" ]] || exit 0
-    shopt -s nullglob
-    for f in "$wants_dir"/dex-watch@*.service; do
-      unit=$(basename "$f")
-      inst=${unit#dex-watch@}
-      inst=${inst%.service}
-      # `--` is load-bearing: $inst always starts with `-` (every absolute
-      # path escapes `/` to `-`), so without it systemd-escape misreads the
-      # arg as malformed flags, prints usage to stderr, and emits nothing
-      # on stdout — every entry then looks "stale" and the loop disables
-      # every running watcher.
-      path=$(systemd-escape --unescape -- "$inst")
-      found=0
-      for p in "${paths[@]}"; do
-        [[ "$p" == "$path" ]] && { found=1; break; }
+  # Server hosts skip the tunnel — they reach the embedding endpoint over
+  # loopback (dex is fine pointing at the same 127.0.0.1:8082 that the
+  # server publishes).
+
+  - name: "Ensure {{ dex_remote_host }} SSH alias is in ~/.ssh/config"
+    # The tunnel template (and the ssh binary launched by launchd/systemd)
+    # resolves `dex_remote_host` as a hostname alias. Without this Host
+    # block the tunnel fails with "nodename nor servname provided". The step
+    # is idempotent — it exits early if the block is already present.
+    shell: |
+      set -euo pipefail
+      config="$HOME/.ssh/config"
+      touch "$config" && chmod 0600 "$config"
+      if ! grep -q "^Host {{ dex_remote_host }}$" "$config"; then
+        printf '\nHost %s\n    HostName %s\n    Port %s\n    User %s\n' \
+          '{{ dex_remote_host }}' '{{ dex_remote_ip }}' \
+          '{{ dex_remote_ssh_port }}' '{{ dex_remote_user }}' >> "$config"
+      fi
+    unless_command: "grep -q '^Host {{ dex_remote_host }}$' ~/.ssh/config 2>/dev/null"
+    when: dex_role == 'client'
+    tags: [dex, tunnel]
+
+  - name: "Deploy dex-tunnel user systemd unit"
+    file.template:
+      src: ./templates/dex-tunnel.service.j2
+      dest: "~/.config/systemd/user/dex-tunnel.service"
+    when: dex_role == 'client' and os == 'linux'
+    tags: [dex, tunnel]
+
+  - name: "Enable and start dex-tunnel.service"
+    shell: |
+      set -euo pipefail
+      systemctl --user daemon-reload
+      systemctl --user enable --now dex-tunnel.service
+    when: dex_role == 'client' and os == 'linux'
+    tags: [dex, tunnel]
+
+  - name: "Deploy dex-tunnel launchd plist (mac)"
+    file.template:
+      src: ./templates/dex-tunnel.plist.j2
+      dest: "~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist"
+    when: dex_role == 'client' and os == 'darwin'
+    tags: [dex, tunnel]
+
+  - name: "Load dex-tunnel launchd plist (mac)"
+    shell: |
+      set -euo pipefail
+      plist=~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist
+      launchctl unload "$plist" 2>/dev/null || true
+      launchctl load "$plist"
+    when: dex_role == 'client' and os == 'darwin'
+    tags: [dex, tunnel]
+
+  # ───────────────── AUTO-REINDEX (dex watch) ───────────────────────
+  #
+  # A templated user systemd unit so each indexed project gets its own
+  # fsnotify-driven watcher. Ad-hoc worktrees pick up watches automatically
+  # through the zsh gwc helper (components/zsh), which enables/disables
+  # dex-watch@ instances and depends on this template existing — so the
+  # template is deployed on every Linux box, server included.
+  #
+  # Long-lived projects (dex_watch_paths) are handled differently per role:
+  #   client  declarative dex-watch@ instances (the sync step below)
+  #   server  dex serve eager-watches its --project registry (== dex_watch_paths)
+  #           at boot, so the standalone dex-watch@ instances for those paths
+  #           are redundant and get retired in the SERVE section. On clients
+  #           dex_watch_paths is empty, so the sync step is the additive no-op.
+  #
+  # Linux-only by design — mac clients have no equivalent watcher, since
+  # long-lived projects live on the GPU host (main_pc) and the Mac is a
+  # read-only consumer over the tunnel.
+
+  - name: "Deploy dex-watch@ templated systemd unit"
+    file.template:
+      src: ./templates/dex-watch@.service.j2
+      dest: "~/.config/systemd/user/dex-watch@.service"
+    when: os == 'linux'
+    tags: [dex, watch]
+
+  - name: "Reload user systemd so dex-watch@ is discoverable"
+    shell: systemctl --user daemon-reload
+    when: os == 'linux'
+    changed_when: false
+    tags: [dex, watch]
+
+  # Empty dex_watch_paths = additive mode (leave existing instances
+  # alone). Listing one or more paths flips into declarative mode: enable
+  # each, disable any other dex-watch@* instance.
+  # Existing watch instances cache their ExecStart from when they were
+  # started, so a template change (e.g. dex_bin_path moves) doesn't
+  # propagate until the instance is restarted. try-restart only acts on
+  # running units, so this is a no-op when nothing's enabled.
+  - name: "Restart any running dex-watch@* to pick up new template"
+    shell: |
+      set -euo pipefail
+      instances=$(systemctl --user list-units --type=service --no-legend --plain 'dex-watch@*' 2>/dev/null | awk '{print $1}')
+      for u in $instances; do
+        systemctl --user try-restart "$u" || true
       done
-      if [[ "$found" -eq 0 ]]; then
-        echo "disabling stale: $unit ($path)"
-        systemctl --user disable --now "$unit"
+    when: os == 'linux'
+    changed_when: false
+    tags: [dex, watch]
+
+  - name: "Sync dex-watch instances against dex_watch_paths"
+    # Client-only: on the server the long-lived dex_watch_paths are owned by
+    # dex serve's eager-watch (see SERVE section), and gating this step out
+    # there also stops it from disabling gwc-driven ad-hoc worktree watchers
+    # as "stale". On clients dex_watch_paths is empty, so this is the
+    # additive no-op that leaves gwc's instances alone.
+    #
+    # Pongo2 (mooncake's templater) treats `{#` as a block-comment opener,
+    # so any literal `${#paths[@]}` blows up at parse time. Check the input
+    # variable instead — same effect, no `{#` bigram.
+    shell: |
+      set -euo pipefail
+      declared='{{ dex_watch_paths }}'
+      if [[ -z "${declared// /}" ]]; then
+        echo "dex_watch_paths empty — leaving existing watch instances alone"
+        exit 0
       fi
-    done
-  when: os == 'linux' and dex_role != 'server'
-  tags: [dex, watch]
+      declare -a paths
+      read -ra paths <<<"$declared"
+      for p in "${paths[@]}"; do
+        esc=$(systemd-escape "$p")
+        systemctl --user enable --now "dex-watch@${esc}.service"
+      done
+      wants_dir="$HOME/.config/systemd/user/default.target.wants"
+      [[ -d "$wants_dir" ]] || exit 0
+      shopt -s nullglob
+      for f in "$wants_dir"/dex-watch@*.service; do
+        unit=$(basename "$f")
+        inst=${unit#dex-watch@}
+        inst=${inst%.service}
+        # `--` is load-bearing: $inst always starts with `-` (every absolute
+        # path escapes `/` to `-`), so without it systemd-escape misreads the
+        # arg as malformed flags, prints usage to stderr, and emits nothing
+        # on stdout — every entry then looks "stale" and the loop disables
+        # every running watcher.
+        path=$(systemd-escape --unescape -- "$inst")
+        found=0
+        for p in "${paths[@]}"; do
+          [[ "$p" == "$path" ]] && { found=1; break; }
+        done
+        if [[ "$found" -eq 0 ]]; then
+          echo "disabling stale: $unit ($path)"
+          systemctl --user disable --now "$unit"
+        fi
+      done
+    when: os == 'linux' and dex_role != 'server'
+    tags: [dex, watch]
 
-# ───────────────── SERVE (HTTP query API for moongit Intel) ─────────────────
-# A server-side `dex serve` daemon on loopback, consumed by moongit's Intel
-# tab (MOONGIT_DEX_URL). Serves the same roots that are auto-reindexed
-# (dex_watch_paths). Linux + server only; bound to 127.0.0.1 so no token.
+  # ───────────────── SERVE (HTTP query API for moongit Intel) ─────────────────
+  # A server-side `dex serve` daemon on loopback, consumed by moongit's Intel
+  # tab (MOONGIT_DEX_URL). Serves the same roots that are auto-reindexed
+  # (dex_watch_paths). Linux + server only; bound to 127.0.0.1 so no token.
 
-- name: "Write dex-serve EnvironmentFile (project list)"
-  # dex_watch_paths is rendered here (shell cmd → {{ username }} expands)
-  # rather than in the unit template (file.template is single-pass and
-  # would leave a literal {{ username }} that breaks the --project list).
-  shell: |
-    set -euo pipefail
-    mkdir -p ~/.config/dex
-    printf 'DEX_SERVE_PROJECTS=%s\n' '{{ dex_watch_paths }}' > ~/.config/dex/serve.env
-  when: dex_role == 'server' and os == 'linux'
-  changed_when: false
-  tags: [dex, serve]
+  - name: "Write dex-serve EnvironmentFile (project list)"
+    # dex_watch_paths is rendered here (shell cmd → {{ username }} expands)
+    # rather than in the unit template (file.template is single-pass and
+    # would leave a literal {{ username }} that breaks the --project list).
+    shell: |
+      set -euo pipefail
+      mkdir -p ~/.config/dex
+      printf 'DEX_SERVE_PROJECTS=%s\n' '{{ dex_watch_paths }}' > ~/.config/dex/serve.env
+    when: dex_role == 'server' and os == 'linux'
+    changed_when: false
+    tags: [dex, serve]
 
-- name: "Deploy dex-serve user systemd unit"
-  file.template:
-    src: ./templates/dex-serve.service.j2
-    dest: "~/.config/systemd/user/dex-serve.service"
-  when: dex_role == 'server' and os == 'linux'
-  tags: [dex, serve]
+  - name: "Deploy dex-serve user systemd unit"
+    file.template:
+      src: ./templates/dex-serve.service.j2
+      dest: "~/.config/systemd/user/dex-serve.service"
+    when: dex_role == 'server' and os == 'linux'
+    tags: [dex, serve]
 
-- name: "Enable + (re)start dex-serve.service"
-  # Always restart so a template change (new dex_watch_paths entry, port
-  # change) takes effect. The daemon is lightweight, so an apply-time blip
-  # is cheap; changed_when:false keeps plan output quiet.
-  shell: |
-    set -euo pipefail
-    systemctl --user daemon-reload
-    systemctl --user enable dex-serve.service
-    systemctl --user restart dex-serve.service
-  when: dex_role == 'server' and os == 'linux'
-  changed_when: false
-  tags: [dex, serve]
+  - name: "Enable + (re)start dex-serve.service"
+    # Always restart so a template change (new dex_watch_paths entry, port
+    # change) takes effect. The daemon is lightweight, so an apply-time blip
+    # is cheap; changed_when:false keeps plan output quiet.
+    shell: |
+      set -euo pipefail
+      systemctl --user daemon-reload
+      systemctl --user enable dex-serve.service
+      systemctl --user restart dex-serve.service
+    when: dex_role == 'server' and os == 'linux'
+    changed_when: false
+    tags: [dex, serve]
 
-# Retire the standalone dex-watch@ instances for the long-lived serve
-# paths: dex serve now eager-watches its --project registry at boot
-# (DEX_SERVE_WATCH, default on), which is exactly dex_watch_paths, so a
-# separate watcher per path is redundant. Runs AFTER serve is (re)started
-# above so there's no window where nothing watches those roots. Only
-# touches the declared serve paths — gwc-driven ad-hoc worktree watchers
-# are left running.
-#
-# Ordering dependency: requires an installed dex binary that supports
-# eager-watch. The build step at the top of this component installs from
-# dex_src_url HEAD, so a fleet apply rebuilds before reaching here; a
-# tag-scoped `-t serve` apply against an old binary would disable the
-# watchers without a replacement — rebuild dex first in that case.
-- name: "Retire server-side dex-watch@ instances superseded by serve eager-watch"
-  shell: |
-    set -euo pipefail
-    declared='{{ dex_watch_paths }}'
-    if [[ -z "${declared// /}" ]]; then
-      echo "dex_watch_paths empty — nothing to retire"
-      exit 0
-    fi
-    declare -a paths
-    read -ra paths <<<"$declared"
-    for p in "${paths[@]}"; do
-      esc=$(systemd-escape "$p")
-      unit="dex-watch@${esc}.service"
-      if systemctl --user is-enabled "$unit" >/dev/null 2>&1 \
-         || systemctl --user is-active "$unit" >/dev/null 2>&1; then
-        echo "retiring $unit (covered by dex serve eager-watch)"
-        systemctl --user disable --now "$unit" || true
+  # Retire the standalone dex-watch@ instances for the long-lived serve
+  # paths: dex serve now eager-watches its --project registry at boot
+  # (DEX_SERVE_WATCH, default on), which is exactly dex_watch_paths, so a
+  # separate watcher per path is redundant. Runs AFTER serve is (re)started
+  # above so there's no window where nothing watches those roots. Only
+  # touches the declared serve paths — gwc-driven ad-hoc worktree watchers
+  # are left running.
+  #
+  # Ordering dependency: requires an installed dex binary that supports
+  # eager-watch. The build step at the top of this component installs from
+  # dex_src_url HEAD, so a fleet apply rebuilds before reaching here; a
+  # tag-scoped `-t serve` apply against an old binary would disable the
+  # watchers without a replacement — rebuild dex first in that case.
+  - name: "Retire server-side dex-watch@ instances superseded by serve eager-watch"
+    shell: |
+      set -euo pipefail
+      declared='{{ dex_watch_paths }}'
+      if [[ -z "${declared// /}" ]]; then
+        echo "dex_watch_paths empty — nothing to retire"
+        exit 0
       fi
-    done
-  when: dex_role == 'server' and os == 'linux'
-  changed_when: false
-  tags: [dex, serve]
+      declare -a paths
+      read -ra paths <<<"$declared"
+      for p in "${paths[@]}"; do
+        esc=$(systemd-escape "$p")
+        unit="dex-watch@${esc}.service"
+        if systemctl --user is-enabled "$unit" >/dev/null 2>&1 \
+           || systemctl --user is-active "$unit" >/dev/null 2>&1; then
+          echo "retiring $unit (covered by dex serve eager-watch)"
+          systemctl --user disable --now "$unit" || true
+        fi
+      done
+    when: dex_role == 'server' and os == 'linux'
+    changed_when: false
+    tags: [dex, serve]
 
-# ───────────────── SUMMARY TUNNEL (server + remote worker configured) ──────
-#
-# When dex_summary_host is non-empty the GPU server offloads all summary
-# generation to a second machine (mini_pc) over an SSH tunnel instead of
-# running summaries locally. DEX_SUMMARY_URL points at the tunnel's local
-# port (dex_summary_port = dex_summary_local_port on the GPU host).
-#
-# The tunnel mirrors the client-side dex-tunnel pattern: SSH port-forward
-# only, reuses existing key auth, never touches the LAN directly.
+  # ───────────────── SUMMARY TUNNEL (server + remote worker configured) ──────
+  #
+  # When dex_summary_host is non-empty the GPU server offloads all summary
+  # generation to a second machine (mini_pc) over an SSH tunnel instead of
+  # running summaries locally. DEX_SUMMARY_URL points at the tunnel's local
+  # port (dex_summary_port = dex_summary_local_port on the GPU host).
+  #
+  # The tunnel mirrors the client-side dex-tunnel pattern: SSH port-forward
+  # only, reuses existing key auth, never touches the LAN directly.
 
-- name: "Ensure {{ dex_summary_host }} SSH alias is in ~/.ssh/config"
-  shell: |
-    set -euo pipefail
-    config="$HOME/.ssh/config"
-    touch "$config" && chmod 0600 "$config"
-    if ! grep -q "^Host {{ dex_summary_host }}$" "$config"; then
-      printf '\nHost %s\n    HostName %s\n    Port %s\n    User %s\n' \
-        '{{ dex_summary_host }}' '{{ dex_summary_host_ip }}' \
-        '{{ dex_summary_host_ssh_port }}' '{{ dex_summary_host_user }}' >> "$config"
-    fi
-  unless_command: "grep -q '^Host {{ dex_summary_host }}$' ~/.ssh/config 2>/dev/null"
-  when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
-  tags: [dex, summary-tunnel]
+  - name: "Ensure {{ dex_summary_host }} SSH alias is in ~/.ssh/config"
+    shell: |
+      set -euo pipefail
+      config="$HOME/.ssh/config"
+      touch "$config" && chmod 0600 "$config"
+      if ! grep -q "^Host {{ dex_summary_host }}$" "$config"; then
+        printf '\nHost %s\n    HostName %s\n    Port %s\n    User %s\n' \
+          '{{ dex_summary_host }}' '{{ dex_summary_host_ip }}' \
+          '{{ dex_summary_host_ssh_port }}' '{{ dex_summary_host_user }}' >> "$config"
+      fi
+    unless_command: "grep -q '^Host {{ dex_summary_host }}$' ~/.ssh/config 2>/dev/null"
+    when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
+    tags: [dex, summary-tunnel]
 
-- name: "Deploy dex-summary-tunnel user systemd unit"
-  file.template:
-    src: ./templates/dex-summary-tunnel.service.j2
-    dest: "~/.config/systemd/user/dex-summary-tunnel.service"
-  when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
-  tags: [dex, summary-tunnel]
+  - name: "Deploy dex-summary-tunnel user systemd unit"
+    file.template:
+      src: ./templates/dex-summary-tunnel.service.j2
+      dest: "~/.config/systemd/user/dex-summary-tunnel.service"
+    when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
+    tags: [dex, summary-tunnel]
 
-- name: "Enable and start dex-summary-tunnel.service"
-  shell: |
-    set -euo pipefail
-    systemctl --user daemon-reload
-    systemctl --user enable --now dex-summary-tunnel.service
-  when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
-  tags: [dex, summary-tunnel]
+  - name: "Enable and start dex-summary-tunnel.service"
+    shell: |
+      set -euo pipefail
+      systemctl --user daemon-reload
+      systemctl --user enable --now dex-summary-tunnel.service
+    when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
+    tags: [dex, summary-tunnel]
 
-# ───────────────── SUMMARY ROUTER (server; dex_summary_router set) ──────────
-#
-# A model-name routing reverse proxy in front of DEX_SUMMARY_URL so the single
-# dex drainer can fan summary chat calls across both GPUs (dotfiles #32). The
-# host points dex_summary_port at the router (DEX_SUMMARY_URL → router); the
-# router's REMOTE upstream is the summary tunnel (5080) and LOCAL is this box's
-# ollama (5090). Steady mode is pure passthrough to REMOTE, so a brief
-# apply-time window where serve points at the router before it's up only
-# defers background summaries (the drainer retries; the queue is durable).
+  # ───────────────── SUMMARY ROUTER (server; dex_summary_router set) ──────────
+  #
+  # A model-name routing reverse proxy in front of DEX_SUMMARY_URL so the single
+  # dex drainer can fan summary chat calls across both GPUs (dotfiles #32). The
+  # host points dex_summary_port at the router (DEX_SUMMARY_URL → router); the
+  # router's REMOTE upstream is the summary tunnel (5080) and LOCAL is this box's
+  # ollama (5090). Steady mode is pure passthrough to REMOTE, so a brief
+  # apply-time window where serve points at the router before it's up only
+  # defers background summaries (the drainer retries; the queue is durable).
 
-- name: "Ensure summary-router source dir exists"
-  file.write:
-    path: "{{ dex_summary_router_src_dir }}"
-    state: directory
-  when: dex_summary_router != '' and os == 'linux'
-  tags: [dex, summary-router]
+  - name: "Ensure summary-router source dir exists"
+    file.write:
+      path: "{{ dex_summary_router_src_dir }}"
+      state: directory
+    when: dex_summary_router != '' and os == 'linux'
+    tags: [dex, summary-router]
 
-- name: "Ship summary-router source (main.go)"
-  file.copy:
-    src: ./router/main.go
-    dest: "{{ dex_summary_router_src_dir }}/main.go"
-  when: dex_summary_router != '' and os == 'linux'
-  tags: [dex, summary-router]
+  - name: "Ship summary-router source (main.go)"
+    file.copy:
+      src: ./router/main.go
+      dest: "{{ dex_summary_router_src_dir }}/main.go"
+    when: dex_summary_router != '' and os == 'linux'
+    tags: [dex, summary-router]
 
-- name: "Ship summary-router source (go.mod)"
-  file.copy:
-    src: ./router/go.mod
-    dest: "{{ dex_summary_router_src_dir }}/go.mod"
-  when: dex_summary_router != '' and os == 'linux'
-  tags: [dex, summary-router]
+  - name: "Ship summary-router source (go.mod)"
+    file.copy:
+      src: ./router/go.mod
+      dest: "{{ dex_summary_router_src_dir }}/go.mod"
+    when: dex_summary_router != '' and os == 'linux'
+    tags: [dex, summary-router]
 
-# Stdlib-only — plain `go build`, no -tags sqlite_fts5 (that's dex's CGO
-# requirement, not the router's). Rebuild gated on the combined source sha so
-# a fleet apply only rebuilds when main.go/go.mod actually change. Vars are
-# unquoted in the heredoc so bash expands the tilde (repo convention).
-- name: "Build + install dex-summary-router"
-  shell: |
-    set -euo pipefail
-    cd {{ dex_summary_router_src_dir }}
-    go build -o {{ dex_summary_router_bin }} .
-    cat {{ dex_summary_router_src_dir }}/main.go {{ dex_summary_router_src_dir }}/go.mod \
-      | sha256sum | awk '{print $1}' > {{ dex_summary_router_sha }}
-  unless_command: |
-    test -x {{ dex_summary_router_bin }} && \
-      [ "$(cat {{ dex_summary_router_sha }} 2>/dev/null)" = \
-        "$(cat {{ dex_summary_router_src_dir }}/main.go {{ dex_summary_router_src_dir }}/go.mod | sha256sum | awk '{print $1}')" ]
-  when: dex_summary_router != '' and os == 'linux'
-  tags: [dex, summary-router, build]
+  # Stdlib-only — plain `go build`, no -tags sqlite_fts5 (that's dex's CGO
+  # requirement, not the router's). Rebuild gated on the combined source sha so
+  # a fleet apply only rebuilds when main.go/go.mod actually change. Vars are
+  # unquoted in the heredoc so bash expands the tilde (repo convention).
+  - name: "Build + install dex-summary-router"
+    shell: |
+      set -euo pipefail
+      cd {{ dex_summary_router_src_dir }}
+      go build -o {{ dex_summary_router_bin }} .
+      cat {{ dex_summary_router_src_dir }}/main.go {{ dex_summary_router_src_dir }}/go.mod \
+        | sha256sum | awk '{print $1}' > {{ dex_summary_router_sha }}
+    unless_command: |
+      test -x {{ dex_summary_router_bin }} && \
+        [ "$(cat {{ dex_summary_router_sha }} 2>/dev/null)" = \
+          "$(cat {{ dex_summary_router_src_dir }}/main.go {{ dex_summary_router_src_dir }}/go.mod | sha256sum | awk '{print $1}')" ]
+    when: dex_summary_router != '' and os == 'linux'
+    tags: [dex, summary-router, build]
 
-- name: "Install dex-summary-mode helper"
-  file.template:
-    src: ./templates/dex-summary-mode.sh.j2
-    dest: "~/.local/bin/dex-summary-mode"
-  when: dex_summary_router != '' and os == 'linux'
-  tags: [dex, summary-router]
+  - name: "Install dex-summary-mode helper"
+    file.template:
+      src: ./templates/dex-summary-mode.sh.j2
+      dest: "~/.local/bin/dex-summary-mode"
+    when: dex_summary_router != '' and os == 'linux'
+    tags: [dex, summary-router]
 
-- name: "Seed default summary-router mode (steady) + make helper executable"
-  shell: |
-    set -euo pipefail
-    mkdir -p ~/.config/dex
-    [ -f ~/.config/dex/summary-router.mode ] || echo steady > ~/.config/dex/summary-router.mode
-    chmod 0755 ~/.local/bin/dex-summary-mode
-  when: dex_summary_router != '' and os == 'linux'
-  changed_when: false
-  tags: [dex, summary-router]
+  - name: "Seed default summary-router mode (steady) + make helper executable"
+    shell: |
+      set -euo pipefail
+      mkdir -p ~/.config/dex
+      [ -f ~/.config/dex/summary-router.mode ] || echo steady > ~/.config/dex/summary-router.mode
+      chmod 0755 ~/.local/bin/dex-summary-mode
+    when: dex_summary_router != '' and os == 'linux'
+    changed_when: false
+    tags: [dex, summary-router]
 
-- name: "Deploy dex-summary-router user systemd unit"
-  file.template:
-    src: ./templates/dex-summary-router.service.j2
-    dest: "~/.config/systemd/user/dex-summary-router.service"
-  when: dex_summary_router != '' and os == 'linux'
-  tags: [dex, summary-router]
+  - name: "Deploy dex-summary-router user systemd unit"
+    file.template:
+      src: ./templates/dex-summary-router.service.j2
+      dest: "~/.config/systemd/user/dex-summary-router.service"
+    when: dex_summary_router != '' and os == 'linux'
+    tags: [dex, summary-router]
 
-- name: "Enable + (re)start dex-summary-router.service"
-  shell: |
-    set -euo pipefail
-    systemctl --user daemon-reload
-    systemctl --user enable dex-summary-router.service
-    systemctl --user restart dex-summary-router.service
-  when: dex_summary_router != '' and os == 'linux'
-  changed_when: false
-  tags: [dex, summary-router]
+  - name: "Enable + (re)start dex-summary-router.service"
+    shell: |
+      set -euo pipefail
+      systemctl --user daemon-reload
+      systemctl --user enable dex-summary-router.service
+      systemctl --user restart dex-summary-router.service
+    when: dex_summary_router != '' and os == 'linux'
+    changed_when: false
+    tags: [dex, summary-router]
 
-# ───────────────── SERVER (main_pc) ────────────────────────────────────────
+  # ───────────────── SERVER (main_pc) ────────────────────────────────────────
 
-- import: ./server.yml
-  when: dex_role == 'server'
-  tags: [dex, server]
+  - import: ./server.yml
+    when: dex_role == 'server'
+    tags: [dex, server]
 
-# ───────────────── CI CONTAINER IMAGE (server role; sha-gated) ──────────────
-# dex-ci:latest is the container moongitd runs dex's server-side CI (mgitci.yml)
-# in: moongit-ci-dev + the cgo toolchain the sqlite_fts5 build needs. Like
-# moongit#193, the bundled mooncake (inherited from the moongit-ci-dev base)
-# silently rots when mooncake advances past dex's tasks.yml syntax, failing the
-# quality gate on a YAML parse. Rebuild via dex's own ci-image task, gated on
-# the combined dex+mooncake HEAD AND the moongit-ci-dev base image id — so a
-# base rebuild (e.g. a Go-toolchain bump landing via a moongit-side change)
-# also retriggers dex-ci. Without the base id the gate is blind to the base it
-# derives FROM: when moongit-ci-dev moved to go1.26.4, dex-ci stayed on 1.26.3
-# and dex CI broke (go.mod requires go>=1.26.4; GOTOOLCHAIN=local). Server role
-# only (no CI on client boxes). dex-ci is FROM moongit-ci-dev, so the dex
-# component is imported AFTER moongit in the machine index — that base is
-# already built when this runs. (NB: base id read via `docker images
-# --no-trunc -q`, not `inspect --format '{{.Id}}'`, to avoid colliding with
-# mooncake's own {{ }} templating.)
-#
-# Force a rebuild:
-#   rm {{ dex_ci_image_sha }} && mooncake apply -c ./main_pc.yml -t ci-images
-- name: "Build dex CI container image (refresh when dex, mooncake, or the base image move)"
-  shell: |
-    set -euo pipefail
-    command -v docker >/dev/null 2>&1 || { echo "docker not found — skipping dex CI image build"; exit 0; }
-    cd {{ dex_src_dir }}
-    mooncake task ci-image
-    mkdir -p "$(dirname {{ dex_ci_image_sha }})"
-    { git -C {{ dex_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; } > {{ dex_ci_image_sha }}
-  unless_command: |
-    docker image inspect dex-ci:latest >/dev/null 2>&1 && \
-    [ "$(cat {{ dex_ci_image_sha }} 2>/dev/null)" = "$({ git -C {{ dex_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; })" ]
-  when: dex_role == 'server' and os == 'linux'
-  timeout: 15m
-  tags: [dex, ci-images]
+  # ───────────────── CI CONTAINER IMAGE (server role; sha-gated) ──────────────
+  # dex-ci:latest is the container moongitd runs dex's server-side CI (mgitci.yml)
+  # in: moongit-ci-dev + the cgo toolchain the sqlite_fts5 build needs. Like
+  # moongit#193, the bundled mooncake (inherited from the moongit-ci-dev base)
+  # silently rots when mooncake advances past dex's tasks.yml syntax, failing the
+  # quality gate on a YAML parse. Rebuild via dex's own ci-image task, gated on
+  # the combined dex+mooncake HEAD AND the moongit-ci-dev base image id — so a
+  # base rebuild (e.g. a Go-toolchain bump landing via a moongit-side change)
+  # also retriggers dex-ci. Without the base id the gate is blind to the base it
+  # derives FROM: when moongit-ci-dev moved to go1.26.4, dex-ci stayed on 1.26.3
+  # and dex CI broke (go.mod requires go>=1.26.4; GOTOOLCHAIN=local). Server role
+  # only (no CI on client boxes). dex-ci is FROM moongit-ci-dev, so the dex
+  # component is imported AFTER moongit in the machine index — that base is
+  # already built when this runs. (NB: base id read via `docker images
+  # --no-trunc -q`, not `inspect --format '{{.Id}}'`, to avoid colliding with
+  # mooncake's own {{ }} templating.)
+  #
+  # Force a rebuild:
+  #   rm {{ dex_ci_image_sha }} && mooncake apply -c ./main_pc.yml -t ci-images
+  - name: "Build dex CI container image (refresh when dex, mooncake, or the base image move)"
+    shell: |
+      set -euo pipefail
+      command -v docker >/dev/null 2>&1 || { echo "docker not found — skipping dex CI image build"; exit 0; }
+      cd {{ dex_src_dir }}
+      mooncake task ci-image
+      mkdir -p "$(dirname {{ dex_ci_image_sha }})"
+      { git -C {{ dex_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; } > {{ dex_ci_image_sha }}
+    unless_command: |
+      docker image inspect dex-ci:latest >/dev/null 2>&1 && \
+      [ "$(cat {{ dex_ci_image_sha }} 2>/dev/null)" = "$({ git -C {{ dex_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; docker images --no-trunc -q moongit-ci-dev:latest; })" ]
+    when: dex_role == 'server' and os == 'linux'
+    timeout: 15m
+    tags: [dex, ci-images]

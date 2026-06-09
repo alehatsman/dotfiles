@@ -2,6 +2,9 @@
 # mini_pc — second Windows 11 box, provisioned via WSL2 Ubuntu.
 # Same structure as main_pc; only vars values differ.
 
+- vars.load: ../../shared/variables.yml
+- vars.load: ./vars.yml
+
 - vars:
     is_wsl: true
     wsl_distro: "Ubuntu-24.04"
@@ -36,18 +39,87 @@
 - import: ../../components/clojure/index.yml
   tags: [dev, clojure, config]
 
-- import: ../../components/zsh/index.yml
+- name: Use zsh component
+  use: ../../components/zsh/index.yml
+  props:
+    dex_local_port: "{{ dex_local_port }}"
+    dex_embed_model: "{{ dex_embed_model }}"
+    dex_chat_model: "{{ dex_chat_model }}"
+    dex_ask_model: "{{ dex_ask_model }}"
+    dex_summary_port: "{{ dex_summary_port }}"
+    dex_summary_model: "{{ dex_summary_model }}"
+    dex_compress_port: "{{ dex_compress_port }}"
+    dex_compress_model: "{{ dex_compress_model }}"
+    dex_draft_port: "{{ dex_draft_port }}"
+    dex_draft_model: "{{ dex_draft_model }}"
+    dex_rerank_local_port: "{{ dex_rerank_local_port }}"
+    dex_rerank_style: "{{ dex_rerank_style }}"
+    dex_rerank_model: "{{ dex_rerank_model }}"
+    dex_rerank_pool: "{{ dex_rerank_pool }}"
+    dex_rerank_concurrency: "{{ dex_rerank_concurrency }}"
   tags: [core, shell]
 
 
 - import: ../../components/tmux/index.yml
   tags: [tools, tmux]
 
-- import: ../../components/nvim/index.yml
+- name: Use nvim component
+  use: ../../components/nvim/index.yml
+  props:
+    use_win32yank: "true"
   tags: [editor, nvim]
 
 # Semantic-search MCP helper. Role is controlled by vars:
 #   mini_pc.yml        → dex_role=client (tunneled to main_pc's 5090)
 #   mini_pc_server.yml → dex_role=server (local RTX 5080, gpu-server profile)
-- import: ../../components/dex/index.yml
+- name: Use dex component
+  use: ../../components/dex/index.yml
+  props:
+    dex_role: "{{ dex_role }}"
+    dex_src_url: "{{ dex_src_url }}"
+    dex_local_port: "{{ dex_local_port }}"
+    dex_embed_model: "{{ dex_embed_model }}"
+    dex_embed_batch: "{{ dex_embed_batch }}"
+    dex_chat_model: "{{ dex_chat_model }}"
+    dex_ask_model: "{{ dex_ask_model }}"
+    dex_rerank_local_port: "{{ dex_rerank_local_port }}"
+    dex_rerank_remote_port: "{{ dex_rerank_remote_port }}"
+    dex_rerank_style: "{{ dex_rerank_style }}"
+    dex_rerank_model: "{{ dex_rerank_model }}"
+    dex_rerank_pool: "{{ dex_rerank_pool }}"
+    dex_rerank_gpu: "{{ dex_rerank_gpu }}"
+    dex_rerank_concurrency: "{{ dex_rerank_concurrency }}"
+    dex_compress_port: "{{ dex_compress_port }}"
+    dex_compress_model: "{{ dex_compress_model }}"
+    dex_draft_port: "{{ dex_draft_port }}"
+    dex_draft_model: "{{ dex_draft_model }}"
+    dex_summary_port: "{{ dex_summary_port }}"
+    dex_summary_model: "{{ dex_summary_model }}"
+    dex_chunk_summary_model: "{{ dex_chunk_summary_model }}"
+    dex_file_summary_model: "{{ dex_file_summary_model }}"
+    dex_package_summary_model: "{{ dex_package_summary_model }}"
+    dex_repo_summary_model: "{{ dex_repo_summary_model }}"
+    dex_summary_concurrency: "{{ dex_summary_concurrency }}"
+    dex_chunk_summary_min_lines: "{{ dex_chunk_summary_min_lines }}"
+    dex_power_save: "{{ dex_power_save }}"
+    dex_summarize_yield: "{{ dex_summarize_yield }}"
+    dex_remote_host: "{{ dex_remote_host }}"
+    dex_remote_ip: "{{ dex_remote_ip }}"
+    dex_remote_port: "{{ dex_remote_port }}"
+    dex_remote_ssh_port: "{{ dex_remote_ssh_port }}"
+    dex_remote_user: "{{ dex_remote_user }}"
+    dex_serve_port: "{{ dex_serve_port }}"
+    dex_watch_paths: "{{ dex_watch_paths }}"
+    dex_ollama_keep_alive: "{{ dex_ollama_keep_alive }}"
+    dex_ollama_num_parallel: "{{ dex_ollama_num_parallel }}"
+    dex_summary_host: "{{ dex_summary_host }}"
+    dex_summary_host_ip: "{{ dex_summary_host_ip }}"
+    dex_summary_host_ssh_port: "{{ dex_summary_host_ssh_port }}"
+    dex_summary_host_user: "{{ dex_summary_host_user }}"
+    dex_summary_local_port: "{{ dex_summary_local_port }}"
+    dex_summary_router: "{{ dex_summary_router }}"
+    dex_summary_router_port: "{{ dex_summary_router_port }}"
+    dex_summary_router_local_models: "{{ dex_summary_router_local_models }}"
+    dex_summary_router_flood_evict: "{{ dex_summary_router_flood_evict }}"
+    dex_summary_router_steady_stop: "{{ dex_summary_router_steady_stop }}"
   tags: [tools, dex]

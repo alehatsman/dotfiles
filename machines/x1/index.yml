@@ -1,6 +1,9 @@
 ---
 # x1 — ThinkPad X1 Carbon Gen 13, Arch Linux, Hyprland Wayland.
 
+- vars.load: ../../shared/variables.yml
+- vars.load: ./vars.yml
+
 - vars:
     is_wsl: false
 
@@ -42,14 +45,34 @@
 - import: ../../components/clojure/index.yml
   tags: [dev, clojure, config]
 
-- import: ../../components/zsh/index.yml
+- name: Use zsh component
+  use: ../../components/zsh/index.yml
+  props:
+    dex_local_port: "{{ dex_local_port }}"
+    dex_embed_model: "{{ dex_embed_model }}"
+    dex_chat_model: "{{ dex_chat_model }}"
+    dex_ask_model: "{{ dex_ask_model }}"
+    dex_summary_port: "{{ dex_summary_port }}"
+    dex_summary_model: "{{ dex_summary_model }}"
+    dex_compress_port: "{{ dex_compress_port }}"
+    dex_compress_model: "{{ dex_compress_model }}"
+    dex_draft_port: "{{ dex_draft_port }}"
+    dex_draft_model: "{{ dex_draft_model }}"
+    dex_rerank_local_port: "{{ dex_rerank_local_port }}"
+    dex_rerank_style: "{{ dex_rerank_style }}"
+    dex_rerank_model: "{{ dex_rerank_model }}"
+    dex_rerank_pool: "{{ dex_rerank_pool }}"
+    dex_rerank_concurrency: "{{ dex_rerank_concurrency }}"
   tags: [core, shell]
 
 
 - import: ../../components/tmux/index.yml
   tags: [tools, tmux]
 
-- import: ../../components/nvim/index.yml
+- name: Use nvim component
+  use: ../../components/nvim/index.yml
+  props:
+    use_win32yank: "false"
   tags: [editor, nvim]
 
 # Semantic-search MCP helper. Disabled — uncomment to re-enable.

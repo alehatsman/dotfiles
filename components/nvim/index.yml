@@ -1,188 +1,199 @@
 ---
-- vars.load: ./variables.yml
+props:
+  notes_dir:
+    type: string
+    default: "~/notes"
+    description: zk Zettelkasten notebook root (plain markdown).
+  use_win32yank:
+    type: string
+    default: "false"
+    description: Install win32yank for clipboard integration (WSL2 only).
 
-- name: Make sure undo dir is present
-  file.write:
-    path: "{{ config_path }}/undodir"
-    state: directory
-  tags: [nvim, setup]
+steps:
+  - vars.load: ./variables.yml
 
-- name: Create directory after
-  file.write:
-    path: "{{ config_path }}/after"
-    state: directory
-  tags: [nvim, setup]
+  - name: Make sure undo dir is present
+    file.write:
+      path: "{{ config_path }}/undodir"
+      state: directory
+    tags: [nvim, setup]
 
-- name: Create directory ftplugin
-  file.write:
-    path: "{{ config_path }}/ftplugin"
-    state: directory
-  tags: [nvim, setup]
+  - name: Create directory after
+    file.write:
+      path: "{{ config_path }}/after"
+      state: directory
+    tags: [nvim, setup]
 
-- name: Create directory lua
-  file.write:
-    path: "{{ config_path }}/lua"
-    state: directory
-  tags: [nvim, setup]
+  - name: Create directory ftplugin
+    file.write:
+      path: "{{ config_path }}/ftplugin"
+      state: directory
+    tags: [nvim, setup]
 
-- name: Create directory lua/claude_nvim
-  file.write:
-    path: "{{ config_path }}/lua/claude_nvim"
-    state: directory
-  tags: [nvim, setup]
+  - name: Create directory lua
+    file.write:
+      path: "{{ config_path }}/lua"
+      state: directory
+    tags: [nvim, setup]
 
-- name: Create directory colors
-  file.write:
-    path: "{{ config_path }}/colors"
-    state: directory
-  tags: [nvim, setup]
+  - name: Create directory lua/claude_nvim
+    file.write:
+      path: "{{ config_path }}/lua/claude_nvim"
+      state: directory
+    tags: [nvim, setup]
 
-# Vendored Monokai colorscheme — generated from the palette component so
-# the editor's syntax colors stay in lockstep with the rest of the system
-# (alacritty/waybar/wofi/dunst/tmux/zsh fzf). Edit components/palette/vars/
-# to change colors; never edit the generated file under ~/.config/nvim/colors/.
-- name: Deploy vendored Monokai colorscheme (palette-driven)
-  file.template:
-    src: ../palette/templates/monokai.vim.j2
-    dest: "{{ config_path }}/colors/monokai.vim"
-  tags: [nvim, colorscheme, palette]
+  - name: Create directory colors
+    file.write:
+      path: "{{ config_path }}/colors"
+      state: directory
+    tags: [nvim, setup]
 
-- name: Deploy config file {{ item.Path }}
-  file.template:
-    src: "{{ item.Src }}"
-    dest: "{{ config_path }}/{{ item.Path }}"
-  for_each_file: "./templates"
-  when: not item.IsDir
-  tags: [nvim, config]
+  # Vendored Monokai colorscheme — generated from the palette component so
+  # the editor's syntax colors stay in lockstep with the rest of the system
+  # (alacritty/waybar/wofi/dunst/tmux/zsh fzf). Edit components/palette/vars/
+  # to change colors; never edit the generated file under ~/.config/nvim/colors/.
+  - name: Deploy vendored Monokai colorscheme (palette-driven)
+    file.template:
+      src: ../palette/templates/monokai.vim.j2
+      dest: "{{ config_path }}/colors/monokai.vim"
+    tags: [nvim, colorscheme, palette]
 
-- import: ./win32yank.yml
-  when: use_win32yank
-  tags: [nvim, win32yank]
+  - name: Deploy config file {{ item.Path }}
+    file.template:
+      src: "{{ item.Src }}"
+      dest: "{{ config_path }}/{{ item.Path }}"
+    for_each_file: "./templates"
+    when: not item.IsDir
+    tags: [nvim, config]
 
-# tree-sitter CLI is required by nvim-treesitter to compile parsers
-# on first install. Cargo install pulls in libclang via rquickjs-sys,
-# so use the official prebuilt binary instead — single static file,
-# no toolchain dependencies. Linux: GitHub release; macOS: brew.
-- name: Install tree-sitter CLI (linux release binary)
-  shell: |
-    set -e
-    mkdir -p "$HOME/.local/bin"
-    tmp=$(mktemp)
-    curl -fsSL -o "$tmp.gz" https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.8/tree-sitter-linux-x64.gz
-    gunzip -c "$tmp.gz" > "$HOME/.local/bin/tree-sitter"
-    chmod +x "$HOME/.local/bin/tree-sitter"
-    rm -f "$tmp" "$tmp.gz"
-  unless_command: command -v tree-sitter >/dev/null 2>&1 || test -x "$HOME/.local/bin/tree-sitter"
-  when: os == 'linux'
-  tags: [nvim, treesitter]
+  - import: ./win32yank.yml
+    when: props.use_win32yank == 'true'
+    tags: [nvim, win32yank]
 
-- name: Install tree-sitter CLI (brew)
-  pkg:
-    name: tree-sitter
-    manager: brew
-  when: os == 'darwin'
-  tags: [nvim, treesitter]
+  # tree-sitter CLI is required by nvim-treesitter to compile parsers
+  # on first install. Cargo install pulls in libclang via rquickjs-sys,
+  # so use the official prebuilt binary instead — single static file,
+  # no toolchain dependencies. Linux: GitHub release; macOS: brew.
+  - name: Install tree-sitter CLI (linux release binary)
+    shell: |
+      set -e
+      mkdir -p "$HOME/.local/bin"
+      tmp=$(mktemp)
+      curl -fsSL -o "$tmp.gz" https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.8/tree-sitter-linux-x64.gz
+      gunzip -c "$tmp.gz" > "$HOME/.local/bin/tree-sitter"
+      chmod +x "$HOME/.local/bin/tree-sitter"
+      rm -f "$tmp" "$tmp.gz"
+    unless_command: command -v tree-sitter >/dev/null 2>&1 || test -x "$HOME/.local/bin/tree-sitter"
+    when: os == 'linux'
+    tags: [nvim, treesitter]
 
-# zk — Zettelkasten CLI over plain markdown. zk-nvim runs it as the
-# markdown LSP (link/backlink/tag completion, note search). Same pattern
-# as tree-sitter: prebuilt GitHub release on Linux, brew on macOS.
-- name: Install zk (linux release binary)
-  shell: |
-    set -e
-    mkdir -p "$HOME/.local/bin"
-    tmp=$(mktemp -d)
-    curl -fsSL -o "$tmp/zk.tar.gz" https://github.com/zk-org/zk/releases/download/v0.15.4/zk-v0.15.4-linux-amd64.tar.gz
-    tar -xzf "$tmp/zk.tar.gz" -C "$tmp"
-    install -m 0755 "$tmp/zk" "$HOME/.local/bin/zk"
-    rm -rf "$tmp"
-  unless_command: command -v zk >/dev/null 2>&1 || test -x "$HOME/.local/bin/zk"
-  when: os == 'linux'
-  tags: [nvim, zk]
+  - name: Install tree-sitter CLI (brew)
+    pkg:
+      name: tree-sitter
+      manager: brew
+    when: os == 'darwin'
+    tags: [nvim, treesitter]
 
-- name: Install zk (brew)
-  pkg:
-    name: zk
-    manager: brew
-  when: os == 'darwin'
-  tags: [nvim, zk]
+  # zk — Zettelkasten CLI over plain markdown. zk-nvim runs it as the
+  # markdown LSP (link/backlink/tag completion, note search). Same pattern
+  # as tree-sitter: prebuilt GitHub release on Linux, brew on macOS.
+  - name: Install zk (linux release binary)
+    shell: |
+      set -e
+      mkdir -p "$HOME/.local/bin"
+      tmp=$(mktemp -d)
+      curl -fsSL -o "$tmp/zk.tar.gz" https://github.com/zk-org/zk/releases/download/v0.15.4/zk-v0.15.4-linux-amd64.tar.gz
+      tar -xzf "$tmp/zk.tar.gz" -C "$tmp"
+      install -m 0755 "$tmp/zk" "$HOME/.local/bin/zk"
+      rm -rf "$tmp"
+    unless_command: command -v zk >/dev/null 2>&1 || test -x "$HOME/.local/bin/zk"
+    when: os == 'linux'
+    tags: [nvim, zk]
 
-# Notebook root + managed config. Presence of .zk/config.toml is what
-# marks the directory as a zk notebook, so no `zk init` is needed.
-- name: Create zk notebook directory
-  file.write:
-    path: "{{ notes_dir }}/.zk"
-    state: directory
-  tags: [nvim, zk]
+  - name: Install zk (brew)
+    pkg:
+      name: zk
+      manager: brew
+    when: os == 'darwin'
+    tags: [nvim, zk]
 
-- name: Deploy managed zk config
-  file.template:
-    src: ./zk_config.toml.j2
-    dest: "{{ notes_dir }}/.zk/config.toml"
-  tags: [nvim, zk]
+  # Notebook root + managed config. Presence of .zk/config.toml is what
+  # marks the directory as a zk notebook, so no `zk init` is needed.
+  - name: Create zk notebook directory
+    file.write:
+      path: "{{ props.notes_dir }}/.zk"
+      state: directory
+    tags: [nvim, zk]
 
-- name: Create zk templates directory
-  file.write:
-    path: "{{ notes_dir }}/.zk/templates"
-    state: directory
-  tags: [nvim, zk]
+  - name: Deploy managed zk config
+    file.template:
+      src: ./zk_config.toml.j2
+      dest: "{{ props.notes_dir }}/.zk/config.toml"
+    tags: [nvim, zk]
 
-# zk refuses to create a note in a missing directory, so the daily-note
-# group path (config.toml [group.daily]) must exist up front.
-- name: Create zk daily journal directory
-  file.write:
-    path: "{{ notes_dir }}/journal/daily"
-    state: directory
-  tags: [nvim, zk]
+  - name: Create zk templates directory
+    file.write:
+      path: "{{ props.notes_dir }}/.zk/templates"
+      state: directory
+    tags: [nvim, zk]
 
-- name: Deploy default note template
-  file.template:
-    src: ./zk_template_default.md.j2
-    dest: "{{ notes_dir }}/.zk/templates/default.md"
-  tags: [nvim, zk]
+  # zk refuses to create a note in a missing directory, so the daily-note
+  # group path (config.toml [group.daily]) must exist up front.
+  - name: Create zk daily journal directory
+    file.write:
+      path: "{{ props.notes_dir }}/journal/daily"
+      state: directory
+    tags: [nvim, zk]
 
-- name: Make sure plugins are installed
-  shell: |
-    set -euo pipefail
-    export PATH="$HOME/.local/bin:$PATH"
-    nvim --headless "+Lazy! sync" +qa
-  timeout: 15m
-  retry:
-    attempts: 2
-    delay: 10s
-  tags: [nvim, plugins]
+  - name: Deploy default note template
+    file.template:
+      src: ./zk_template_default.md.j2
+      dest: "{{ props.notes_dir }}/.zk/templates/default.md"
+    tags: [nvim, zk]
 
-# vim-go is lazy-loaded on Go filetype, so it prompts to run :GoInstallBinaries
-# the first time a .go file is opened. Do it here so users never see the prompt.
-# Opening a stub .go file triggers vim-go via FileType; :GoInstallBinaries is
-# idempotent (skips binaries already present).
-- name: Pre-install vim-go binaries (gopls, goimports, ...)
-  shell: |
-    set -e
-    command -v go >/dev/null 2>&1 || { echo "go not installed, skipping"; exit 0; }
-    tmp=$(mktemp /tmp/vimgo-XXXXXX.go)
-    echo 'package main' > "$tmp"
-    nvim --headless "$tmp" "+GoInstallBinaries" +qa
-    rm -f "$tmp"
-  timeout: 15m
-  tags: [nvim, golang]
+  - name: Make sure plugins are installed
+    shell: |
+      set -euo pipefail
+      export PATH="$HOME/.local/bin:$PATH"
+      nvim --headless "+Lazy! sync" +qa
+    timeout: 15m
+    retry:
+      attempts: 2
+      delay: 10s
+    tags: [nvim, plugins]
 
-- import: ./copilot.yml
-  tags: [nvim, copilot]
+  # vim-go is lazy-loaded on Go filetype, so it prompts to run :GoInstallBinaries
+  # the first time a .go file is opened. Do it here so users never see the prompt.
+  # Opening a stub .go file triggers vim-go via FileType; :GoInstallBinaries is
+  # idempotent (skips binaries already present).
+  - name: Pre-install vim-go binaries (gopls, goimports, ...)
+    shell: |
+      set -e
+      command -v go >/dev/null 2>&1 || { echo "go not installed, skipping"; exit 0; }
+      tmp=$(mktemp /tmp/vimgo-XXXXXX.go)
+      echo 'package main' > "$tmp"
+      nvim --headless "$tmp" "+GoInstallBinaries" +qa
+      rm -f "$tmp"
+    timeout: 15m
+    tags: [nvim, golang]
 
-- name: Verify nvim installation
-  assert:
-    command:
-      cmd: which nvim
-  tags: [nvim, verify]
+  - import: ./copilot.yml
+    tags: [nvim, copilot]
 
-- name: Verify nvim config
-  assert:
-    command:
-      cmd: test -f ~/.config/nvim/init.lua
-  tags: [nvim, verify]
+  - name: Verify nvim installation
+    assert:
+      command:
+        cmd: which nvim
+    tags: [nvim, verify]
 
-- name: Verify lazy.nvim installation
-  assert:
-    command:
-      cmd: test -d ~/.local/share/nvim/lazy/lazy.nvim
-  tags: [nvim, verify]
+  - name: Verify nvim config
+    assert:
+      command:
+        cmd: test -f ~/.config/nvim/init.lua
+    tags: [nvim, verify]
+
+  - name: Verify lazy.nvim installation
+    assert:
+      command:
+        cmd: test -d ~/.local/share/nvim/lazy/lazy.nvim
+    tags: [nvim, verify]

@@ -1,100 +1,163 @@
 ---
-- name: Install zsh
-  pkg:
-    name: zsh
-    state: present
-  as_user: root
-  when: os == "linux"
-  tags: [zsh, install]
+props:
+  dex_local_port:
+    type: string
+    default: "11434"
+    description: Local ollama port for embed + chat URLs.
+  dex_embed_model:
+    type: string
+    default: ""
+    description: Embedding model name (e.g. qwen3-embedding:4b). Empty = binary default.
+  dex_chat_model:
+    type: string
+    default: ""
+    description: Chat model name (e.g. qwen2.5-coder:32b). Empty = binary default.
+  dex_ask_model:
+    type: string
+    default: ""
+    description: Ask/routing model override. Empty = falls back to dex_chat_model.
+  dex_summary_port:
+    type: string
+    default: "11434"
+    description: Ollama port for the summary worker.
+  dex_summary_model:
+    type: string
+    default: "qwen2.5-coder:7b"
+    description: Default summary model.
+  dex_compress_port:
+    type: string
+    default: "11434"
+    description: Ollama port for the compress step.
+  dex_compress_model:
+    type: string
+    default: "qwen2.5-coder:7b"
+    description: Compress model name.
+  dex_draft_port:
+    type: string
+    default: "11434"
+    description: Ollama port for draft generation. Empty = disabled.
+  dex_draft_model:
+    type: string
+    default: "qwen2.5-coder:3b"
+    description: Draft model name.
+  dex_rerank_local_port:
+    type: string
+    default: "8082"
+    description: Local reranker port.
+  dex_rerank_style:
+    type: string
+    default: "cohere"
+    description: Reranker API style (cohere or chat).
+  dex_rerank_model:
+    type: string
+    default: "BAAI/bge-reranker-v2-m3"
+    description: Reranker model name.
+  dex_rerank_pool:
+    type: string
+    default: "40"
+    description: Reranker candidate pool size.
+  dex_rerank_concurrency:
+    type: string
+    default: "8"
+    description: Reranker request concurrency.
 
-- name: Install zsh (macos)
-  pkg:
-    name: zsh
-    state: present
-    manager: brew
-  when: os == "darwin"
-  timeout: 5m
-  retry:
-    attempts: 3
-    delay: 5s
-  tags: [zsh, install]
+steps:
+  - name: Install zsh
+    pkg:
+      name: zsh
+      state: present
+    as_user: root
+    when: os == "linux"
+    tags: [zsh, install]
 
-- name: Make sure zsh config directory is present
-  file.write:
-    path: ~/.config/zsh
-    state: directory
-  tags: [zsh, config]
+  - name: Install zsh (macos)
+    pkg:
+      name: zsh
+      state: present
+      manager: brew
+    when: os == "darwin"
+    timeout: 5m
+    retry:
+      attempts: 3
+      delay: 5s
+    tags: [zsh, install]
 
-- vars.load: ./vars/ubuntu_vars.yml
-  when: os == 'linux'
+  - name: Make sure zsh config directory is present
+    file.write:
+      path: ~/.config/zsh
+      state: directory
+    tags: [zsh, config]
 
-- vars.load: ./vars/macos_{{arch}}.yml
-  when: os == "darwin"
+  - vars.load: ./vars/ubuntu_vars.yml
+    when: os == 'linux'
 
-- name: Deploy .zshenv
-  # Sourced by ALL zsh (incl. non-interactive scripts/cron/agent shells) —
-  # holds env that must apply regardless of shell type (cargo, dex client
-  # vars). See templates/.zshenv.j2 (dotfiles #33).
-  file.template:
-    src: ./templates/.zshenv.j2
-    dest: ~/.zshenv
-  tags: [zsh, config]
+  - vars.load: ./vars/macos_{{arch}}.yml
+    when: os == "darwin"
 
-- name: Deploy .zshrc
-  file.template:
-    src: ./templates/.zshrc.j2
-    dest: ~/.zshrc
-  tags: [zsh, config]
+  - name: Deploy .zshenv
+    # Sourced by ALL zsh (incl. non-interactive scripts/cron/agent shells) —
+    # holds env that must apply regardless of shell type (cargo, dex client
+    # vars). See templates/.zshenv.j2 (dotfiles #33).
+    file.template:
+      src: ./templates/.zshenv.j2
+      dest: ~/.zshenv
+    tags: [zsh, config]
 
-- name: Deploy .ignore
-  file.template:
-    src: ./templates/.ignore.j2
-    dest: ~/.ignore
-  tags: [zsh, config]
+  - name: Deploy .zshrc
+    file.template:
+      src: ./templates/.zshrc.j2
+      dest: ~/.zshrc
+    tags: [zsh, config]
 
-- name: Clone zplug
-  git.clone:
-    repo: https://github.com/zplug/zplug.git
-    dest: ~/.zplug
-    depth: 1
-  timeout: 5m
-  retry:
-    attempts: 3
-    delay: 5s
-  tags: [zsh, plugins]
+  - name: Deploy .ignore
+    file.template:
+      src: ./templates/.ignore.j2
+      dest: ~/.ignore
+    tags: [zsh, config]
 
-- name: Clone oh-my-zsh
-  git.clone:
-    repo: https://github.com/ohmyzsh/ohmyzsh.git
-    dest: ~/.zplug/repos/ohmyzsh/ohmyzsh
-    depth: 1
-  timeout: 5m
-  retry:
-    attempts: 3
-    delay: 5s
-  tags: [zsh, plugins]
+  - name: Clone zplug
+    git.clone:
+      repo: https://github.com/zplug/zplug.git
+      dest: ~/.zplug
+      depth: 1
+    timeout: 5m
+    retry:
+      attempts: 3
+      delay: 5s
+    tags: [zsh, plugins]
 
-- name: Set zsh as default shell
-  os.user:
-    name: "{{ username }}"
-    shell: "{{ zsh_shell_path }}"
-  as_user: root
-  tags: [zsh, shell]
+  - name: Clone oh-my-zsh
+    git.clone:
+      repo: https://github.com/ohmyzsh/ohmyzsh.git
+      dest: ~/.zplug/repos/ohmyzsh/ohmyzsh
+      depth: 1
+    timeout: 5m
+    retry:
+      attempts: 3
+      delay: 5s
+    tags: [zsh, plugins]
 
-- name: Verify zsh installation
-  assert:
-    command:
-      cmd: which zsh
-  tags: [zsh, verify]
+  - name: Set zsh as default shell
+    os.user:
+      name: "{{ username }}"
+      shell: "{{ zsh_shell_path }}"
+    as_user: root
+    tags: [zsh, shell]
 
-- name: Verify zsh config
-  assert:
-    command:
-      cmd: test -f ~/.zshrc
-  tags: [zsh, verify]
+  - name: Verify zsh installation
+    assert:
+      command:
+        cmd: which zsh
+    tags: [zsh, verify]
 
-- name: Verify zplug installation
-  assert:
-    command:
-      cmd: test -d ~/.zplug
-  tags: [zsh, verify]
+  - name: Verify zsh config
+    assert:
+      command:
+        cmd: test -f ~/.zshrc
+    tags: [zsh, verify]
+
+  - name: Verify zplug installation
+    assert:
+      command:
+        cmd: test -d ~/.zplug
+    tags: [zsh, verify]
