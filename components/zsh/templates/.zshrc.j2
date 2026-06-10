@@ -786,5 +786,21 @@ ce() {
     done
     [[ -n "$tok" ]] && { export MOONGIT_TOKEN="$tok"; print -r -- "moongit identity: $ident" >&2 }
   fi
+  # Route this session through the dex proxy when it's up (epic #232): exporting
+  # ANTHROPIC_BASE_URL points Claude's /v1/messages at the local pass-through
+  # (token baseline now; history compression later). Opt-in by liveness — a TCP
+  # probe via ztcp (no upstream request); if the proxy is down we leave the env
+  # untouched and talk to the API directly, so a dead proxy never blocks a
+  # launch. An explicit pre-set ANTHROPIC_BASE_URL always wins. ENABLE_TOOL_SEARCH
+  # is required or a non-first-party base URL silently disables MCP tool search.
+  if [[ -z "$ANTHROPIC_BASE_URL" ]]; then
+    local proxy_port="${DEX_PROXY_PORT:-{{ dex_proxy_port }}}"
+    if zmodload zsh/net/tcp 2>/dev/null && ztcp 127.0.0.1 "$proxy_port" 2>/dev/null; then
+      ztcp -c 2>/dev/null
+      export ANTHROPIC_BASE_URL="http://127.0.0.1:${proxy_port}"
+      export ENABLE_TOOL_SEARCH=true
+      print -r -- "dex proxy: routing via $ANTHROPIC_BASE_URL" >&2
+    fi
+  fi
   claude-autoapprove "$@"
 }
