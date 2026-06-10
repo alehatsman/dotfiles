@@ -1,0 +1,38 @@
+# dex proxy — loopback Anthropic API pass-through (dex #235, epic #232).
+#
+# Sits between Claude Code and the Anthropic API at ANTHROPIC_BASE_URL and
+# forwards /v1/messages verbatim (SSE streamed through unbuffered), logging a
+# per-request input-token baseline. NO compression yet — this is the spike
+# seam; the baseline is the before-number the history-pruning / tool_result
+# compression tickets (#237/#238) will be measured against.
+#
+# DAEMON-ONLY / OPT-IN: this unit only *runs* the proxy. It deliberately does
+# NOT set ANTHROPIC_BASE_URL anywhere — Claude sessions route through it only
+# when a user/agent explicitly exports
+#   ANTHROPIC_BASE_URL=http://127.0.0.1:{{ dex_proxy_port }}
+#   ENABLE_TOOL_SEARCH=true   # non-first-party base URL disables MCP tool
+#                             # search otherwise; needed for tool_reference blocks
+# Keeping it opt-in means the no-compression spike is never a single point of
+# failure for the autonomous agents on this box.
+#
+# Bound to 127.0.0.1 on purpose: the proxy sees the agent's API key, so dex
+# refuses any non-loopback bind. No token, no firewall rule — same posture as
+# dex-serve.
+
+[Unit]
+Description=dex proxy (loopback Anthropic pass-through + token baseline)
+After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+# %h is systemd's user-home specifier; it does NOT expand `~`, so the tilde
+# form in {{ dex_bin_path }} can't be used in ExecStart directly — hardcode
+# the resolved .local/bin path (matches dex-serve.service.j2).
+ExecStart=%h/.local/bin/dex proxy --addr 127.0.0.1:{{ dex_proxy_port }}
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=default.target

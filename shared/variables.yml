@@ -184,6 +184,12 @@ dex_embed_batch: "128"
 # rule. Distinct from moongit (:8080), ollama (:11434), rerank (:8082).
 dex_serve_port: "7920"
 
+# dex proxy — loopback Anthropic API pass-through that logs a per-request
+# input-token baseline (dex #235). Server-only, Restart=always. Opt-in: nothing
+# routes through it until ANTHROPIC_BASE_URL=http://127.0.0.1:7921 is exported.
+# Distinct from dex serve (:7920), moongit (:8080), ollama (:11434).
+dex_proxy_port: "7921"
+
 # OLLAMA_NUM_PARALLEL — max concurrent generation requests ollama will
 # pack into a single model. Deployed as a systemd drop-in on the GPU
 # host (components/dex/templates/ollama-num-parallel.conf.j2). 4 is

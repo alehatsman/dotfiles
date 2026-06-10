@@ -146,6 +146,10 @@ props:
     type: string
     default: "7920"
     description: Local port for dex serve (HTTP query API for moongit Intel tab).
+  dex_proxy_port:
+    type: string
+    default: "7921"
+    description: Loopback port for the dex proxy (Anthropic pass-through + token baseline). Server-only; opt-in via ANTHROPIC_BASE_URL.
   dex_watch_paths:
     type: string
     default: ""
@@ -251,6 +255,7 @@ steps:
       dex_remote_ssh_port: "{{ props.dex_remote_ssh_port }}"
       dex_remote_user: "{{ props.dex_remote_user }}"
       dex_serve_port: "{{ props.dex_serve_port }}"
+      dex_proxy_port: "{{ props.dex_proxy_port }}"
       dex_watch_paths: "{{ props.dex_watch_paths }}"
       dex_ollama_keep_alive: "{{ props.dex_ollama_keep_alive }}"
       dex_ollama_num_parallel: "{{ props.dex_ollama_num_parallel }}"
@@ -687,6 +692,36 @@ steps:
     when: dex_role == 'server' and os == 'linux'
     changed_when: false
     tags: [dex, serve]
+
+  # ───────────────── PROXY (loopback Anthropic pass-through) ──────────────────
+  # A server-side `dex proxy` daemon on loopback (dex #235): forwards
+  # /v1/messages to the Anthropic API verbatim and logs a per-request
+  # input-token baseline. NO compression yet. DAEMON-ONLY / OPT-IN — this
+  # deploys and runs the service but does NOT set ANTHROPIC_BASE_URL anywhere,
+  # so it never sits on the critical path of the box's Claude sessions. A
+  # user/agent routes a session through it by exporting
+  # ANTHROPIC_BASE_URL=http://127.0.0.1:{{ dex_proxy_port }} (+ ENABLE_TOOL_SEARCH=true).
+  # Linux + server only; bound to 127.0.0.1 so dex needs no token.
+
+  - name: "Deploy dex-proxy user systemd unit"
+    file.template:
+      src: ./templates/dex-proxy.service.j2
+      dest: "~/.config/systemd/user/dex-proxy.service"
+    when: dex_role == 'server' and os == 'linux'
+    tags: [dex, proxy]
+
+  - name: "Enable + (re)start dex-proxy.service"
+    # Restart on every apply so a port/template change takes effect. The proxy
+    # is a thin forwarder, so an apply-time blip is cheap; opt-in routing means
+    # no session breaks during the restart window anyway.
+    shell: |
+      set -euo pipefail
+      systemctl --user daemon-reload
+      systemctl --user enable dex-proxy.service
+      systemctl --user restart dex-proxy.service
+    when: dex_role == 'server' and os == 'linux'
+    changed_when: false
+    tags: [dex, proxy]
 
   # Retire the standalone dex-watch@ instances for the long-lived serve
   # paths: dex serve now eager-watches its --project registry at boot
