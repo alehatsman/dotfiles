@@ -19,12 +19,6 @@
       "Glob",
       "Grep"
     ],
-    "deny": [
-      "Bash(rm -rf /)",
-      "Bash(rm -rf /*)",
-      "Bash(git commit*)",
-      "Bash(git push*)"
-    ]
   },
   "enabledPlugins": {
     "lua-lsp@claude-plugins-official": true,
