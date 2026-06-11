@@ -5,8 +5,8 @@
 # WSL strips underscores from hostnames (RFC 952), so main_pc → mainpc,
 # mini_pc → minipc. Mac and x1 have no underscores and match directly.
 #
-# Alternate profiles (mini_pc_server.yml, mini_pc_summary.yml) are
-# intentionally excluded — invoke those explicitly with -c.
+# Alternate profile (mini_pc_server.yml) is
+# intentionally excluded — invoke it explicitly with -c.
 
 - import: ./main_pc.yml
   when: hostname == 'mainpc'

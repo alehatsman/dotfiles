@@ -10,12 +10,11 @@
 #
 # VRAM budget (keep_alive=-1, all pinned):
 #   embed-4b   ~4.0 G  (qwen3-embedding:4b)
-#   chat/all   ~8.7 G  (qwen3:14b Q4_K_M — single model for chat + all summary)
+#   chat       ~8.7 G  (qwen3:14b Q4_K_M)
 #   ──────────────────────
 #   total      ~12.7 G  (3.3 G headroom on 16 G card)
 #
-# Single model for everything — simpler than the old two-slot approach and
-# fits with more headroom. Qwen3-14B matches Qwen2.5-32B on coding benchmarks.
+# Qwen3-14B matches Qwen2.5-32B on coding benchmarks.
 # Compress and draft disabled; add back if VRAM budget allows a second model.
 
 dex_role: server
@@ -24,27 +23,10 @@ dex_chat_model: "qwen3:14b"
 # Pin embed + chat warm — both fit within the 12.7 G budget.
 dex_ollama_keep_alive: "-1"
 
-# All summary tiers use the same model as chat — one slot, no cycling needed.
-dex_chunk_summary_model: "qwen3:14b"
-dex_file_summary_model: "qwen3:14b"
-dex_package_summary_model: "qwen3:14b"
-dex_repo_summary_model: "qwen3:14b"
-
-# Two workers — adequate for a single pinned model at ~59 t/s on RTX 5080.
-dex_summary_concurrency: "2"
-
 # Compress and draft disabled — qwen3:8b would need ~5 G, pushing total to
 # ~17.7 G (OOM with pinning). Re-enable if running without keep_alive=-1.
 dex_compress_port: ""
 dex_draft_port: ""
-
-# Background draining ON. dex #17 drain lock + yield make it safe on a
-# shared GPU. Set to "1" to pause draining (e.g. while debugging GPU issues).
-dex_power_save: ""
-
-# Slightly wider yield window than main_pc (10s) to compensate for the
-# tighter VRAM headroom — a latency spike mid-drain is more likely on 16 G.
-dex_summarize_yield: "15s"
 
 # Projects to keep auto-reindexed on this box. Extend as needed.
 dex_watch_paths: "/home/{{ username }}/dotfiles"

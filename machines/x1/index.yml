@@ -52,8 +52,6 @@
     dex_embed_model: "{{ dex_embed_model }}"
     dex_chat_model: "{{ dex_chat_model }}"
     dex_ask_model: "{{ dex_ask_model }}"
-    dex_summary_port: "{{ dex_summary_port }}"
-    dex_summary_model: "{{ dex_summary_model }}"
     dex_compress_port: "{{ dex_compress_port }}"
     dex_compress_model: "{{ dex_compress_model }}"
     dex_draft_port: "{{ dex_draft_port }}"

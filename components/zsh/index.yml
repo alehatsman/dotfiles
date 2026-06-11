@@ -16,14 +16,6 @@ props:
     type: string
     default: ""
     description: Ask/routing model override. Empty = falls back to dex_chat_model.
-  dex_summary_port:
-    type: string
-    default: "11434"
-    description: Ollama port for the summary worker.
-  dex_summary_model:
-    type: string
-    default: "qwen2.5-coder:7b"
-    description: Default summary model.
   dex_compress_port:
     type: string
     default: "11434"
