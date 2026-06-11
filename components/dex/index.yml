@@ -248,6 +248,7 @@ steps:
       [[ -n '{{ dex_draft_port }}' ]] && args+=(
         -e DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
         -e DEX_DRAFT_MODEL={{ dex_draft_model }}
+      )
       claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
     tags: [dex, claude]
 
