@@ -82,46 +82,6 @@ props:
     type: string
     default: "qwen2.5-coder:3b"
     description: Draft model name.
-  dex_summary_port:
-    type: string
-    default: "11434"
-    description: Ollama port for the summary worker.
-  dex_summary_model:
-    type: string
-    default: "qwen2.5-coder:7b"
-    description: Default summary model.
-  dex_chunk_summary_model:
-    type: string
-    default: ""
-    description: Per-chunk summary model override. Empty = inherit dex_summary_model.
-  dex_file_summary_model:
-    type: string
-    default: ""
-    description: Per-file summary model override. Empty = inherit dex_summary_model.
-  dex_package_summary_model:
-    type: string
-    default: ""
-    description: Per-package summary model override. Empty = inherit dex_summary_model.
-  dex_repo_summary_model:
-    type: string
-    default: ""
-    description: Per-repo summary model override. Empty = inherit dex_summary_model.
-  dex_summary_concurrency:
-    type: string
-    default: "4"
-    description: Number of concurrent summary requests.
-  dex_chunk_summary_min_lines:
-    type: string
-    default: "50"
-    description: Min lines in a chunk to warrant summarization.
-  dex_power_save:
-    type: string
-    default: ""
-    description: Pause background summary draining when set. Empty = off.
-  dex_summarize_yield:
-    type: string
-    default: ""
-    description: Drainer defers while a query is in flight. Empty = off.
   dex_remote_host:
     type: string
     default: "main_pc-wsl"
@@ -162,64 +122,10 @@ props:
     type: string
     default: "4"
     description: Ollama parallel request slots.
-  dex_summary_host:
-    type: string
-    default: ""
-    description: SSH hostname alias for the remote summary worker. Empty = no tunnel.
-  dex_summary_host_ip:
-    type: string
-    default: ""
-    description: LAN IP of the remote summary worker.
-  dex_summary_host_ssh_port:
-    type: string
-    default: "2222"
-    description: SSH port on the remote summary worker host.
-  dex_summary_host_user:
-    type: string
-    default: "aleh"
-    description: SSH user on the remote summary worker host.
-  dex_summary_local_port:
-    type: string
-    default: "11435"
-    description: Local port the summary SSH tunnel listens on.
-  dex_summary_router:
-    type: string
-    default: ""
-    description: Enable the summary router when non-empty.
-  dex_summary_router_port:
-    type: string
-    default: "11436"
-    description: Port the summary router listens on.
-  dex_summary_router_local_models:
-    type: string
-    default: "qwen2.5-coder:3b"
-    description: Models served locally (not routed to remote).
-  dex_summary_router_flood_evict:
-    type: string
-    default: ""
-    description: Model to evict from GPU in flood mode. Empty = no eviction.
-  dex_summary_router_steady_stop:
-    type: string
-    default: ""
-    description: Space-separated models to stop in steady mode. Empty = none.
-  dex_summary_flood_concurrency:
-    type: string
-    default: "8"
-    description: DEX_SUMMARY_CONCURRENCY applied while flood mode is active.
-  dex_summary_flood_batch:
-    type: string
-    default: "100"
-    description: DEX_SUMMARIZE_BATCH applied while flood mode is active.
-  dex_summary_worker:
-    type: string
-    default: ""
-    description: "When non-empty: pull dex_summary_model regardless of dex_role. Set on machines that serve as a remote summary worker for another host."
-
 steps:
   - vars.load: ./variables.yml
 
-  # Inject all props into global scope so sub-imports (server.yml,
-  # summary-worker.yml) and templates can continue using {{ dex_* }}.
+  # Inject all props into global scope so server.yml and templates can use {{ dex_* }}.
   - vars:
       dex_role: "{{ props.dex_role }}"
       dex_src_url: "{{ props.dex_src_url }}"
@@ -239,39 +145,6 @@ steps:
       dex_compress_model: "{{ props.dex_compress_model }}"
       dex_draft_port: "{{ props.dex_draft_port }}"
       dex_draft_model: "{{ props.dex_draft_model }}"
-      dex_summary_port: "{{ props.dex_summary_port }}"
-      dex_summary_model: "{{ props.dex_summary_model }}"
-      dex_chunk_summary_model: "{{ props.dex_chunk_summary_model }}"
-      dex_file_summary_model: "{{ props.dex_file_summary_model }}"
-      dex_package_summary_model: "{{ props.dex_package_summary_model }}"
-      dex_repo_summary_model: "{{ props.dex_repo_summary_model }}"
-      dex_summary_concurrency: "{{ props.dex_summary_concurrency }}"
-      dex_chunk_summary_min_lines: "{{ props.dex_chunk_summary_min_lines }}"
-      dex_power_save: "{{ props.dex_power_save }}"
-      dex_summarize_yield: "{{ props.dex_summarize_yield }}"
-      dex_remote_host: "{{ props.dex_remote_host }}"
-      dex_remote_ip: "{{ props.dex_remote_ip }}"
-      dex_remote_port: "{{ props.dex_remote_port }}"
-      dex_remote_ssh_port: "{{ props.dex_remote_ssh_port }}"
-      dex_remote_user: "{{ props.dex_remote_user }}"
-      dex_serve_port: "{{ props.dex_serve_port }}"
-      dex_proxy_port: "{{ props.dex_proxy_port }}"
-      dex_watch_paths: "{{ props.dex_watch_paths }}"
-      dex_ollama_keep_alive: "{{ props.dex_ollama_keep_alive }}"
-      dex_ollama_num_parallel: "{{ props.dex_ollama_num_parallel }}"
-      dex_summary_host: "{{ props.dex_summary_host }}"
-      dex_summary_host_ip: "{{ props.dex_summary_host_ip }}"
-      dex_summary_host_ssh_port: "{{ props.dex_summary_host_ssh_port }}"
-      dex_summary_host_user: "{{ props.dex_summary_host_user }}"
-      dex_summary_local_port: "{{ props.dex_summary_local_port }}"
-      dex_summary_router: "{{ props.dex_summary_router }}"
-      dex_summary_router_port: "{{ props.dex_summary_router_port }}"
-      dex_summary_router_local_models: "{{ props.dex_summary_router_local_models }}"
-      dex_summary_router_flood_evict: "{{ props.dex_summary_router_flood_evict }}"
-      dex_summary_router_steady_stop: "{{ props.dex_summary_router_steady_stop }}"
-      dex_summary_flood_concurrency: "{{ props.dex_summary_flood_concurrency }}"
-      dex_summary_flood_batch: "{{ props.dex_summary_flood_batch }}"
-      dex_summary_worker: "{{ props.dex_summary_worker }}"
 
   # ───────────────── CLIENT (and server — server is a superset) ──────────────
 
@@ -375,49 +248,6 @@ steps:
       [[ -n '{{ dex_draft_port }}' ]] && args+=(
         -e DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
         -e DEX_DRAFT_MODEL={{ dex_draft_model }}
-      )
-      # Index-time summary leg: smaller, faster model for per-file /
-      # per-chunk / per-package summaries generated during `dex index`.
-      # SUMMARY_URL disabled when port is "" (summaries fall back to the
-      # main chat leg). Concurrency + min-lines always apply.
-      [[ -n '{{ dex_summary_port }}' ]] && args+=(
-        -e DEX_SUMMARY_URL=http://127.0.0.1:{{ dex_summary_port }}
-        -e DEX_SUMMARY_MODEL={{ dex_summary_model }}
-      )
-      # Per-tier model overrides. Each empty string means "inherit
-      # DEX_SUMMARY_MODEL", so the default fleet behavior is unchanged;
-      # only boxes with VRAM headroom (main_pc) override and route the
-      # higher tiers through bigger models. These also flow through the
-      # MCP server into the auto-watcher's drainer, so summaries
-      # regenerated in the background use the same ladder as inline
-      # `dex index`.
-      [[ -n '{{ dex_chunk_summary_model }}' ]] && args+=(
-        -e DEX_CHUNK_SUMMARY_MODEL={{ dex_chunk_summary_model }}
-      )
-      [[ -n '{{ dex_file_summary_model }}' ]] && args+=(
-        -e DEX_FILE_SUMMARY_MODEL={{ dex_file_summary_model }}
-      )
-      [[ -n '{{ dex_package_summary_model }}' ]] && args+=(
-        -e DEX_PACKAGE_SUMMARY_MODEL={{ dex_package_summary_model }}
-      )
-      [[ -n '{{ dex_repo_summary_model }}' ]] && args+=(
-        -e DEX_REPO_SUMMARY_MODEL={{ dex_repo_summary_model }}
-      )
-      args+=(
-        -e DEX_SUMMARY_CONCURRENCY={{ dex_summary_concurrency }}
-        -e DEX_CHUNK_SUMMARY_MIN_LINES={{ dex_chunk_summary_min_lines }}
-      )
-      # Power-save: pause background summary draining (index stays fresh via
-      # embed). Empty string = off, so only hosts that set dex_power_save
-      # (the GPU box) add the flag; the rest keep summarizing in the bg.
-      [[ -n '{{ dex_power_save }}' ]] && args+=(
-        -e DEX_POWER_SAVE={{ dex_power_save }}
-      )
-      # Yield-to-foreground: drainer defers while a query is in flight.
-      # Empty = off; only set on hosts that configure dex_summarize_yield.
-      [[ -n '{{ dex_summarize_yield }}' ]] && args+=(
-        -e DEX_SUMMARIZE_YIELD={{ dex_summarize_yield }}
-      )
       claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
     tags: [dex, claude]
 
@@ -641,21 +471,6 @@ steps:
     when: os == 'linux' and dex_role != 'server'
     tags: [dex, watch]
 
-  # ───────────────── SUMMARY WORKER (client acting as remote summary target) ──
-  # When dex_summary_worker is set the machine runs a local ollama and serves
-  # as the SSH tunnel target for another host's summary router. Pull the summary
-  # model here so it's ready before the first drain request arrives.
-  # Runs regardless of dex_role so client machines (e.g. mini_pc) get the pull
-  # without being promoted to full server.
-
-  - name: "Pull summary model (summary worker)"
-    shell: ollama pull {{ dex_summary_model }}
-    unless_command: |
-      [ -z "{{ dex_summary_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_summary_model }}'
-    timeout: 30m
-    when: dex_summary_worker != '' and os == 'linux'
-    tags: [dex, summary-worker]
-
   # ───────────────── SERVE (HTTP query API for moongit Intel) ─────────────────
   # A server-side `dex serve` daemon on loopback, consumed by moongit's Intel
   # tab (MOONGIT_DEX_URL). Serves the same roots that are auto-reindexed
@@ -761,125 +576,6 @@ steps:
 
   # ───────────────── SUMMARY TUNNEL (server + remote worker configured) ──────
   #
-  # When dex_summary_host is non-empty the GPU server offloads all summary
-  # generation to a second machine (mini_pc) over an SSH tunnel instead of
-  # running summaries locally. DEX_SUMMARY_URL points at the tunnel's local
-  # port (dex_summary_port = dex_summary_local_port on the GPU host).
-  #
-  # The tunnel mirrors the client-side dex-tunnel pattern: SSH port-forward
-  # only, reuses existing key auth, never touches the LAN directly.
-
-  - name: "Ensure {{ dex_summary_host }} SSH alias is in ~/.ssh/config"
-    shell: |
-      set -euo pipefail
-      config="$HOME/.ssh/config"
-      touch "$config" && chmod 0600 "$config"
-      if ! grep -q "^Host {{ dex_summary_host }}$" "$config"; then
-        printf '\nHost %s\n    HostName %s\n    Port %s\n    User %s\n' \
-          '{{ dex_summary_host }}' '{{ dex_summary_host_ip }}' \
-          '{{ dex_summary_host_ssh_port }}' '{{ dex_summary_host_user }}' >> "$config"
-      fi
-    unless_command: "grep -q '^Host {{ dex_summary_host }}$' ~/.ssh/config 2>/dev/null"
-    when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
-    tags: [dex, summary-tunnel]
-
-  - name: "Deploy dex-summary-tunnel user systemd unit"
-    file.template:
-      src: ./templates/dex-summary-tunnel.service.j2
-      dest: "~/.config/systemd/user/dex-summary-tunnel.service"
-    when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
-    tags: [dex, summary-tunnel]
-
-  - name: "Enable and start dex-summary-tunnel.service"
-    shell: |
-      set -euo pipefail
-      systemctl --user daemon-reload
-      systemctl --user enable --now dex-summary-tunnel.service
-    when: dex_role == 'server' and os == 'linux' and dex_summary_host != ''
-    tags: [dex, summary-tunnel]
-
-  # ───────────────── SUMMARY ROUTER (server; dex_summary_router set) ──────────
-  #
-  # A model-name routing reverse proxy in front of DEX_SUMMARY_URL so the single
-  # dex drainer can fan summary chat calls across both GPUs (dotfiles #32). The
-  # host points dex_summary_port at the router (DEX_SUMMARY_URL → router); the
-  # router's REMOTE upstream is the summary tunnel (5080) and LOCAL is this box's
-  # ollama (5090). Steady mode is pure passthrough to REMOTE, so a brief
-  # apply-time window where serve points at the router before it's up only
-  # defers background summaries (the drainer retries; the queue is durable).
-
-  - name: "Ensure summary-router source dir exists"
-    file.write:
-      path: "{{ dex_summary_router_src_dir }}"
-      state: directory
-    when: dex_summary_router != '' and os == 'linux'
-    tags: [dex, summary-router]
-
-  - name: "Ship summary-router source (main.go)"
-    file.copy:
-      src: ./router/main.go
-      dest: "{{ dex_summary_router_src_dir }}/main.go"
-    when: dex_summary_router != '' and os == 'linux'
-    tags: [dex, summary-router]
-
-  - name: "Ship summary-router source (go.mod)"
-    file.copy:
-      src: ./router/go.mod
-      dest: "{{ dex_summary_router_src_dir }}/go.mod"
-    when: dex_summary_router != '' and os == 'linux'
-    tags: [dex, summary-router]
-
-  # Stdlib-only — plain `go build`, no -tags sqlite_fts5 (that's dex's CGO
-  # requirement, not the router's). Rebuild gated on the combined source sha so
-  # a fleet apply only rebuilds when main.go/go.mod actually change. Vars are
-  # unquoted in the heredoc so bash expands the tilde (repo convention).
-  - name: "Build + install dex-summary-router"
-    shell: |
-      set -euo pipefail
-      cd {{ dex_summary_router_src_dir }}
-      go build -o {{ dex_summary_router_bin }} .
-      cat {{ dex_summary_router_src_dir }}/main.go {{ dex_summary_router_src_dir }}/go.mod \
-        | sha256sum | awk '{print $1}' > {{ dex_summary_router_sha }}
-    unless_command: |
-      test -x {{ dex_summary_router_bin }} && \
-        [ "$(cat {{ dex_summary_router_sha }} 2>/dev/null)" = \
-          "$(cat {{ dex_summary_router_src_dir }}/main.go {{ dex_summary_router_src_dir }}/go.mod | sha256sum | awk '{print $1}')" ]
-    when: dex_summary_router != '' and os == 'linux'
-    tags: [dex, summary-router, build]
-
-  - name: "Install dex-summary-mode helper"
-    file.template:
-      src: ./templates/dex-summary-mode.sh.j2
-      dest: "~/.local/bin/dex-summary-mode"
-    when: dex_summary_router != '' and os == 'linux'
-    tags: [dex, summary-router]
-
-  - name: "Seed default summary-router mode (steady) + make helper executable"
-    shell: |
-      set -euo pipefail
-      mkdir -p ~/.config/dex
-      [ -f ~/.config/dex/summary-router.mode ] || echo steady > ~/.config/dex/summary-router.mode
-      chmod 0755 ~/.local/bin/dex-summary-mode
-    when: dex_summary_router != '' and os == 'linux'
-    changed_when: false
-    tags: [dex, summary-router]
-
-  - name: "Deploy dex-summary-router user systemd unit"
-    file.template:
-      src: ./templates/dex-summary-router.service.j2
-      dest: "~/.config/systemd/user/dex-summary-router.service"
-    when: dex_summary_router != '' and os == 'linux'
-    tags: [dex, summary-router]
-
-  - name: "Enable + (re)start dex-summary-router.service"
-    shell: |
-      set -euo pipefail
-      systemctl --user daemon-reload
-      systemctl --user enable dex-summary-router.service
-      systemctl --user restart dex-summary-router.service
-    when: dex_summary_router != '' and os == 'linux'
-    changed_when: false
-    tags: [dex, summary-router]
 
   # ───────────────── SERVER (main_pc) ────────────────────────────────────────
 

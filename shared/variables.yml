@@ -148,31 +148,6 @@ dex_compress_model: "qwen3:8b"
 dex_draft_port: "11434"
 dex_draft_model: "qwen3:8b"
 
-# Index-time summary model — overrides the chat leg used during indexing
-# (file / chunk / package / repo summaries). Outputs are 1–4 sentences.
-# Qwen3-14B Q5_K_M (~12.9 GB) matches Qwen2.5-32B on coding benchmarks
-# at ~59 t/s on RTX 5080. Non-thinking mode mandatory for summaries.
-# Set port to "" to fall back to dex_chat_model.
-dex_summary_port: "11434"
-dex_summary_model: "qwen3:14b"
-# Per-tier summary model overrides. Empty = inherit dex_summary_model.
-# Lets boxes with VRAM headroom (e.g. 5090) route the dozen package
-# summaries and the single repo summary that compound into LLM_GUIDE.md
-# through a much heavier model than the hundreds of chunk summaries.
-# Tier ordering reflects call volume — chunk fires per code chunk
-# (hundreds), file per file (tens), package per directory (~dozens),
-# repo once per project. Default empty across the fleet; main_pc
-# overrides with the 3b/7b/14b/32b ladder.
-dex_chunk_summary_model: ""
-dex_file_summary_model: ""
-dex_package_summary_model: ""
-dex_repo_summary_model: ""
-# Conservative default. The GPU host (main_pc/5090, 32 GB VRAM) bumps
-# this in machines/main_pc/vars.yml — push it as high as the local
-# ollama can serve concurrent /chat requests without VRAM thrash.
-dex_summary_concurrency: "4"
-dex_chunk_summary_min_lines: "50"
-
 # Embed batch size — chunks per /v1/embeddings call. The dex default
 # is 32; 128 cuts request overhead with no measurable quality cost on
 # Ollama or vLLM/TEI. Larger batches show bigger wins on big repos.
@@ -194,8 +169,8 @@ dex_proxy_port: "7921"
 # pack into a single model. Deployed as a systemd drop-in on the GPU
 # host (components/dex/templates/ollama-num-parallel.conf.j2). 4 is
 # upstream's default since v0.2.0 but is set explicitly here so a
-# future upstream change can't silently regress the summary/rerank
-# concurrency caps that assume it.
+# future upstream change can't silently regress the rerank
+# concurrency cap that assumes it.
 dex_ollama_num_parallel: "4"
 
 # OLLAMA_KEEP_ALIVE — how long ollama keeps a model resident after its
@@ -205,23 +180,6 @@ dex_ollama_num_parallel: "4"
 # drop-in (components/dex/templates/ollama-keep-alive.conf.j2).
 dex_ollama_keep_alive: "5m"
 
-# DEX_POWER_SAVE — when truthy, dex `serve` / `mcp` watchers keep the
-# index fresh (embed reindex) but skip background summary draining (no
-# chat-model gen). Default off (fleet behaviour unchanged). The GPU host
-# sets it on (machines/main_pc/vars.yml) so foreground `ask` isn't
-# starved by summary churn, and so the warm-pin (dex_ollama_keep_alive
-# = -1) can't be OOM'd by the summary model ladder loading. Wired into
-# the MCP registration (components/dex/index.yml) and the dex-serve unit.
-dex_power_save: ""
-
-# DEX_SUMMARIZE_YIELD — when set (e.g. "10s"), the background summary
-# drainer skips a tick if a foreground query (ask/search/symbol/graph)
-# ran within this window, so interactive latency wins over summary
-# freshness. Cross-process via a marker file (dex #17). Default off
-# (""). The GPU host turns it on. Wired into the MCP registration and
-# the dex-serve unit alongside DEX_POWER_SAVE.
-dex_summarize_yield: ""
-
 # SSH alias for the GPU host — used by both the tunnel template and the
 # ssh-config step managed by the dex client install. The dex
 # component writes a Host block into ~/.ssh/config on client machines
@@ -230,55 +188,6 @@ dex_remote_host: "main_pc-wsl"
 dex_remote_ip: "192.168.1.68"
 dex_remote_ssh_port: "2222"
 dex_remote_user: "aleh"
-
-# Remote summary worker — when dex_summary_host is non-empty, the GPU host
-# offloads all summary generation to a second machine (e.g. mini_pc's 5080)
-# via an SSH tunnel. DEX_SUMMARY_URL is pointed at the local tunnel port
-# (dex_summary_port, which the GPU host sets to dex_summary_local_port).
-# Empty = local ollama handles summaries (default fleet behaviour).
-dex_summary_host: ""
-dex_summary_host_ip: ""
-dex_summary_host_ssh_port: "2222"
-dex_summary_host_user: "aleh"
-# Local port the summary tunnel binds on the GPU host; must match
-# dex_summary_port on that machine so DEX_SUMMARY_URL resolves correctly.
-dex_summary_local_port: "11435"
-
-# Summary router — when dex_summary_router is truthy, the GPU host runs a
-# small model-name-routing reverse proxy (components/dex/router) in front of
-# DEX_SUMMARY_URL so the single dex drainer can fan summary chat calls across
-# BOTH GPUs. The host points dex_summary_port at the router; the router's
-# REMOTE upstream is the summary tunnel (dex_summary_local_port → 5080) and
-# its LOCAL upstream is this box's ollama (dex_local_port → 5090).
-#   steady (default): every call → REMOTE. Identical to no router in the path.
-#   burst:            the chunk tier (dex_summary_router_local_models) → LOCAL,
-#                     heavier tiers → REMOTE. Flip with `dex-summary-mode burst`
-#                     to push coverage to 100% across both GPUs after a reindex;
-#                     `dex-summary-mode steady` flips back and `ollama stop`s the
-#                     lent model to free the warm-pin headroom.
-# Empty = off (default fleet behaviour). dotfiles #32.
-dex_summary_router: ""
-# Set on machines that serve as a remote summary worker for another host's
-# summary router tunnel. Causes the dex component to pull dex_summary_model
-# regardless of dex_role (client machines don't run server.yml model pulls).
-dex_summary_worker: ""
-# Loopback port the router listens on (distinct from the tunnel's 11435 and
-# ollama's 11434). When the router is enabled the GPU host sets
-# dex_summary_port to this so DEX_SUMMARY_URL resolves to the router.
-dex_summary_router_port: "11436"
-# Models routed to the LOCAL upstream (this box's GPU) in burst mode,
-# comma-separated. Default: the high-volume chunk tier only — a 3b fits the
-# 5090's warm-pin headroom (~3 GB) without evicting the 32b ask model.
-dex_summary_router_local_models: "qwen3:14b"
-# Flood mode (`dex-summary-mode flood`) — the router round-robins ALL summary
-# tiers across both GPUs at once for maximum catch-up throughput. To make room
-# on the local card it evicts dex_summary_router_flood_evict (the foreground
-# ask model); returning to steady re-warms it and stops the summary-only tiers
-# in dex_summary_router_steady_stop (kept separate so the 7b compress model
-# isn't dropped). Empty = no-op; only the GPU host with a local ask model sets
-# these (machines/main_pc/vars.yml). dotfiles #34.
-dex_summary_router_flood_evict: ""
-dex_summary_router_steady_stop: ""
 
 # Space-separated list of absolute project roots to auto-watch via
 # dex-watch@.service. The apply step enables one user systemd

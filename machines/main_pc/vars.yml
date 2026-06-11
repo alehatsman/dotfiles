@@ -57,71 +57,13 @@ dex_embed_model: "qwen3-embedding:4b"
 #   total          ~26 G  (6 G headroom on 32 G card)
 #
 # Sequential pipeline (embed→rerank→ask) means these never all fire at once;
-# the budget is for the warm-pin worst case. Summary tiers run on mini_pc.
+# the budget is for the warm-pin worst case.
 dex_ollama_keep_alive: "-1"
 
 # GPU for the reranker: Qwen3-Reranker-4B needs GPU for 1–2s latency on 40
 # candidates. At ~3 GB Q4_K_M GGUF it fits within the VRAM budget above.
 # server.yml runs vLLM (chat-vllm style) when dex_rerank_style=chat-vllm.
 dex_rerank_gpu: "1"
-
-# Summary model names: dex requests these from DEX_SUMMARY_URL (mini_pc's
-# ollama via the SSH tunnel below). All tiers use qwen3:14b on mini_pc
-# (Q5_K_M ~12.9 G, ~59 t/s, matches Qwen2.5-32B quality). Non-thinking mode.
-# Repo summary routes to the local 5090 (30b-a3b) via the flood router path
-# for maximum one-call quality.
-dex_chunk_summary_model: "qwen3:14b"
-dex_file_summary_model: "qwen3:14b"
-dex_package_summary_model: "qwen3:14b"
-dex_repo_summary_model: "qwen3-coder:30b-a3b-q4_K_M"
-
-# Concurrency for summary requests sent to mini_pc. mini_pc runs 8-parallel
-# ollama; 4 concurrent HTTP calls from dex keeps the pipeline full without
-# overwhelming the tunnel. Raise if monitoring shows mini_pc GPU idle.
-dex_summary_concurrency: "4"
-
-# Route DEX_SUMMARY_URL at the summary router (dotfiles #32), not directly at
-# the tunnel. The router sits in front and fans summary chat calls across both
-# GPUs: steady (default) → tunnel → mini_pc 5080 (identical to pointing here
-# straight at 11435); burst → chunk tier to the local 5090, heavier tiers to
-# 5080. So this must equal dex_summary_router_port (11436) — kept literal here
-# rather than a nested {{ }} ref since mooncake resolves vars single-pass — and
-# the router's REMOTE upstream is dex_summary_local_port (11435, the tunnel).
-dex_summary_port: "11436"
-
-# Enable the summary router on this box (it has both a local GPU and a remote
-# summary worker, so it's the only host where fan-out makes sense).
-# Flip burst/flood/steady with `dex-summary-mode`.
-dex_summary_router: "1"
-
-# Flood mode: evict the 30b-a3b ask model to free the 5090 for summaries;
-# on steady re-warm 30b-a3b and unload qwen3:14b (loaded for flood summaries).
-dex_summary_router_flood_evict: "qwen3-coder:30b-a3b-q4_K_M"
-dex_summary_router_steady_stop: "qwen3:14b"
-# Drainer overrides for flood: 6 workers (3 local + 3 remote via round-robin).
-# 5090 ollama is serial (NUM_PARALLEL=1); 3 queued calls at ~30s each = 90s
-# max queue depth, safely under DEX_CHAT_TIMEOUT=120s. 8 caused the 4th local
-# call to hit 120s and time out. batch=100 keeps the pipeline full.
-# Workaround for mooncake #166 (schema-default props not reaching renderer).
-dex_summary_flood_concurrency: "6"
-dex_summary_flood_batch: "100"
-
-# Summary worker: mini_pc's 5080 handles steady-state background summarization.
-# dex-summary-tunnel.service (deployed by the dex component when this is
-# non-empty) maintains:  127.0.0.1:11435 → mini_pc-wsl:127.0.0.1:11434  — which
-# is the router's REMOTE upstream.
-# Set dex_summary_host_ip to mini_pc's actual Windows host LAN IP.
-dex_summary_host: "mini_pc-wsl"
-dex_summary_host_ip: "192.168.50.2"
-
-# No yield: summaries run on mini_pc, not on this GPU. The 5090 is never
-# contended between foreground ask and background summarization.
-dex_summarize_yield: ""
-
-# Background draining ON. dex #17 drain lock still guards dex-serve's
-# eager-watch. Yield is gone since nothing local competes for the GPU.
-# Set to "1" to pause draining for debugging only.
-dex_power_save: ""
 
 # Long-lived project roots to keep auto-reindexed via dex-watch@.
 # Adding a path here = enabled at next apply; removing it = disabled.
