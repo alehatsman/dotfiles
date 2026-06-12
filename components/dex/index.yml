@@ -74,22 +74,6 @@ props:
     type: string
     default: "8"
     description: Reranker request concurrency.
-  dex_compress_port:
-    type: string
-    default: "11434"
-    description: Ollama port for context compression.
-  dex_compress_model:
-    type: string
-    default: "qwen2.5-coder:7b"
-    description: Compression model name.
-  dex_draft_port:
-    type: string
-    default: "11434"
-    description: Ollama port for speculative draft generation. Empty = disabled.
-  dex_draft_model:
-    type: string
-    default: "qwen2.5-coder:3b"
-    description: Draft model name.
   dex_remote_host:
     type: string
     default: "main_pc-wsl"
@@ -151,10 +135,6 @@ steps:
       dex_rerank_pool: "{{ props.dex_rerank_pool }}"
       dex_rerank_gpu: "{{ props.dex_rerank_gpu }}"
       dex_rerank_concurrency: "{{ props.dex_rerank_concurrency }}"
-      dex_compress_port: "{{ props.dex_compress_port }}"
-      dex_compress_model: "{{ props.dex_compress_model }}"
-      dex_draft_port: "{{ props.dex_draft_port }}"
-      dex_draft_model: "{{ props.dex_draft_model }}"
 
   # ───────────────── CLIENT (and server — server is a superset) ──────────────
 
@@ -232,8 +212,7 @@ steps:
     shell: |
       set -euo pipefail
       claude mcp remove dex --scope user 2>/dev/null || true
-      # Build arg list in a bash array so optional features (compress, draft)
-      # can be conditionally appended without multi-line continuation gymnastics.
+      # Build arg list in a bash array — avoids multi-line continuation gymnastics.
       args=(
         -e DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
         -e DEX_EMBED_MODEL={{ dex_embed_model }}
@@ -246,18 +225,6 @@ steps:
         -e DEX_RERANK_MODEL={{ dex_rerank_model }}
         -e DEX_RERANK_POOL={{ dex_rerank_pool }}
         -e DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
-      )
-      # Context compression: distils retrieved chunks before injecting into
-      # Claude's context window (4–5× token savings). Disabled when port is "".
-      [[ -n '{{ dex_compress_port }}' ]] && args+=(
-        -e DEX_COMPRESS_URL=http://127.0.0.1:{{ dex_compress_port }}
-        -e DEX_COMPRESS_MODEL={{ dex_compress_model }}
-      )
-      # Speculative local draft: pre-generates code so Claude refines rather
-      # than writes from scratch (3–10× generation token savings). Disabled when port is "".
-      [[ -n '{{ dex_draft_port }}' ]] && args+=(
-        -e DEX_DRAFT_URL=http://127.0.0.1:{{ dex_draft_port }}
-        -e DEX_DRAFT_MODEL={{ dex_draft_model }}
       )
       claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
     tags: [dex, claude]

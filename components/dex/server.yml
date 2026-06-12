@@ -154,27 +154,6 @@
   timeout: 30m
   tags: [dex, server]
 
-- name: "Pull compress model"
-  # Distinct from chat only if the operator has pointed compress
-  # at a separate model; the unless_command de-dupes when it matches
-  # dex_chat_model (no second download).
-  shell: ollama pull {{ dex_compress_model }}
-  unless_command: |
-    [ -z "{{ dex_compress_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_compress_model }}'
-  timeout: 30m
-  tags: [dex, server]
-
-- name: "Pull draft model (speculative-draft coder for generate_code)"
-  # Smaller than chat by design: draft latency must fit inside Claude's
-  # network/thinking RTT or the speculative pipeline is net-negative.
-  # Pulled separately because it's typically the smallest model on the
-  # box (1.5B/3B) — no overlap with chat/compress.
-  shell: ollama pull {{ dex_draft_model }}
-  unless_command: |
-    [ -z "{{ dex_draft_model }}" ] || ollama list | awk '{print $1}' | grep -qx '{{ dex_draft_model }}'
-  timeout: 30m
-  tags: [dex, server]
-
 - name: "Pull query-expansion model (dex #252)"
   # One fast call per opt-in ask widens the BM25/symbol lanes. Non-thinking
   # coder (qwen2.5-coder:7b ~4.7G) so the JSON lands in content. Skipped
