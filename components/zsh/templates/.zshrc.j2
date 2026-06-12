@@ -764,43 +764,49 @@ complete -f -F _rush_bash_complete rush
 NOTES_PATH="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes"
 alias n="cd \"$NOTES_PATH\" && nvim ."
 
-# ce — launch Claude (claude-autoapprove) with a FRESH moongit identity per
-# spawn. Every run mints a new token named agent#<N> (monotonic counter) and
-# exports it, so the agent AND every tool shell it spawns inherit their own
-# distinct MOONGIT_TOKEN — two Claudes never share an identity. No shell-init
-# resolver needed (child procs inherit env). No-op where moongit isn't present.
+# Launch Claude with a fresh moongit identity and optional dex proxy.
 ce() {
-  if command -v moongitd >/dev/null 2>&1; then
-    [[ -r ~/.config/moongit/agent.env ]] && source ~/.config/moongit/agent.env
-    local seqfile n ident tok i
-    seqfile="$HOME/.config/moongit/agent-seq"
+  if command -v moongitd >/dev/null; then
+    [[ -r ~/.config/moongit/agent.env ]] &&
+      source ~/.config/moongit/agent.env
+
+    local seqfile="$HOME/.config/moongit/agent-seq"
+    local n ident token
+
     mkdir -p "${seqfile:h}"
-    # Bump the counter and mint; retry on the rare name clash (concurrent
-    # spawn, or a reset counter colliding with an existing agent#N).
-    for i in 1 2 3 4 5; do
-      n=$(( $(cat "$seqfile" 2>/dev/null || echo 0) + 1 ))
+
+    repeat 5; do
+      n=$(( ${$(<"$seqfile" 2>/dev/null):-0} + 1 ))
       print -r -- "$n" >| "$seqfile"
-      ident="agent#${n}"
-      tok=$(moongitd token create "$ident" 2>/dev/null | grep -oE 'mgt_[0-9a-f]+' | head -1)
-      [[ -n "$tok" ]] && break
+
+      ident="agent#$n"
+      token=$(
+        moongitd token create "$ident" 2>/dev/null |
+          grep -om1 'mgt_[0-9a-f]\+'
+      )
+
+      [[ -n "$token" ]] && break
     done
-    [[ -n "$tok" ]] && { export MOONGIT_TOKEN="$tok"; print -r -- "moongit identity: $ident" >&2 }
-  fi
-  # Route this session through the dex proxy when it's up (epic #232): exporting
-  # ANTHROPIC_BASE_URL points Claude's /v1/messages at the local pass-through
-  # (token baseline now; history compression later). Opt-in by liveness — a TCP
-  # probe via ztcp (no upstream request); if the proxy is down we leave the env
-  # untouched and talk to the API directly, so a dead proxy never blocks a
-  # launch. An explicit pre-set ANTHROPIC_BASE_URL always wins. ENABLE_TOOL_SEARCH
-  # is required or a non-first-party base URL silently disables MCP tool search.
-  if [[ -z "$ANTHROPIC_BASE_URL" ]]; then
-    local proxy_port="${DEX_PROXY_PORT:-{{ dex_proxy_port }}}"
-    if zmodload zsh/net/tcp 2>/dev/null && ztcp 127.0.0.1 "$proxy_port" 2>/dev/null; then
-      ztcp -c 2>/dev/null
-      export ANTHROPIC_BASE_URL="http://127.0.0.1:${proxy_port}"
-      export ENABLE_TOOL_SEARCH=true
-      print -r -- "dex proxy: routing via $ANTHROPIC_BASE_URL" >&2
+
+    if [[ -n "$token" ]]; then
+      export MOONGIT_TOKEN="$token"
+      print -u2 -- "moongit identity: $ident"
     fi
   fi
+
+  if [[ -z "$ANTHROPIC_BASE_URL" ]]; then
+    local port="${DEX_PROXY_PORT:-{{ dex_proxy_port }}}"
+
+    if zmodload zsh/net/tcp 2>/dev/null &&
+       ztcp 127.0.0.1 "$port" 2>/dev/null; then
+      ztcp -c 2>/dev/null
+
+      export ANTHROPIC_BASE_URL="http://127.0.0.1:$port"
+      export ENABLE_TOOL_SEARCH=true
+
+      print -u2 -- "dex proxy: routing via $ANTHROPIC_BASE_URL"
+    fi
+  fi
+
   claude-autoapprove "$@"
 }
