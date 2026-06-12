@@ -16,22 +16,6 @@ props:
     type: string
     default: ""
     description: Ask/routing model override. Empty = falls back to dex_chat_model.
-  dex_compress_port:
-    type: string
-    default: "11434"
-    description: Ollama port for the compress step.
-  dex_compress_model:
-    type: string
-    default: "qwen2.5-coder:7b"
-    description: Compress model name.
-  dex_draft_port:
-    type: string
-    default: "11434"
-    description: Ollama port for draft generation. Empty = disabled.
-  dex_draft_model:
-    type: string
-    default: "qwen2.5-coder:3b"
-    description: Draft model name.
   dex_rerank_local_port:
     type: string
     default: "8082"

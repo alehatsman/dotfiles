@@ -19,12 +19,6 @@ export DEX_EMBED_MODEL={{ props.dex_embed_model }}
 export DEX_CHAT_URL=http://127.0.0.1:{{ props.dex_local_port }}
 export DEX_CHAT_MODEL={{ props.dex_chat_model }}
 export DEX_ASK_MODEL={{ props.dex_ask_model }}
-export DEX_COMPRESS_URL=http://127.0.0.1:{{ props.dex_compress_port }}
-export DEX_COMPRESS_MODEL={{ props.dex_compress_model }}
-{% if props.dex_draft_port %}
-export DEX_DRAFT_URL=http://127.0.0.1:{{ props.dex_draft_port }}
-export DEX_DRAFT_MODEL={{ props.dex_draft_model }}
-{% endif %}
 {% if props.dex_rerank_local_port %}
 export DEX_RERANK_URL=http://127.0.0.1:{{ props.dex_rerank_local_port }}
 export DEX_RERANK_STYLE={{ props.dex_rerank_style }}

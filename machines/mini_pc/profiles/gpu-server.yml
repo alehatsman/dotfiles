@@ -23,10 +23,5 @@ dex_chat_model: "qwen3:14b"
 # Pin embed + chat warm — both fit within the 12.7 G budget.
 dex_ollama_keep_alive: "-1"
 
-# Compress and draft disabled — qwen3:8b would need ~5 G, pushing total to
-# ~17.7 G (OOM with pinning). Re-enable if running without keep_alive=-1.
-dex_compress_port: ""
-dex_draft_port: ""
-
 # Projects to keep auto-reindexed on this box. Extend as needed.
 dex_watch_paths: "/home/{{ username }}/dotfiles"
