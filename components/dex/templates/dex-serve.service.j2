@@ -24,6 +24,10 @@ Environment=DEX_EMBED_MODEL={{ dex_embed_model }}
 Environment=DEX_EMBED_BATCH={{ dex_embed_batch }}
 Environment=DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
 Environment=DEX_CHAT_MODEL={{ dex_chat_model }}
+{% if dex_expand_model | default('') %}
+Environment=DEX_EXPAND_MODEL={{ dex_expand_model }}
+Environment=DEX_EXPAND_MODE={{ dex_expand_mode | default('on') }}
+{% endif %}
 Environment=DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
 Environment=DEX_RERANK_STYLE={{ dex_rerank_style }}
 Environment=DEX_RERANK_MODEL={{ dex_rerank_model }}
@@ -35,6 +39,13 @@ Environment=DEX_RERANK_MODEL={{ dex_rerank_model }}
 # %h is expanded by systemd; $-vars by the shell.
 EnvironmentFile=-%h/.config/dex/serve.env
 ExecStart=/bin/sh -c 'p=""; for d in $DEX_SERVE_PROJECTS; do p="$p --project $d"; done; exec %h/.local/bin/dex serve --addr 127.0.0.1:{{ dex_serve_port }} $p'
+# Warm-pin both models with keep_alive=-1 so they survive idle timeouts.
+# Runs in the background — does not block service startup or Restart.
+ExecStartPost=/bin/sh -c 'curl -sf http://127.0.0.1:{{ dex_local_port }}/api/generate -d "{\"model\":\"{{ dex_chat_model }}\",\"keep_alive\":-1}" >/dev/null 2>&1 &'
+ExecStartPost=/bin/sh -c 'curl -sf http://127.0.0.1:{{ dex_local_port }}/api/embed -d "{\"model\":\"{{ dex_embed_model }}\",\"input\":\"warmup\",\"keep_alive\":-1}" >/dev/null 2>&1 &'
+{% if dex_expand_model | default('') %}
+ExecStartPost=/bin/sh -c 'curl -sf http://127.0.0.1:{{ dex_local_port }}/api/generate -d "{\"model\":\"{{ dex_expand_model }}\",\"keep_alive\":-1}" >/dev/null 2>&1 &'
+{% endif %}
 Restart=always
 RestartSec=10s
 

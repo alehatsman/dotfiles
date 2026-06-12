@@ -38,6 +38,14 @@ props:
     type: string
     default: ""
     description: Ask/routing model override. Empty = falls back to dex_chat_model.
+  dex_expand_model:
+    type: string
+    default: ""
+    description: Query-side expansion model (dex #252), e.g. qwen3:4b. Empty = expansion disabled.
+  dex_expand_mode:
+    type: string
+    default: "on"
+    description: Default expansion level when a request omits it (off|on|full). Only used when dex_expand_model is set.
   dex_rerank_local_port:
     type: string
     default: "8082"
@@ -134,6 +142,8 @@ steps:
       dex_embed_batch: "{{ props.dex_embed_batch }}"
       dex_chat_model: "{{ props.dex_chat_model }}"
       dex_ask_model: "{{ props.dex_ask_model }}"
+      dex_expand_model: "{{ props.dex_expand_model }}"
+      dex_expand_mode: "{{ props.dex_expand_mode }}"
       dex_rerank_local_port: "{{ props.dex_rerank_local_port }}"
       dex_rerank_remote_port: "{{ props.dex_rerank_remote_port }}"
       dex_rerank_style: "{{ props.dex_rerank_style }}"
