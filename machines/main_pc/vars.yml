@@ -39,28 +39,31 @@ wsl_moongit_port: "8080"
 # the embedding container; confirm `nvidia-smi` works inside WSL first.
 dex_role: server
 
-# Demoted from Qwen3-Coder-30B-A3B (~19 G) to qwen3:14b (~9 G) to free VRAM
-# for the query-side expansion model (dex #252) without crowding the warm-pin
-# budget. History: 32B-Q4 (27.8 G) → 30B-A3B-MoE (19 G, 4× faster) → 14B here.
-# Use non-thinking mode (/no_think or enable_thinking=False) for ask/chat.
-dex_chat_model: "qwen3:14b"
+# qwen2.5-coder:14b (~9 G) — non-thinking coder for ask/generate synthesis.
+# Demoted from Qwen3-Coder-30B-A3B (~19 G) to free VRAM for the expansion
+# model (dex #252). Qwen3-gen coders only ship at 30B (no mid-size), and
+# qwen3.x *thinking* models route their output to a reasoning channel that
+# leaves `content` empty over the OpenAI-compat API — unusable here. So we
+# stay on the non-thinking qwen2.5-coder line. History: 32B-Q4 → 30B-A3B-MoE → 14B.
+dex_chat_model: "qwen2.5-coder:14b"
 
 # Query-side expansion model (dex #252): one fast call per opt-in ask turns
-# the question into BM25/symbol terms (+ optional HyDE passage). Small + fast
-# beats big here. ~2.6 G; warm-pinned by dex-serve.service.j2.
-dex_expand_model: "qwen3:4b"
-dex_expand_mode: "on"
+# the question into BM25/symbol terms (+ optional HyDE passage). Non-thinking
+# coder so the JSON lands in `content`. ~4.7 G; warm-pinned by dex-serve.service.j2.
+# (The expansion call sends reasoning_effort=none defensively regardless.)
+dex_expand_model: "qwen2.5-coder:7b"
+dex_expand_mode: "full"
 
 # qwen3-embedding:4b — code-specific 4B embedding model (~4 G, MTEB-Code 80.06).
 dex_embed_model: "qwen3-embedding:4b"
 
 # VRAM budget (keep_alive=-1, all pinned):
-#   embed-4b        ~4 G  (qwen3-embedding:4b)
-#   chat-14b       ~9 G   (qwen3:14b — demoted from 30B-a3b to make room)
-#   expand-4b      ~2.6 G (qwen3:4b — query-side expansion, dex #252)
-#   reranker-4b     ~3 G  (Qwen3-Reranker-4B Q4; GPU — 1–2s for 40 docs)
+#   embed-4b        ~4 G   (qwen3-embedding:4b)
+#   chat-coder-14b  ~9 G   (qwen2.5-coder:14b — demoted from 30B-a3b)
+#   expand-coder-7b ~4.7 G (qwen2.5-coder:7b — query-side expansion, dex #252)
+#   reranker-4b     ~3 G   (Qwen3-Reranker-4B Q4; GPU — 1–2s for 40 docs)
 #   ──────────────────────
-#   total          ~19 G  (13 G headroom on 32 G card — KV room for chat + expand)
+#   total          ~21 G  (~11 G headroom on 32 G card — KV room for chat + expand)
 #
 # Sequential pipeline (embed→rerank→ask) means these never all fire at once;
 # the budget is for the warm-pin worst case.
