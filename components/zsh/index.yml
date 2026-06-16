@@ -20,6 +20,10 @@ props:
     type: string
     default: "8082"
     description: Local reranker port.
+  dex_rerank_connect_host:
+    type: string
+    default: "127.0.0.1"
+    description: Host dex connects to for rerank (shell env). Override where 127.0.0.1 publish is unreachable (e.g. host.docker.internal under Docker Desktop + WSL mirrored networking).
   dex_rerank_style:
     type: string
     default: "cohere"

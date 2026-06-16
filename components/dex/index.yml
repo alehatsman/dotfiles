@@ -54,6 +54,14 @@ props:
     type: string
     default: "8082"
     description: Remote reranker port (for SSH tunnel in server role).
+  dex_rerank_publish_addr:
+    type: string
+    default: "127.0.0.1"
+    description: Host address the reranker container publishes on. Override to 0.0.0.0 where Docker Desktop + WSL mirrored networking won't expose 127.0.0.1.
+  dex_rerank_connect_host:
+    type: string
+    default: "127.0.0.1"
+    description: Host dex connects to for rerank. Override (e.g. host.docker.internal) where 127.0.0.1 publish is unreachable.
   dex_rerank_style:
     type: string
     default: "cohere"
@@ -135,6 +143,8 @@ steps:
       dex_rerank_pool: "{{ props.dex_rerank_pool }}"
       dex_rerank_gpu: "{{ props.dex_rerank_gpu }}"
       dex_rerank_concurrency: "{{ props.dex_rerank_concurrency }}"
+      dex_rerank_publish_addr: "{{ props.dex_rerank_publish_addr }}"
+      dex_rerank_connect_host: "{{ props.dex_rerank_connect_host }}"
 
   # ───────────────── CLIENT (and server — server is a superset) ──────────────
 
@@ -265,7 +275,7 @@ steps:
         -e DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
         -e DEX_CHAT_MODEL={{ dex_chat_model }}
         -e DEX_ASK_MODEL={{ dex_ask_model }}
-        -e DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
+        -e DEX_RERANK_URL=http://{{ dex_rerank_connect_host | default:'127.0.0.1' }}:{{ dex_rerank_local_port }}
         -e DEX_RERANK_STYLE={{ dex_rerank_style }}
         -e DEX_RERANK_MODEL={{ dex_rerank_model }}
         -e DEX_RERANK_POOL={{ dex_rerank_pool }}
