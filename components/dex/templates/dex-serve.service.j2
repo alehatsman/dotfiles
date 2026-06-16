@@ -28,7 +28,7 @@ Environment=DEX_CHAT_MODEL={{ dex_chat_model }}
 Environment=DEX_EXPAND_MODEL={{ dex_expand_model }}
 Environment=DEX_EXPAND_MODE={{ dex_expand_mode | default:'on' }}
 {% endif %}
-Environment=DEX_RERANK_URL=http://127.0.0.1:{{ dex_rerank_local_port }}
+Environment=DEX_RERANK_URL=http://{{ dex_rerank_connect_host | default:'127.0.0.1' }}:{{ dex_rerank_local_port }}
 Environment=DEX_RERANK_STYLE={{ dex_rerank_style }}
 Environment=DEX_RERANK_MODEL={{ dex_rerank_model }}
 # DEX_SERVE_PROJECTS (space-separated roots) comes from an EnvironmentFile

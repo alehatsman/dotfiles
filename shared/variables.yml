@@ -103,6 +103,14 @@ dex_local_port: "11434"
 dex_rerank_remote_port: "8082"
 dex_rerank_local_port: "8082"
 
+# Host the reranker container publishes on, and the host dex connects to for
+# rerank. Default loopback works for native docker and for clients (which
+# reach the reranker via the SSH tunnel's 127.0.0.1 forward). main_pc overrides
+# these because Docker Desktop under WSL "mirrored" networking does NOT expose
+# published ports on 127.0.0.1 — see machines/main_pc/vars.yml.
+dex_rerank_publish_addr: "127.0.0.1"
+dex_rerank_connect_host: "127.0.0.1"
+
 # Rerank backend style: "cohere" or "chat-vllm" (see comment above).
 dex_rerank_style: "chat-vllm"
 

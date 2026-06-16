@@ -286,7 +286,7 @@
     state: running
     restart: unless-stopped
     ports:
-      - "127.0.0.1:{{ dex_rerank_remote_port }}:7997"
+      - "{{ dex_rerank_publish_addr | default:'127.0.0.1' }}:{{ dex_rerank_remote_port }}:7997"
     volumes:
       - "{{ env.HOME }}/.cache/huggingface:/app/.cache"
     env:
@@ -314,7 +314,7 @@
     state: running
     restart: unless-stopped
     ports:
-      - "127.0.0.1:{{ dex_rerank_remote_port }}:7997"
+      - "{{ dex_rerank_publish_addr | default:'127.0.0.1' }}:{{ dex_rerank_remote_port }}:7997"
     volumes:
       - "{{ env.HOME }}/.cache/huggingface:/app/.cache"
     env:
@@ -360,7 +360,7 @@
     state: running
     restart: unless-stopped
     ports:
-      - "127.0.0.1:{{ dex_rerank_remote_port }}:7997"
+      - "{{ dex_rerank_publish_addr | default:'127.0.0.1' }}:{{ dex_rerank_remote_port }}:7997"
     volumes:
       - "{{ env.HOME }}/.cache/huggingface:/root/.cache/huggingface"
     env:
@@ -394,8 +394,8 @@
           --served-model-name "{{ dex_rerank_model }}" \
           --dtype float16 \
           --port 7997 \
-          --max-model-len 4096 \
-          --gpu-memory-utilization 0.25
+          --max-model-len 2048 \
+          --gpu-memory-utilization 0.18
   unless_command: "[ '{{ dex_rerank_style }}' != 'chat-vllm' ]"
   tags: [dex, server, rerank]
 
@@ -403,7 +403,7 @@
   # Both Infinity (/health) and vLLM (/health) respond on this path.
   # First start may trigger a HuggingFace download — allow 10 min.
   wait.http:
-    url: "http://127.0.0.1:{{ dex_rerank_remote_port }}/health"
+    url: "http://{{ dex_rerank_connect_host | default:'127.0.0.1' }}:{{ dex_rerank_remote_port }}/health"
     status: [200]
     timeout: 10m
     poll_interval: 5s

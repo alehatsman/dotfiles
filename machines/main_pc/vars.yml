@@ -57,22 +57,41 @@ dex_expand_mode: "full"
 # qwen3-embedding:0.6b — same Qwen3 family, 6x smaller/faster (~0.4 G, competitive MTEB quality).
 dex_embed_model: "qwen3-embedding:0.6b"
 
-# VRAM budget (keep_alive=-1, all pinned):
-#   embed-0.6b      ~0.4 G (qwen3-embedding:0.6b — same family as 4b, 6x faster)
-#   chat-coder-14b  ~9 G   (qwen2.5-coder:14b — demoted from 30B-a3b)
-#   expand-coder-7b ~4.7 G (qwen2.5-coder:7b — query-side expansion, dex #252)
-#   reranker-4b     ~3 G   (Qwen3-Reranker-4B Q4; GPU — 1–2s for 40 docs)
+# VRAM budget on the 32 G card (keep_alive=-1, NUM_PARALLEL=1). Warm sizes
+# include KV cache at 32k ctx, not just weights — these are measured, not
+# weight-only estimates:
+#   embed-0.6b      ~0.4 G  (qwen3-embedding:0.6b — same family, 6x faster)
+#   chat-coder-14b  ~15 G   (qwen2.5-coder:14b Q4 — ~9 G weights + 32k KV)
+#   reranker-4b     ~5.9 G  (vLLM Qwen3-Reranker-4B, gpu-mem-util 0.18, len 2048)
 #   ──────────────────────
-#   total          ~17 G  (~15 G headroom on 32 G card — KV room for chat + expand)
+#   total          ~21.3 G  (~10.7 G headroom on 32 G card)
 #
-# Sequential pipeline (embed→rerank→ask) means these never all fire at once;
-# the budget is for the warm-pin worst case.
+# NUM_PARALLEL=1 is load-bearing here: at 4 the chat model's KV alone balloons
+# to ~35 G and spills to CPU. expand-coder-7b (~4.7 G, qwen2.5-coder:7b, dex
+# #252) does NOT fit alongside the three above — with all pinned it would OOM,
+# so it can only load if something is evicted first. The sequential pipeline
+# (embed→rerank→ask) keeps them from all firing at once.
 dex_ollama_keep_alive: "-1"
 
+# Single parallel slot (override shared default of 4). dex on this box is a
+# single-user sequential pipeline (embed→rerank→ask), and keep_alive=-1 pins
+# every model — so NUM_PARALLEL=4 would reserve 4× the KV cache per pinned
+# model (e.g. qwen2.5-coder:14b balloons from ~9 G weights to ~35 G loaded at
+# 32k ctx × 4). The VRAM budget below assumes one slot.
+dex_ollama_num_parallel: "1"
+
 # GPU for the reranker: Qwen3-Reranker-4B needs GPU for 1–2s latency on 40
-# candidates. At ~3 GB Q4_K_M GGUF it fits within the VRAM budget above.
-# server.yml runs vLLM (chat-vllm style) when dex_rerank_style=chat-vllm.
+# candidates. vLLM reserves ~5.9 G (gpu-mem-util 0.18, max-model-len 2048) —
+# see the budget above. server.yml runs vLLM when dex_rerank_style=chat-vllm.
 dex_rerank_gpu: "1"
+
+# Docker Desktop + WSL "mirrored" networking does NOT expose container ports on
+# 127.0.0.1 (the loopback publish is unreachable from the host; only the eth0
+# IP / docker0 gateway / host.docker.internal work). So publish the reranker on
+# 0.0.0.0 and have dex reach it via host.docker.internal instead of 127.0.0.1.
+# Defaults (127.0.0.1) stay correct for native-docker hosts and tunnel clients.
+dex_rerank_publish_addr: "0.0.0.0"
+dex_rerank_connect_host: "host.docker.internal"
 
 # Long-lived project roots to keep auto-reindexed via dex-watch@.
 # Adding a path here = enabled at next apply; removing it = disabled.
