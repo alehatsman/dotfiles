@@ -39,6 +39,10 @@ wsl_moongit_port: "8080"
 # the embedding container; confirm `nvidia-smi` works inside WSL first.
 dex_role: server
 
+# Auto-route Claude sessions through the local dex proxy. Saves ~45% on input
+# tokens via compression. Opt out per-shell with `unset ANTHROPIC_BASE_URL`.
+dex_proxy_default_on: "true"
+
 # qwen2.5-coder:14b (~9 G) — non-thinking coder for ask/generate synthesis.
 # Demoted from Qwen3-Coder-30B-A3B (~19 G) to free VRAM for the expansion
 # model (dex #252). Qwen3-gen coders only ship at 30B (no mid-size), and
