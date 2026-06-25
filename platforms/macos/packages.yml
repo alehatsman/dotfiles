@@ -104,6 +104,7 @@
       - pngpaste  # clipboard->PNG for img-clip.nvim (paste screenshots into notes)
     cask_apps:
       - adobe-acrobat-reader
+      - alacritty  # components/alacritty deploys the config; the app itself installs here
       - amazon-workspaces
       - anki
       - docker
