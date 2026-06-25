@@ -19,3 +19,4 @@ dex_rerank_gpu: ""
 
 # Auto-route Claude sessions through the local dex proxy.
 dex_proxy_default_on: "true"
+dex_proxy_tool_desc: "terse"
