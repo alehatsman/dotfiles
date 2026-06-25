@@ -182,13 +182,14 @@ steps:
   - name: "Build and install dex binary"
     # Delegates to dex's own tasks.yml `install` target: builds with
     # -tags sqlite_fts5 (required for FTS5), copies to ~/.local/bin, and
-    # restarts any running dex instances. MOONCAKE_MODULE_INSECURE trusts
-    # the plain-HTTP moongit host that serves the go-quality module.
+    # restarts any running dex instances. The go-quality module it pulls is
+    # fetched from github.com over https (alehatsman/go-quality), so no
+    # insecure-host trust is needed — works even when this moongit host is down.
     # {{ dex_src_dir }} is unquoted on purpose — see variables.yml.
     shell: |
       set -euo pipefail
       cd {{ dex_src_dir }}
-      MOONCAKE_MODULE_INSECURE=host.docker.internal:8080 mooncake task install
+      mooncake task install
       git -C {{ dex_src_dir }} rev-parse HEAD > {{ dex_bin_path }}.sha
       chmod 0644 {{ dex_bin_path }}.sha
     unless_command: |
