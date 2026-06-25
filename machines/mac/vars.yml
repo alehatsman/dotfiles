@@ -20,3 +20,15 @@ dex_rerank_gpu: ""
 # Auto-route Claude sessions through the local dex proxy.
 dex_proxy_default_on: "true"
 dex_proxy_tool_desc: "terse"
+
+# mac runs local ollama + reranker on the same ports the tunnel would
+# forward — disable it so launchd stops retrying every 10 s.
+dex_tunnel_enabled: "false"
+
+# Query expansion via a small local model (dex #252): widens BM25/symbol
+# lanes with one extra call per ask(). qwen3:4b fits alongside 30b-a3b.
+dex_expand_model: "qwen3:4b"
+
+# More headroom for concurrent agents (M2 Max, 64 GB unified memory).
+dex_ollama_num_parallel: "8"
+dex_ollama_keep_alive: "-1"

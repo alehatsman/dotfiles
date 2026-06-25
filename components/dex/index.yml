@@ -122,6 +122,10 @@ props:
     type: string
     default: "4"
     description: Ollama parallel request slots.
+  dex_tunnel_enabled:
+    type: string
+    default: "true"
+    description: "true=deploy+load the SSH tunnel plist; false=unload+remove it (use when local services already occupy the forwarded ports)."
 steps:
   - vars.load: ./variables.yml
 
@@ -219,6 +223,34 @@ steps:
     when: os == 'darwin' and dex_chat_model != ''
     tags: [dex, ollama]
 
+  - name: "Pull dex expand model into local ollama (mac)"
+    shell: ollama pull {{ dex_expand_model }}
+    unless_command: ollama list 2>/dev/null | grep -q '^{{ dex_expand_model }}'
+    when: os == 'darwin' and dex_expand_model != ''
+    tags: [dex, ollama]
+
+  - name: "Tune ollama homebrew plist for multi-agent (OLLAMA_NUM_PARALLEL, OLLAMA_KEEP_ALIVE) (mac)"
+    # PlistBuddy Add fails when the key exists; fall back to Set.
+    # Use launchctl unload+load (not brew services restart): brew services
+    # start/restart regenerates the plist from the formula, clobbering edits.
+    shell: |
+      set -euo pipefail
+      plist=~/Library/LaunchAgents/homebrew.mxcl.ollama.plist
+      /usr/libexec/PlistBuddy -c "Add :EnvironmentVariables:OLLAMA_NUM_PARALLEL string {{ dex_ollama_num_parallel }}" "$plist" 2>/dev/null || \
+        /usr/libexec/PlistBuddy -c "Set :EnvironmentVariables:OLLAMA_NUM_PARALLEL {{ dex_ollama_num_parallel }}" "$plist"
+      /usr/libexec/PlistBuddy -c "Add :EnvironmentVariables:OLLAMA_KEEP_ALIVE string {{ dex_ollama_keep_alive }}" "$plist" 2>/dev/null || \
+        /usr/libexec/PlistBuddy -c "Set :EnvironmentVariables:OLLAMA_KEEP_ALIVE {{ dex_ollama_keep_alive }}" "$plist"
+      # launchctl unload+load re-reads the plist from disk without overwriting it.
+      # brew services restart would regenerate the plist from the formula template,
+      # clobbering the edits above.
+      launchctl unload "$plist"
+      launchctl load "$plist"
+    unless_command: |
+      /usr/libexec/PlistBuddy -c "Print :EnvironmentVariables:OLLAMA_NUM_PARALLEL" ~/Library/LaunchAgents/homebrew.mxcl.ollama.plist 2>/dev/null | grep -qx "{{ dex_ollama_num_parallel }}" && \
+      /usr/libexec/PlistBuddy -c "Print :EnvironmentVariables:OLLAMA_KEEP_ALIVE" ~/Library/LaunchAgents/homebrew.mxcl.ollama.plist 2>/dev/null | grep -qx "{{ dex_ollama_keep_alive }}"
+    when: os == 'darwin'
+    tags: [dex, ollama]
+
   # ───────────────── LOCAL RERANKER (macOS, Infinity + MPS) ─────────────────
   # Linux rerank is handled in server.yml via Docker containers (Infinity or
   # vLLM). On macOS, Docker containers can't reach Metal, so Infinity runs as
@@ -280,6 +312,8 @@ steps:
         -e DEX_RERANK_MODEL={{ dex_rerank_model }}
         -e DEX_RERANK_POOL={{ dex_rerank_pool }}
         -e DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
+        -e DEX_EXPAND_MODEL={{ dex_expand_model }}
+        -e DEX_EXPAND_MODE={{ dex_expand_mode }}
       )
       claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
     tags: [dex, claude]
@@ -390,11 +424,21 @@ steps:
     when: dex_role == 'client' and os == 'linux'
     tags: [dex, tunnel]
 
+  - name: "Unload and remove dex-tunnel launchd plist when tunnel is disabled (mac)"
+    shell: |
+      set -euo pipefail
+      plist=~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist
+      launchctl unload "$plist" 2>/dev/null || true
+      rm -f "$plist"
+    unless_command: "[ ! -f ~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist ]"
+    when: dex_role == 'client' and os == 'darwin' and dex_tunnel_enabled == 'false'
+    tags: [dex, tunnel]
+
   - name: "Deploy dex-tunnel launchd plist (mac)"
     file.template:
       src: ./templates/dex-tunnel.plist.j2
       dest: "~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist"
-    when: dex_role == 'client' and os == 'darwin'
+    when: dex_role == 'client' and os == 'darwin' and dex_tunnel_enabled == 'true'
     tags: [dex, tunnel]
 
   - name: "Load dex-tunnel launchd plist (mac)"
@@ -403,7 +447,7 @@ steps:
       plist=~/Library/LaunchAgents/com.alehatsman.dex-tunnel.plist
       launchctl unload "$plist" 2>/dev/null || true
       launchctl load "$plist"
-    when: dex_role == 'client' and os == 'darwin'
+    when: dex_role == 'client' and os == 'darwin' and dex_tunnel_enabled == 'true'
     tags: [dex, tunnel]
 
   # ───────────────── AUTO-REINDEX (dex watch) ───────────────────────

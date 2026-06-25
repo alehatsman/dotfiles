@@ -101,4 +101,7 @@
     dex_watch_paths: "{{ dex_watch_paths }}"
     dex_ollama_keep_alive: "{{ dex_ollama_keep_alive }}"
     dex_ollama_num_parallel: "{{ dex_ollama_num_parallel }}"
+    dex_tunnel_enabled: "{{ dex_tunnel_enabled }}"
+    dex_expand_model: "{{ dex_expand_model }}"
+    dex_expand_mode: "{{ dex_expand_mode }}"
   tags: [macos, dex]
