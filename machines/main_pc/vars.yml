@@ -66,9 +66,9 @@ dex_embed_model: "qwen3-embedding:0.6b"
 # weight-only estimates:
 #   embed-0.6b      ~0.4 G  (qwen3-embedding:0.6b — same family, 6x faster)
 #   chat-coder-14b  ~15 G   (qwen2.5-coder:14b Q4 — ~9 G weights + 32k KV)
-#   reranker-4b     ~5.9 G  (vLLM Qwen3-Reranker-4B, gpu-mem-util 0.18, len 2048)
+#   reranker        ~1.1 G  (Infinity bge-reranker-v2-m3 cross-encoder, GPU)
 #   ──────────────────────
-#   total          ~21.3 G  (~10.7 G headroom on 32 G card)
+#   total          ~16.5 G  (~15.5 G headroom on 32 G card)
 #
 # NUM_PARALLEL=1 is load-bearing here: at 4 the chat model's KV alone balloons
 # to ~35 G and spills to CPU. expand-coder-7b (~4.7 G, qwen2.5-coder:7b, dex
@@ -84,9 +84,19 @@ dex_ollama_keep_alive: "-1"
 # 32k ctx × 4). The VRAM budget below assumes one slot.
 dex_ollama_num_parallel: "1"
 
-# GPU for the reranker: Qwen3-Reranker-4B needs GPU for 1–2s latency on 40
-# candidates. vLLM reserves ~5.9 G (gpu-mem-util 0.18, max-model-len 2048) —
-# see the budget above. server.yml runs vLLM when dex_rerank_style=chat-vllm.
+# Rerank backend: override the shared chat-vllm/Qwen3-Reranker-4B default with
+# the Cohere-style Infinity cross-encoder on this box. The 4B vLLM scorer fought
+# ollama for VRAM on the shared 5090 — vLLM demands a rigid upfront reservation
+# and counts ollama's pinned models against its own KV budget, so it crash-looped
+# with negative KV cache. Infinity + bge-reranker-v2-m3 is ~1.1 G, no GGUF
+# patches, no memory-accounting war — it coexists with the pinned ollama models
+# trivially. server.yml runs the Infinity container when dex_rerank_style=cohere.
+dex_rerank_style: "cohere"
+dex_rerank_model: "BAAI/bge-reranker-v2-m3"
+
+# GPU for the reranker: bge-reranker-v2-m3 (~1.1 G) gives ~sub-second latency on
+# 40 candidates. Set "" to run CPU-only and free even that (acceptable for the
+# 10–50 post-retrieval candidates).
 dex_rerank_gpu: "1"
 
 # Docker Desktop + WSL "mirrored" networking does NOT expose container ports on

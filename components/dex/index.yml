@@ -288,34 +288,39 @@ steps:
 
   # ───────────────────────────────────────────────────────────────────────────
 
+  - name: "Ensure ~/.config/dex exists"
+    file.write:
+      path: ~/.config/dex
+      state: directory
+    tags: [dex]
+
+  - name: "Render dex.env (single source of truth for all DEX_* consumers)"
+    # One file feeds .zshenv (sourced), the dex-serve/dex-watch@ units
+    # (EnvironmentFile=) and the MCP registration below (each line → a
+    # `claude mcp add -e` flag). Change a DEX_* value via the vars and
+    # re-deploy — the consumers never carry their own copy.
+    file.template:
+      src: ./templates/dex.env.j2
+      dest: "~/.config/dex/dex.env"
+    tags: [dex, claude]
+
   - name: "Register dex with Claude Code (user scope)"
     # remove-then-add keeps the command/args in lockstep with this template
-    # so future arg changes propagate cleanly. Env vars are passed via
-    # `claude mcp add -e` rather than relying on shell defaults — the
-    # ollama-served model names + non-standard port all differ from the
-    # dex binary's compiled-in defaults, so leaving them implicit
-    # would silently 4xx against both endpoints. EMBED_* drives both
-    # semantic_search and the RAG leg of generate_code; CHAT_* drives the
-    # generation leg of generate_code.
+    # so future arg changes propagate cleanly. Env vars come from the rendered
+    # dex.env (above) rather than shell defaults — the ollama-served model
+    # names + non-standard port all differ from the dex binary's compiled-in
+    # defaults, so leaving them implicit would silently 4xx against both
+    # endpoints. Each KEY=VALUE line becomes one `-e` flag, so the MCP server's
+    # env stays identical to the shell + service env by construction.
     shell: |
       set -euo pipefail
       claude mcp remove dex --scope user 2>/dev/null || true
-      # Build arg list in a bash array — avoids multi-line continuation gymnastics.
-      args=(
-        -e DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
-        -e DEX_EMBED_MODEL={{ dex_embed_model }}
-        -e DEX_EMBED_BATCH={{ dex_embed_batch }}
-        -e DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
-        -e DEX_CHAT_MODEL={{ dex_chat_model }}
-        -e DEX_ASK_MODEL={{ dex_ask_model }}
-        -e DEX_RERANK_URL=http://{{ dex_rerank_connect_host | default:'127.0.0.1' }}:{{ dex_rerank_local_port }}
-        -e DEX_RERANK_STYLE={{ dex_rerank_style }}
-        -e DEX_RERANK_MODEL={{ dex_rerank_model }}
-        -e DEX_RERANK_POOL={{ dex_rerank_pool }}
-        -e DEX_RERANK_CONCURRENCY={{ dex_rerank_concurrency }}
-        -e DEX_EXPAND_MODEL={{ dex_expand_model }}
-        -e DEX_EXPAND_MODE={{ dex_expand_mode }}
-      )
+      # Build the -e flag list from dex.env — single source, no per-var duplication.
+      args=()
+      while IFS= read -r kv; do
+        case "$kv" in ''|\#*) continue ;; esac
+        args+=(-e "$kv")
+      done < ~/.config/dex/dex.env
       claude mcp add --scope user dex "${args[@]}" -- {{ dex_bin_path }} mcp
     tags: [dex, claude]
 

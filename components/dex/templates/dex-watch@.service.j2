@@ -34,13 +34,11 @@ Type=simple
 # We can't use {{ dex_bin_path }} directly because it now resolves
 # to the tilde-prefixed form (`~/.local/bin/dex`), and systemd does
 # NOT expand `~` in ExecStart= — the unit would load with bad-setting.
-# Embed-only: `dex watch` indexes but never generates, so the
-# CHAT_* vars from the MCP registration in index.yml are intentionally
-# omitted. EMBED_* still has to be set — ollama's model ref + non-default
-# port can't be left to the binary's compiled-in defaults.
-Environment=DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
-Environment=DEX_EMBED_MODEL={{ dex_embed_model }}
-Environment=DEX_EMBED_BATCH={{ dex_embed_batch }}
+# Embed-only: `dex watch` indexes but never generates. It sources the same
+# single dex.env as serve/CLI for simplicity; the CHAT_*/RERANK_* vars in it
+# are inert here (watch never calls those endpoints). EMBED_* must be set —
+# ollama's model ref + non-default port can't be left to the binary defaults.
+EnvironmentFile=%h/.config/dex/dex.env
 ExecStart=%h/.local/bin/dex watch -v %I
 Restart=always
 RestartSec=10s
