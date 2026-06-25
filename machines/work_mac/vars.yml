@@ -5,8 +5,15 @@ computer_name: work-mac
 
 EMAIL: aatsman@nvidia.com
 
-# ─── dex — embed-only, no tunnel to main_pc ──────────────────────────
-# Local ollama serves the embed endpoint; no GPU server reachable from
-# the work network, so chat model is disabled.
-dex_embed_model: "nomic-embed-text:latest"
+# ─── dex — local ollama + Infinity reranker (M2 Max, Metal) ─────────
+# No GPU server reachable from the work network. Embedding and reranking
+# both run locally: ollama for embed (Brew), Infinity Python package with
+# the mps engine for rerank (bge-reranker-v2-m3, ~278M params, fast on M2).
+dex_embed_model: "qwen3-embedding:4b"
 dex_chat_model: ""
+
+# Cohere-style cross-encoder via Infinity on MPS.
+# chat-vllm needs vLLM which is Linux/CUDA only.
+dex_rerank_style: "cohere"
+dex_rerank_model: "BAAI/bge-reranker-v2-m3"
+dex_rerank_gpu: ""

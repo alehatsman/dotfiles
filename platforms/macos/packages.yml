@@ -92,6 +92,7 @@
       - nvm
       - yarn
       - tmux
+      - uv
       - reattach-to-user-namespace
       - zsh
       - httpie

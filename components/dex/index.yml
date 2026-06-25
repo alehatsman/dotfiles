@@ -209,6 +209,40 @@ steps:
     when: os == 'darwin' and dex_chat_model != ''
     tags: [dex, ollama]
 
+  # ───────────────── LOCAL RERANKER (macOS, Infinity + MPS) ─────────────────
+  # Linux rerank is handled in server.yml via Docker containers (Infinity or
+  # vLLM). On macOS, Docker containers can't reach Metal, so Infinity runs as
+  # a Python package with --engine torch --device mps. Gated on
+  # dex_rerank_style=cohere — client macs that tunnel to a Linux chat-vllm
+  # server don't activate this block.
+
+  - name: "Install Infinity reranker package (mac)"
+    shell: >-
+      uv tool install 'infinity-emb[torch,optimum,server]'
+      --with 'click<8.2'
+      --with 'optimum<2'
+      --with 'transformers<4.49'
+    unless_command: uv tool list 2>/dev/null | grep -q '^infinity-emb'
+    when: os == 'darwin' and dex_rerank_style == 'cohere' and dex_rerank_local_port != ''
+    timeout: 10m
+    tags: [dex, rerank]
+
+  - name: "Deploy dex-reranker launchd plist (mac)"
+    file.template:
+      src: ./templates/dex-reranker.plist.j2
+      dest: "~/Library/LaunchAgents/com.alehatsman.dex-reranker.plist"
+    when: os == 'darwin' and dex_rerank_style == 'cohere' and dex_rerank_local_port != ''
+    tags: [dex, rerank]
+
+  - name: "Load dex-reranker launchd plist (mac)"
+    shell: |
+      set -euo pipefail
+      plist=~/Library/LaunchAgents/com.alehatsman.dex-reranker.plist
+      launchctl unload "$plist" 2>/dev/null || true
+      launchctl load "$plist"
+    when: os == 'darwin' and dex_rerank_style == 'cohere' and dex_rerank_local_port != ''
+    tags: [dex, rerank]
+
   # ───────────────────────────────────────────────────────────────────────────
 
   - name: "Register dex with Claude Code (user scope)"
