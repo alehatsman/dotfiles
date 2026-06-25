@@ -16,7 +16,7 @@ props:
     description: "client=MCP+tunnel only; server=additionally runs embedding service"
   dex_src_url:
     type: string
-    default: "http://127.0.0.1:8080/alehatsman/dex.git"
+    default: "git@github.com:alehatsman/dex.git"
     description: Git remote to clone/update dex source from.
   dex_local_port:
     type: string
@@ -169,36 +169,47 @@ steps:
   # and plan-mode reports a change every run. Force rebuild via:
   #   rm /usr/local/bin/dex{,.sha} && mooncake apply -c ./<m>.yml [-K] -t dex
 
-  - name: "Build dex binary"
-    # Delegate to dex's own tasks.yml `build` target rather than hardcoding the
-    # go build line here. dex's build requires `-tags sqlite_fts5` (CGO
-    # mattn/go-sqlite3) — a plain `go build` ships a binary missing the fts5
-    # module, and dex then fails every reindex with `no such module: fts5`.
-    # reindex drops the index *before* rebuilding, so an fts5-less binary wipes
-    # the project index. Keeping the build flags single-sourced in dex's
-    # tasks.yml (GO_TAGS: sqlite_fts5) means this component never drifts from it.
+  - name: "Build and install dex binary"
+    # Delegates to dex's own tasks.yml `install` target: builds with
+    # -tags sqlite_fts5 (required for FTS5), copies to ~/.local/bin, and
+    # restarts any running dex instances. MOONCAKE_MODULE_INSECURE trusts
+    # the plain-HTTP moongit host that serves the go-quality module.
     # {{ dex_src_dir }} is unquoted on purpose — see variables.yml.
     shell: |
       set -euo pipefail
       cd {{ dex_src_dir }}
-      mooncake task build
-    unless_command: |
-      test -x {{ dex_bin_path }} && \
-        [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
-    tags: [dex, build]
-
-  - name: "Install dex to {{ dex_bin_path }}"
-    # Runs as the user (no as_user: root) so ~ resolves to the same home
-    # the build step used.
-    shell: |
-      set -euo pipefail
-      install -m 0755 {{ dex_src_dir }}/dex {{ dex_bin_path }}
+      MOONCAKE_MODULE_INSECURE=host.docker.internal:8080 mooncake task install
       git -C {{ dex_src_dir }} rev-parse HEAD > {{ dex_bin_path }}.sha
       chmod 0644 {{ dex_bin_path }}.sha
     unless_command: |
       test -x {{ dex_bin_path }} && \
         [ "$(cat {{ dex_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ dex_src_dir }} rev-parse HEAD 2>/dev/null)" ]
     tags: [dex, build]
+
+  # ───────────────── LOCAL OLLAMA (macOS only) ───────────────────────────────
+  # On Linux the GPU server runs ollama as a system service (server.yml).
+  # On macOS ollama is installed via Homebrew; start it as a user service and
+  # pull the embed + chat models so dex works offline without the SSH tunnel.
+
+  - name: "Start ollama via Homebrew services (mac)"
+    shell: brew services start ollama
+    unless_command: brew services list | grep -q '^ollama.*started'
+    when: os == 'darwin'
+    tags: [dex, ollama]
+
+  - name: "Pull dex embed model into local ollama (mac)"
+    shell: ollama pull {{ dex_embed_model }}
+    unless_command: ollama list 2>/dev/null | grep -q '^{{ dex_embed_model }}'
+    when: os == 'darwin' and dex_embed_model != ''
+    tags: [dex, ollama]
+
+  - name: "Pull dex chat model into local ollama (mac)"
+    shell: ollama pull {{ dex_chat_model }}
+    unless_command: ollama list 2>/dev/null | grep -q '^{{ dex_chat_model }}'
+    when: os == 'darwin' and dex_chat_model != ''
+    tags: [dex, ollama]
+
+  # ───────────────────────────────────────────────────────────────────────────
 
   - name: "Register dex with Claude Code (user scope)"
     # remove-then-add keeps the command/args in lockstep with this template

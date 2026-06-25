@@ -1,0 +1,12 @@
+---
+# work-mac — NVIDIA work macOS workstation.
+is_wsl: false
+computer_name: work-mac
+
+EMAIL: aatsman@nvidia.com
+
+# ─── dex — embed-only, no tunnel to main_pc ──────────────────────────
+# Local ollama serves the embed endpoint; no GPU server reachable from
+# the work network, so chat model is disabled.
+dex_embed_model: "nomic-embed-text:latest"
+dex_chat_model: ""

@@ -51,7 +51,7 @@ dex_role: client
 # moongit host's LAN IP (e.g. mini_pc → 192.168.50.1:8080).
 # Lives here — not in components/dex/variables.yml — so machine overrides
 # win (component vars.load runs after machine vars and would clobber).
-dex_src_url: "http://127.0.0.1:8080/alehatsman/dex.git"
+dex_src_url: "git@github.com:alehatsman/dex.git"
 
 # Embedding model. Code-retrieval quality vs VRAM trade-off documented in
 # components/dex/README.md. Ollama-style ref (vs HF-style for vLLM).
