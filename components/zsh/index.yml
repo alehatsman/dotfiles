@@ -1,45 +1,9 @@
 ---
 props:
-  dex_local_port:
-    type: string
-    default: "11434"
-    description: Local ollama port for embed + chat URLs.
-  dex_embed_model:
-    type: string
-    default: ""
-    description: Embedding model name (e.g. qwen3-embedding:0.6b). Empty = binary default.
-  dex_chat_model:
-    type: string
-    default: ""
-    description: Chat model name (e.g. qwen2.5-coder:32b). Empty = binary default.
-  dex_ask_model:
-    type: string
-    default: ""
-    description: Ask/routing model override. Empty = falls back to dex_chat_model.
-  dex_rerank_local_port:
-    type: string
-    default: "8082"
-    description: Local reranker port.
-  dex_rerank_connect_host:
-    type: string
-    default: "127.0.0.1"
-    description: Host dex connects to for rerank (shell env). Override where 127.0.0.1 publish is unreachable (e.g. host.docker.internal under Docker Desktop + WSL mirrored networking).
-  dex_rerank_style:
-    type: string
-    default: "cohere"
-    description: Reranker API style (cohere or chat).
-  dex_rerank_model:
-    type: string
-    default: "BAAI/bge-reranker-v2-m3"
-    description: Reranker model name.
-  dex_rerank_pool:
-    type: string
-    default: "40"
-    description: Reranker candidate pool size.
-  dex_rerank_concurrency:
-    type: string
-    default: "8"
-    description: Reranker request concurrency.
+  # dex's DEX_* env now comes from ~/.config/dex/dex.env (rendered by
+  # components/dex); .zshenv just sources that file. The only dex knobs zsh
+  # still needs are the proxy ones below, which drive the shell-only
+  # ANTHROPIC_BASE_URL export (services must NOT route through the proxy).
   dex_proxy_port:
     type: string
     default: "7921"

@@ -7,25 +7,18 @@
 # Rust/cargo — guarded so a box without rustup doesn't error on every shell.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
-# dex — point ad-hoc CLI invocations at the same endpoint + model that the MCP
-# registration (components/dex/index.yml) and the watch/serve units use. Lives
-# in .zshenv (not .zshrc) so NON-interactive shells — scripts, cron, agent
-# tool-shells, `zsh -c` — get them too; otherwise a bare `dex` there falls back
-# to the binary's compiled defaults (8082 + Qwen/Qwen3-Embedding-4B, 2560-dim),
-# which mismatch the nomic-built index (768-dim) and fail with a dim error
-# (dotfiles #33).
-export DEX_EMBED_URL=http://127.0.0.1:{{ props.dex_local_port }}
-export DEX_EMBED_MODEL={{ props.dex_embed_model }}
-export DEX_CHAT_URL=http://127.0.0.1:{{ props.dex_local_port }}
-export DEX_CHAT_MODEL={{ props.dex_chat_model }}
-export DEX_ASK_MODEL={{ props.dex_ask_model }}
-{% if props.dex_rerank_local_port %}
-export DEX_RERANK_URL=http://{{ props.dex_rerank_connect_host | default:'127.0.0.1' }}:{{ props.dex_rerank_local_port }}
-export DEX_RERANK_STYLE={{ props.dex_rerank_style }}
-export DEX_RERANK_MODEL={{ props.dex_rerank_model }}
-export DEX_RERANK_POOL={{ props.dex_rerank_pool }}
-export DEX_RERANK_CONCURRENCY={{ props.dex_rerank_concurrency }}
-{% endif %}
+# dex — point ad-hoc CLI invocations at the same endpoints + models the MCP
+# registration and the watch/serve units use. The DEX_* values live in ONE
+# file rendered by components/dex (~/.config/dex/dex.env); we source it here so
+# scripts, cron, agent tool-shells and `zsh -c` all get them too (otherwise a
+# bare `dex` falls back to the binary's compiled defaults and dim-mismatches the
+# index — dotfiles #33). Guarded so a box without dex (no file) is a no-op.
+# `set -a` auto-exports every KEY=VALUE the file assigns.
+if [ -f "$HOME/.config/dex/dex.env" ]; then
+  set -a
+  . "$HOME/.config/dex/dex.env"
+  set +a
+fi
 {% if props.dex_proxy_default_on == "true" %}
 # Route Claude sessions through the local dex proxy by default. Opt out for
 # a single shell with `unset ANTHROPIC_BASE_URL` if the proxy is wedged.

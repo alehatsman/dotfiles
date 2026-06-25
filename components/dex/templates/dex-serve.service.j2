@@ -18,19 +18,10 @@ Type=simple
 # `%h` is systemd's user-home specifier — systemd does NOT expand `~`, so
 # {{ dex_bin_path }} (tilde form) can't be used in ExecStart directly.
 # Search needs the embedding + rerank endpoints; ask needs chat. All are
-# loopback on the server box (no tunnel).
-Environment=DEX_EMBED_URL=http://127.0.0.1:{{ dex_local_port }}
-Environment=DEX_EMBED_MODEL={{ dex_embed_model }}
-Environment=DEX_EMBED_BATCH={{ dex_embed_batch }}
-Environment=DEX_CHAT_URL=http://127.0.0.1:{{ dex_local_port }}
-Environment=DEX_CHAT_MODEL={{ dex_chat_model }}
-{% if dex_expand_model | default:'' %}
-Environment=DEX_EXPAND_MODEL={{ dex_expand_model }}
-Environment=DEX_EXPAND_MODE={{ dex_expand_mode | default:'on' }}
-{% endif %}
-Environment=DEX_RERANK_URL=http://{{ dex_rerank_connect_host | default:'127.0.0.1' }}:{{ dex_rerank_local_port }}
-Environment=DEX_RERANK_STYLE={{ dex_rerank_style }}
-Environment=DEX_RERANK_MODEL={{ dex_rerank_model }}
+# loopback on the server box (no tunnel). The DEX_* values come from the
+# single source rendered by index.yml — same file .zshenv sources and the MCP
+# registration reads, so the service can't drift from the CLI.
+EnvironmentFile=%h/.config/dex/dex.env
 # DEX_SERVE_PROJECTS (space-separated roots) comes from an EnvironmentFile
 # written by index.yml — NOT templated here, because file.template renders
 # single-pass and won't expand the {{ username }} nested inside
