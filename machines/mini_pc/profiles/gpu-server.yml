@@ -9,10 +9,10 @@
 # is tuned for 16 GB VRAM instead of 32 GB.
 #
 # VRAM budget (keep_alive=-1, all pinned):
-#   embed-4b   ~4.0 G  (qwen3-embedding:4b)
+#   embed-0.6b ~0.4 G  (qwen3-embedding:0.6b)
 #   chat       ~8.7 G  (qwen3:14b Q4_K_M)
 #   ──────────────────────
-#   total      ~12.7 G  (3.3 G headroom on 16 G card)
+#   total      ~9.1 G  (6.9 G headroom on 16 G card)
 #
 # Qwen3-14B matches Qwen2.5-32B on coding benchmarks.
 # Compress and draft disabled; add back if VRAM budget allows a second model.
