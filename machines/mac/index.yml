@@ -57,6 +57,8 @@
     dex_rerank_model: "{{ dex_rerank_model }}"
     dex_rerank_pool: "{{ dex_rerank_pool }}"
     dex_rerank_concurrency: "{{ dex_rerank_concurrency }}"
+    dex_proxy_port: "{{ dex_proxy_port }}"
+    dex_proxy_default_on: "{{ dex_proxy_default_on }}"
   tags: [core, shell]
 
 
