@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  dex reranker — Infinity cross-encoder on macOS (Apple Silicon, MPS engine).
+  Serves a Cohere-compatible /rerank endpoint on 127.0.0.1:{{ dex_rerank_local_port }}.
+  PYTORCH_ENABLE_MPS_FALLBACK=1 prevents crashes when an op isn't yet Metal-backed.
+  ThrottleInterval=30 gives launchd room for the first-run HuggingFace download.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.alehatsman.dex-reranker</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/{{ username }}/.local/bin/infinity_emb</string>
+    <string>v2</string>
+    <string>--model-id</string>
+    <string>{{ dex_rerank_model }}</string>
+    <string>--port</string>
+    <string>{{ dex_rerank_local_port }}</string>
+    <string>--host</string>
+    <string>127.0.0.1</string>
+    <string>--engine</string>
+    <string>torch</string>
+    <string>--device</string>
+    <string>mps</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HF_HOME</key>
+    <string>/Users/{{ username }}/.cache/huggingface</string>
+    <key>PYTORCH_ENABLE_MPS_FALLBACK</key>
+    <string>1</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>30</integer>
+  <key>StandardOutPath</key>
+  <string>/tmp/dex-reranker.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/dex-reranker.log</string>
+</dict>
+</plist>
