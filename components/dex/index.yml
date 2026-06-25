@@ -527,6 +527,28 @@ steps:
     changed_when: false
     tags: [dex, proxy]
 
+  # mac: same opt-in proxy daemon, via launchd. Runs on every mac that
+  # imports the dex component (role is irrelevant — the proxy is a thin
+  # loopback forwarder, no GPU/embedding deps). Same OPT-IN posture: routing
+  # only happens when ANTHROPIC_BASE_URL is exported in a session.
+  - name: "Deploy dex-proxy launchd plist (mac)"
+    file.template:
+      src: ./templates/dex-proxy.plist.j2
+      dest: "~/Library/LaunchAgents/com.alehatsman.dex-proxy.plist"
+    when: os == 'darwin'
+    tags: [dex, proxy]
+
+  - name: "Load dex-proxy launchd plist (mac)"
+    # unload-then-load so a template change (port, args) actually takes
+    # effect. Mirrors the dex-tunnel launchd step above.
+    shell: |
+      set -euo pipefail
+      plist=~/Library/LaunchAgents/com.alehatsman.dex-proxy.plist
+      launchctl unload "$plist" 2>/dev/null || true
+      launchctl load "$plist"
+    when: os == 'darwin'
+    tags: [dex, proxy]
+
   # Retire the standalone dex-watch@ instances for the long-lived serve
   # paths: dex serve now eager-watches its --project registry at boot
   # (DEX_SERVE_WATCH, default on), which is exactly dex_watch_paths, so a
