@@ -9,5 +9,13 @@ computer_name: mac
 # ~/.ssh/config (using dex_remote_ip/port/user from shared/variables.yml)
 # so the tunnel resolves without any manual prerequisite.
 
-dex_embed_model: "nomic-embed-text:latest"
-dex_chat_model: ""
+dex_embed_model: "qwen3-embedding:4b"
+dex_chat_model: "qwen3:30b-a3b"
+
+# Cohere-style cross-encoder via Infinity on MPS.
+dex_rerank_style: "cohere"
+dex_rerank_model: "BAAI/bge-reranker-v2-m3"
+dex_rerank_gpu: ""
+
+# Auto-route Claude sessions through the local dex proxy.
+dex_proxy_default_on: "true"
