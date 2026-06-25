@@ -40,6 +40,9 @@
       - { name: borkdude-brew,        tap: borkdude/brew }
       - { name: wagoodman-dive,       tap: wagoodman/dive }
       - { name: adoptopenjdk-openjdk, tap: AdoptOpenJDK/openjdk }
+      # HashiCorp relicensed to BSL and pulled packer/terraform from
+      # homebrew-core; their tap is now the only brew source.
+      - { name: hashicorp-tap,        tap: hashicorp/tap }
     apps:
       - aria2
       - autoenv
@@ -62,13 +65,13 @@
       - libpq
       - mosh
       - nmap
-      - packer
+      - hashicorp/tap/packer
       - python
       - ripgrep
       - rustup
       - shellcheck
       - shfmt
-      - terraform
+      - hashicorp/tap/terraform
       - terraform-inventory
       - tig
       - tldr
@@ -112,7 +115,7 @@
       - pgadmin4
       - postman
       - slack
-      - spectacle
+      - rectangle  # spectacle was discontinued and pulled from homebrew-cask; rectangle is the drop-in successor
       - telegram
       - transmission
       - tunnelblick
@@ -134,6 +137,17 @@
     brew:
       tap: "{{ item.tap }}"
   for_each: "{{ taps }}"
+  timeout: 5m
+
+- name: Trust brew taps
+  # Homebrew 6.0 refuses to load formulae from third-party taps unless the
+  # tap is explicitly trusted; `brew tap` no longer implies trust. `brew
+  # trust` is idempotent, so re-running a trusted tap is a clean no-op.
+  shell: |
+    set -euo pipefail
+    brew trust "{{ item.tap }}"
+  for_each: "{{ taps }}"
+  changed_when: false
   timeout: 5m
 
 - name: Install brew formulae
