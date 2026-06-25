@@ -1,0 +1,7 @@
+# work_mac — NVIDIA work macOS workstation.
+# Apply: mooncake apply -c ./work_mac.yml -K
+# Plan: mooncake plan -c ./work_mac.yml
+# -K prompts for the sudo password (needed for brew casks, system flags).
+- vars.load: ./shared/variables.yml
+- vars.load: ./machines/work_mac/vars.yml
+- import: ./machines/work_mac/index.yml
