@@ -9,7 +9,7 @@ EMAIL: aatsman@nvidia.com
 # No GPU server reachable from the work network. Embedding and reranking
 # both run locally: ollama for embed (Brew), Infinity Python package with
 # the mps engine for rerank (bge-reranker-v2-m3, ~278M params, fast on M2).
-dex_embed_model: "qwen3-embedding:4b"
+dex_embed_model: "qwen3-embedding:0.6b"
 dex_chat_model: ""
 
 # Cohere-style cross-encoder via Infinity on MPS.
