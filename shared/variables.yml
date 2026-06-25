@@ -147,6 +147,13 @@ dex_serve_port: "7920"
 # Distinct from dex serve (:7920), moongit (:8080), ollama (:11434).
 dex_proxy_port: "7921"
 
+# Auto-export ANTHROPIC_BASE_URL + ENABLE_TOOL_SEARCH in .zshenv so every shell
+# routes Claude sessions through dex proxy by default. Default off — preserves
+# the opt-in posture noted on dex_proxy_port above (proxy is a single point of
+# failure if it wedges). Flip to "true" per-machine to make the proxy the
+# default. Unset ANTHROPIC_BASE_URL in a single shell to bypass temporarily.
+dex_proxy_default_on: "false"
+
 # OLLAMA_NUM_PARALLEL — max concurrent generation requests ollama will
 # pack into a single model. Deployed as a systemd drop-in on the GPU
 # host (components/dex/templates/ollama-num-parallel.conf.j2). 4 is

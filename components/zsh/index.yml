@@ -36,6 +36,14 @@ props:
     type: string
     default: "8"
     description: Reranker request concurrency.
+  dex_proxy_port:
+    type: string
+    default: "7921"
+    description: Loopback port for the dex proxy (Anthropic pass-through).
+  dex_proxy_default_on:
+    type: string
+    default: "false"
+    description: When "true", .zshenv auto-exports ANTHROPIC_BASE_URL + ENABLE_TOOL_SEARCH so every shell routes through the proxy.
 
 steps:
   - name: Install zsh
