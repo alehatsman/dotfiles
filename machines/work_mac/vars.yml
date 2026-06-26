@@ -11,6 +11,7 @@ EMAIL: aatsman@nvidia.com
 # the mps engine for rerank (bge-reranker-v2-m3, ~278M params, fast on M2).
 dex_embed_model: "qwen3-embedding:0.6b"
 dex_chat_model: ""
+dex_expand_model: "qwen3:4b"
 
 # Cohere-style cross-encoder via Infinity on MPS.
 # chat-vllm needs vLLM which is Linux/CUDA only.
