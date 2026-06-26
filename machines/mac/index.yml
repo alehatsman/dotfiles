@@ -12,6 +12,17 @@
 - import: ../../platforms/macos/index.yml
   tags: [macos]
 
+- name: Install personal-mac casks
+  pkg:
+    manager: brew
+    cask: true
+    state: present
+    names:
+      - google-chrome
+      - slack
+      - veracrypt
+  tags: [macos, packages]
+
 - name: Set computer name
   shell: |
     set -euo pipefail
