@@ -63,9 +63,12 @@
       - jq
       - lastpass-cli
       - libpq
+      - lsd
       - mosh
       - nmap
       - hashicorp/tap/packer
+      - pyenv
+      - pyenv-virtualenv
       - python
       - ripgrep
       - rustup
