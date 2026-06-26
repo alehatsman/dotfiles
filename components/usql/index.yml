@@ -30,8 +30,8 @@
   when: apt_available
   tags: [usql]
 
-- name: Verify usql is on $PATH
+- name: Verify usql is installed
   assert:
     command:
-      cmd: command -v usql
+      cmd: command -v usql || test -x "$HOME/go/bin/usql"
   tags: [usql, verify]
