@@ -34,9 +34,10 @@
     trap 'rm -rf "$tmpdir"' EXIT
     git clone https://github.com/alehatsman/claude-autoapprove "$tmpdir/claude-autoapprove"
     cd "$tmpdir/claude-autoapprove"
-    go build -o claude-autoapprove ./cmd/claude-autoapprove
-    sudo mv claude-autoapprove /usr/local/bin/claude-autoapprove
-  creates: /usr/local/bin/claude-autoapprove
+    go build -o cry-aye ./cmd/cry-aye
+    mkdir -p "$HOME/.local/bin"
+    mv cry-aye "$HOME/.local/bin/cry-aye"
+  creates: ~/.local/bin/cry-aye
   tags: [claude]
 
 - name: "Register moongit MCP server"
