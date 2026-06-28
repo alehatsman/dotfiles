@@ -115,3 +115,7 @@ dex_rerank_connect_host: "host.docker.internal"
 # TS frontend at web/ (own .dex/config.toml, separate graph) — both watched
 # + served (moongit #292 / dex #13).
 dex_watch_paths: "/home/{{ username }}/dotfiles /home/{{ username }}/projects/mooncake /home/{{ username }}/projects/dex /home/{{ username }}/projects/moongit /home/{{ username }}/projects/moongit/web"
+
+# dex feedback flags (#731): shadow=A/B logging, live=serve the reweighted ranking.
+dex_feedback_shadow: "1"
+dex_feedback_live: "1"

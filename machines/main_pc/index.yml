@@ -113,6 +113,8 @@
     dex_remote_port: "{{ dex_remote_port }}"
     dex_remote_ssh_port: "{{ dex_remote_ssh_port }}"
     dex_remote_user: "{{ dex_remote_user }}"
+    dex_feedback_shadow: "{{ dex_feedback_shadow | default:'' }}"
+    dex_feedback_live: "{{ dex_feedback_live | default:'' }}"
     dex_serve_port: "{{ dex_serve_port }}"
     dex_watch_paths: "{{ dex_watch_paths }}"
     dex_ollama_keep_alive: "{{ dex_ollama_keep_alive }}"
