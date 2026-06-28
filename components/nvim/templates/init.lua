@@ -873,10 +873,29 @@ local force_osc52 = (vim.env.NVIM_USE_OSC52 == "1")
 local local_wsl  = is_wsl and not is_ssh   -- WSL at the console
 local remote_ssh = is_ssh                  -- any SSH session, WSL or not
 
-if local_wsl and os.getenv("WAYLAND_DISPLAY") then
-  -- vim.opt.clipboard = { 
-  --   "unnamed", 
-  --   "unnamedplus" 
+if local_wsl and vim.fn.executable("win32yank.exe") == 1 then
+  -- WSLg always exports WAYLAND_DISPLAY, but wl-copy only writes the WSLg
+  -- compositor's Wayland clipboard, whose sync into the real Windows
+  -- clipboard is unreliable. win32yank.exe talks to the Windows clipboard
+  -- directly, so prefer it whenever it's installed (~/bin via win32yank.yml).
+  vim.opt.clipboard = "unnamedplus"
+  vim.g.clipboard = {
+    name = "win32yank",
+    copy = {
+      ["+"] = { "win32yank.exe", "-i", "--crlf" },
+      ["*"] = { "win32yank.exe", "-i", "--crlf" },
+    },
+    paste = {
+      ["+"] = { "win32yank.exe", "-o", "--lf" },
+      ["*"] = { "win32yank.exe", "-o", "--lf" },
+    },
+    cache_enabled = 0,
+  }
+elseif local_wsl and os.getenv("WAYLAND_DISPLAY") then
+  -- Real Linux Wayland (non-WSLg) fallback.
+  -- vim.opt.clipboard = {
+  --   "unnamed",
+  --   "unnamedplus"
   -- }
   vim.opt.clipboard = "unnamedplus"
   vim.g.clipboard = {
