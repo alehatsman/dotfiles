@@ -126,6 +126,14 @@ props:
     type: string
     default: "true"
     description: "true=deploy+load the SSH tunnel plist; false=unload+remove it (use when local services already occupy the forwarded ports)."
+  dex_feedback_shadow:
+    type: string
+    default: ""
+    description: "1 = record shadow re-ranking A/B decisions to feedback_shadow.jsonl (#731). Server-only; empty = off."
+  dex_feedback_live:
+    type: string
+    default: ""
+    description: "1 = enable live feedback-driven reweighting (#731). Server-only; empty = off."
 steps:
   - vars.load: ./variables.yml
 
@@ -466,10 +474,11 @@ steps:
   #
   # Long-lived projects (dex_watch_paths) are handled differently per role:
   #   client  declarative dex-watch@ instances (the sync step below)
-  #   server  dex serve eager-watches its --project registry (== dex_watch_paths)
-  #           at boot, so the standalone dex-watch@ instances for those paths
-  #           are redundant and get retired in the SERVE section. On clients
-  #           dex_watch_paths is empty, so the sync step is the additive no-op.
+  #   server  the dex-sweep daemon (see SWEEP section) keeps the WHOLE indexed
+  #           portfolio fresh by polling — not just dex_watch_paths — so per-path
+  #           eager watchers are unnecessary and serve runs query-only
+  #           (DEX_SERVE_WATCH=0). On clients dex_watch_paths is empty, so the
+  #           sync step is the additive no-op.
   #
   # Linux-only by design — mac clients have no equivalent watcher, since
   # long-lived projects live on the GPU host (main_pc) and the Mac is a
@@ -556,8 +565,9 @@ steps:
 
   # ───────────────── SERVE (HTTP query API for moongit Intel) ─────────────────
   # A server-side `dex serve` daemon on loopback, consumed by moongit's Intel
-  # tab (MOONGIT_DEX_URL). Serves the same roots that are auto-reindexed
-  # (dex_watch_paths). Linux + server only; bound to 127.0.0.1 so no token.
+  # tab (MOONGIT_DEX_URL). Serves the dex_watch_paths roots read-only; it no
+  # longer eager-watches them (DEX_SERVE_WATCH=0) — dex-sweep owns freshness.
+  # Linux + server only; bound to 127.0.0.1 so no token.
 
   - name: "Write dex-serve EnvironmentFile (project list)"
     # dex_watch_paths is rendered here (shell cmd → {{ username }} expands)
@@ -566,7 +576,14 @@ steps:
     shell: |
       set -euo pipefail
       mkdir -p ~/.config/dex
-      printf 'DEX_SERVE_PROJECTS=%s\n' '{{ dex_watch_paths }}' > ~/.config/dex/serve.env
+      {
+        printf 'DEX_SERVE_PROJECTS=%s\n' '{{ dex_watch_paths }}'
+        # Eager per-project watchers are retired in favour of dex-sweep (see
+        # SWEEP section): serve is query-only, dex-sweep owns freshness across
+        # the whole portfolio. DEX_SERVE_WATCH=0 disables serve's eager-watch
+        # without touching MCP autowatch (which lives in dex.env, not here).
+        printf 'DEX_SERVE_WATCH=0\n'
+      } > ~/.config/dex/serve.env
     when: dex_role == 'server' and os == 'linux'
     changed_when: false
     tags: [dex, serve]
@@ -590,6 +607,34 @@ steps:
     when: dex_role == 'server' and os == 'linux'
     changed_when: false
     tags: [dex, serve]
+
+  # ───────────────── SWEEP (portfolio freshness daemon) ──────────────────────
+  # One `dex sweep` daemon that keeps EVERY repo dex has ever indexed fresh —
+  # not just the served dex_watch_paths. It polls the index dir and incrementally
+  # reindexes stale repos (git HEAD newer than the index), one at a time,
+  # throttled. This is the migration target away from eager per-project watchers:
+  # serve no longer eager-watches (DEX_SERVE_WATCH=0 above), and the whole
+  # portfolio stays warm without N resident fsnotify watchers. Server + Linux
+  # only — the portfolio lives on the GPU host. Ad-hoc active-repo watchers
+  # (gwc / dex-watch@) are unaffected; they remain for low-latency real-time
+  # freshness on the repo you're actively editing.
+
+  - name: "Deploy dex-sweep user systemd unit"
+    file.template:
+      src: ./templates/dex-sweep.service.j2
+      dest: "~/.config/systemd/user/dex-sweep.service"
+    when: dex_role == 'server' and os == 'linux'
+    tags: [dex, sweep]
+
+  - name: "Enable + (re)start dex-sweep.service"
+    shell: |
+      set -euo pipefail
+      systemctl --user daemon-reload
+      systemctl --user enable dex-sweep.service
+      systemctl --user restart dex-sweep.service
+    when: dex_role == 'server' and os == 'linux'
+    changed_when: false
+    tags: [dex, sweep]
 
   # ───────────────── PROXY (loopback Anthropic pass-through) ──────────────────
   # A server-side `dex proxy` daemon on loopback (dex #235): forwards
