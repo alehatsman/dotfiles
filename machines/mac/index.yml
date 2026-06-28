@@ -44,6 +44,9 @@
 - import: ../../components/claude/index.yml
   tags: [core, claude]
 
+- import: ../../components/codex/index.yml
+  tags: [core, codex]
+
 - import: ../../components/git/index.yml
   tags: [core, git]
 
