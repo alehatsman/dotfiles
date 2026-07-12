@@ -20,6 +20,8 @@ wsl_networking_mode: "mirrored"
 # Set true per-machine in machines/<m>/vars.yml. Default false (laptops keep
 # their power policy).
 windows_prevent_sleep: false
+# AC sleep timeout in minutes for non-server boxes (windows_prevent_sleep: false).
+windows_sleep_timeout_ac: 30
 
 # ─── claude — global system prompt (~/.claude/CLAUDE.md) ──────────────────
 # Source file the claude component deploys as the user-global system prompt.
