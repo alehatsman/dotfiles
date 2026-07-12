@@ -103,6 +103,26 @@
   when: windows_prevent_sleep
   tags: [power, always-on]
 
+# Inverse of the above: restore AC sleep timeout on non-server boxes so the
+# machine can sleep normally. Idempotent — skips if already at target value.
+- name: Restore AC sleep timeout
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      $target = {{ windows_sleep_timeout_ac }}
+      $acSleep = (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE |
+                  Select-String "Current AC Power Setting Index" |
+                  ForEach-Object { [Convert]::ToInt32(($_ -split '\s+')[-1], 16) })
+      if ($acSleep -eq $target * 60) {
+        Write-Host "AC sleep timeout already at $target min"
+      } else {
+        Write-Host "Setting AC sleep timeout to $target min (was $($acSleep / 60) min)"
+        powercfg /change standby-timeout-ac $target
+      }
+  when: not windows_prevent_sleep
+  tags: [power]
+
 # Default OpenSSH server shell on Windows is cmd.exe, which makes any
 # remote PowerShell call go through a layer of cmd quoting hell. Set it
 # to powershell.exe so SSH lands directly in PowerShell — friendlier for
@@ -311,6 +331,15 @@
       start_when_available: true
   when: windows_prevent_sleep
   tags: [wsl, windows, always-on]
+
+# Inverse: remove the keepalive task on non-server boxes so it can't block
+# sleep. No-ops cleanly if the task doesn't exist.
+- name: Remove WSL session keepalive task (non-server boxes)
+  windows.scheduled_task:
+    name: WSL-Session-Keepalive
+    state: absent
+  when: not windows_prevent_sleep
+  tags: [wsl, windows]
 
 - name: Print next steps
   log:
