@@ -6,6 +6,14 @@
   Serves a Cohere-compatible /rerank endpoint on 127.0.0.1:{{ dex_rerank_local_port }}.
   PYTORCH_ENABLE_MPS_FALLBACK=1 prevents crashes when an op isn't yet Metal-backed.
   ThrottleInterval=30 gives launchd room for the first-run HuggingFace download.
+
+  Memory guardrails (bge-reranker-v2-m3 is 568M params, not 278M): default
+  fp32 weights + batch-size 32 over long code chunks drove the MPS unified-memory
+  footprint to ~13.5 GB, and macOS SIGKILL'd (exit -9) the process under pressure,
+  looping via KeepAlive. --dtype float16 halves weight+activation memory,
+  --batch-size 8 caps peak activation memory, and PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
+  stops MPS over-committing unified memory (torch raises a catchable OOM instead
+  of letting the OS kill the process).
 -->
 <plist version="1.0">
 <dict>
@@ -25,6 +33,10 @@
     <string>torch</string>
     <string>--device</string>
     <string>mps</string>
+    <string>--dtype</string>
+    <string>float16</string>
+    <string>--batch-size</string>
+    <string>8</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
@@ -32,6 +44,8 @@
     <string>/Users/{{ username }}/.cache/huggingface</string>
     <key>PYTORCH_ENABLE_MPS_FALLBACK</key>
     <string>1</string>
+    <key>PYTORCH_MPS_HIGH_WATERMARK_RATIO</key>
+    <string>0.0</string>
   </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
