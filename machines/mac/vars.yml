@@ -28,6 +28,10 @@ dex_tunnel_enabled: "false"
 # Query expansion via a small local model (dex #252): widens BM25/symbol
 # lanes with one extra call per ask(). qwen3:4b fits alongside 30b-a3b.
 dex_expand_model: "qwen3:4b"
+# Default expansion level when a request omits it (off|on|full). Required
+# because mac/index.yml wires dex_expand_mode as a prop with no component
+# default fallback in machine scope.
+dex_expand_mode: "on"
 
 # More headroom for concurrent agents (M2 Max, 64 GB unified memory).
 dex_ollama_num_parallel: "8"
