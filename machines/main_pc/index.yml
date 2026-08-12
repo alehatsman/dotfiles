@@ -99,6 +99,8 @@
     dex_embed_batch: "{{ dex_embed_batch }}"
     dex_chat_model: "{{ dex_chat_model }}"
     dex_ask_model: "{{ dex_ask_model }}"
+    dex_expand_model: "{{ dex_expand_model }}"
+    dex_expand_mode: "{{ dex_expand_mode }}"
     dex_rerank_local_port: "{{ dex_rerank_local_port }}"
     dex_rerank_remote_port: "{{ dex_rerank_remote_port }}"
     dex_rerank_style: "{{ dex_rerank_style }}"
