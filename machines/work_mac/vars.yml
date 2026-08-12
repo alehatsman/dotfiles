@@ -11,7 +11,10 @@ EMAIL: aatsman@nvidia.com
 # the mps engine for rerank (bge-reranker-v2-m3, 568M params, fp16 on M2).
 dex_embed_model: "qwen3-embedding:0.6b"
 dex_chat_model: ""
-dex_expand_model: "qwen3:4b"
+# Query expansion intentionally disabled here: index.yml doesn't wire the
+# expand props, and this memory-constrained work machine avoids the extra
+# ollama model + per-ask() call. Re-enable by wiring dex_expand_model/mode
+# through work_mac/index.yml (see mac/index.yml) if that changes.
 
 # Cohere-style cross-encoder via Infinity on MPS.
 # chat-vllm needs vLLM which is Linux/CUDA only.
