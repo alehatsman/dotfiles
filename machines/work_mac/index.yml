@@ -46,11 +46,6 @@
 
 - name: Use zsh component
   use: ../../components/zsh/index.yml
-  props:
-    # dex's DEX_* env now flows through ~/.config/dex/dex.env (components/dex);
-    # zsh only needs the proxy knobs for the shell-only ANTHROPIC_BASE_URL.
-    dex_proxy_port: "{{ dex_proxy_port }}"
-    dex_proxy_default_on: "{{ dex_proxy_default_on }}"
   tags: [core, shell]
 
 - import: ../../components/tmux/index.yml

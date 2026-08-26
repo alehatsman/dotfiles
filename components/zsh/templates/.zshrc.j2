@@ -764,7 +764,7 @@ complete -f -F _rush_bash_complete rush
 NOTES_PATH="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes"
 alias n="cd \"$NOTES_PATH\" && nvim ."
 
-# Launch Claude with a fresh moongit identity and optional dex proxy.
+# Launch Claude with a fresh moongit identity.
 ce() {
   if command -v moongitd >/dev/null; then
     [[ -r ~/.config/moongit/agent.env ]] &&
@@ -791,20 +791,6 @@ ce() {
     if [[ -n "$token" ]]; then
       export MOONGIT_TOKEN="$token"
       print -u2 -- "moongit identity: $ident"
-    fi
-  fi
-
-  if [[ -z "$ANTHROPIC_BASE_URL" ]]; then
-    local port="${DEX_PROXY_PORT:-{{ dex_proxy_port }}}"
-
-    if zmodload zsh/net/tcp 2>/dev/null &&
-       ztcp 127.0.0.1 "$port" 2>/dev/null; then
-      ztcp -c 2>/dev/null
-
-      export ANTHROPIC_BASE_URL="http://127.0.0.1:$port"
-      export ENABLE_TOOL_SEARCH=true
-
-      print -u2 -- "dex proxy: routing via $ANTHROPIC_BASE_URL"
     fi
   fi
 

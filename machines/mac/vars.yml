@@ -17,10 +17,6 @@ dex_rerank_style: "cohere"
 dex_rerank_model: "BAAI/bge-reranker-v2-m3"
 dex_rerank_gpu: ""
 
-# Auto-route Claude sessions through the local dex proxy.
-dex_proxy_default_on: "true"
-dex_proxy_tool_desc: "terse"
-
 # mac runs local ollama + reranker on the same ports the tunnel would
 # forward — disable it so launchd stops retrying every 10 s.
 dex_tunnel_enabled: "false"

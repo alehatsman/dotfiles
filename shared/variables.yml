@@ -149,28 +149,6 @@ dex_embed_batch: "128"
 # rule. Distinct from moongit (:8080), ollama (:11434), rerank (:8082).
 dex_serve_port: "7920"
 
-# dex proxy — loopback Anthropic API pass-through that logs a per-request
-# input-token baseline (dex #235). Server-only, Restart=always. Opt-in: nothing
-# routes through it until ANTHROPIC_BASE_URL=http://127.0.0.1:7921 is exported.
-# Distinct from dex serve (:7920), moongit (:8080), ollama (:11434).
-dex_proxy_port: "7921"
-
-# Auto-export ANTHROPIC_BASE_URL + ENABLE_TOOL_SEARCH in .zshenv so every shell
-# routes Claude sessions through dex proxy by default. Default off — preserves
-# the opt-in posture noted on dex_proxy_port above (proxy is a single point of
-# failure if it wedges). Flip to "true" per-machine to make the proxy the
-# default. Unset ANTHROPIC_BASE_URL in a single shell to bypass temporarily.
-dex_proxy_default_on: "false"
-
-# Tool-description compression mode for dex proxy. Controls how aggressively
-# MCP tool descriptions are rewritten before forwarding to Anthropic. Modes:
-#   full  — no-op, descriptions untouched (safe default)
-#   terse — trims to ≤3 substantive lines, drops Examples/Notes/See-also
-#   lazy  — first line only (~77 chars) + pointer suffix
-# Override per-machine. When ENABLE_TOOL_SEARCH is active the proxy ignores
-# this and always uses full (tool search relies on complete docs).
-dex_proxy_tool_desc: "full"
-
 # OLLAMA_NUM_PARALLEL — max concurrent generation requests ollama will
 # pack into a single model. Deployed as a systemd drop-in on the GPU
 # host (components/dex/templates/ollama-num-parallel.conf.j2). 4 is
