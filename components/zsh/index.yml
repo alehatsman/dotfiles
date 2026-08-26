@@ -1,17 +1,7 @@
 ---
-props:
-  # dex's DEX_* env now comes from ~/.config/dex/dex.env (rendered by
-  # components/dex); .zshenv just sources that file. The only dex knobs zsh
-  # still needs are the proxy ones below, which drive the shell-only
-  # ANTHROPIC_BASE_URL export (services must NOT route through the proxy).
-  dex_proxy_port:
-    type: string
-    default: "7921"
-    description: Loopback port for the dex proxy (Anthropic pass-through).
-  dex_proxy_default_on:
-    type: string
-    default: "false"
-    description: When "true", .zshenv auto-exports ANTHROPIC_BASE_URL + ENABLE_TOOL_SEARCH so every shell routes through the proxy.
+props: {}
+  # dex's DEX_* env comes from ~/.config/dex/dex.env (rendered by
+  # components/dex); .zshenv just sources that file.
 
 steps:
   - name: Install zsh
