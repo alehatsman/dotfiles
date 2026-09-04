@@ -35,6 +35,14 @@
 # {{ username }} interpolated, so there's no template path that
 # produces invalid sudoers syntax — but a typo here lands without
 # visudo validation, so review changes carefully.
+#
+# owner/group are required, not decorative: mooncake's file.write
+# Become path stages content in a temp file (owned by the calling
+# user) and `mv`s it into place via sudo — on a same-filesystem move
+# that's a rename(2), which preserves the pre-sudo owner instead of
+# landing it as root. Without an explicit owner here the file comes
+# out owned by {{ username }}, and sudo then refuses to honor it
+# ("owned by uid N, should be 0") on every subsequent invocation.
 - name: Configure passwordless sudo for {{ username }}
   file.write:
     path: /etc/sudoers.d/{{ username }}-nopasswd
@@ -42,6 +50,8 @@
     content: |
       {{ username }} ALL=(ALL) NOPASSWD: ALL
     mode: '0440'
+    owner: root
+    group: root
   as_user: root
   when: os == "linux"
   tags: [core, sudo]
