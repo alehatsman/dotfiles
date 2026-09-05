@@ -216,6 +216,26 @@ steps:
     when: os == 'darwin'
     tags: [dex, ollama]
 
+  - name: "Wait for local ollama to accept connections (mac)"
+    # `brew services start` returns as soon as launchd has accepted the job —
+    # well before the server is listening. The pulls below then die with
+    # "could not connect to ollama server, run 'ollama serve' to start it",
+    # which reads like a misconfiguration and is really just a race we lost.
+    #
+    # 127.0.0.1:11434 is ollama's own fixed default, deliberately NOT
+    # {{ dex_local_port }}: that var is what the dex *client* dials (the
+    # tunnel forward on machines that use one), while nothing here sets
+    # OLLAMA_HOST, so the server and the `ollama` CLI both use the default.
+    # /api/tags is a plain GET that needs no model present, so it is a
+    # readiness probe rather than an inference request.
+    wait.http:
+      url: "http://127.0.0.1:11434/api/tags"
+      status: [200]
+      timeout: 2m
+      poll_interval: 2s
+    when: os == 'darwin'
+    tags: [dex, ollama]
+
   - name: "Pull dex embed model into local ollama (mac)"
     shell: ollama pull {{ dex_embed_model }}
     unless_command: ollama list 2>/dev/null | grep -q '^{{ dex_embed_model }}'
