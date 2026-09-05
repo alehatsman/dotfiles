@@ -14,8 +14,14 @@ tells you when.
 git clone https://github.com/alehatsman/dotfiles ~/dotfiles && cd ~/dotfiles
 sh scripts/install_mooncake.sh          # → ~/.local/bin/mooncake, no sudo
 export PATH="$HOME/.local/bin:$PATH"    # until components/zsh lands
-mooncake task <machine> -K              # x1|main_pc|mini_pc|mac|work_mac
+mooncake plan -c ./<machine>.yml        # preview; works before anything exists
+mooncake apply -c ./<machine>.yml -K --keep-going
 ```
+
+`--keep-going` is the flag that matters on a first run: it finishes every
+step it can and lists the failures at the end (still exiting non-zero)
+instead of stranding the other 160 steps behind one package that went
+away upstream. Re-run after fixing; every step is idempotent.
 
 `install_mooncake.sh` detects OS/arch, and *verifies the binary can parse
 this repo* before accepting it — releases lag `main` by months, so a
