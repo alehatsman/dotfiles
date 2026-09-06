@@ -410,10 +410,18 @@ fgcb() {
   git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
 }
 
-# Lastpass
-flpass() {
-  lpass login {{ EMAIL }}
-  lpass show -c --password $(lpass ls  | fzf | awk "{print $(NF)}" | sed "s/\]//g")
+# 1Password — fzf-pick an item, copy its password to the clipboard.
+# Assumes `op` is already authenticated (desktop-app integration on both
+# mac and Linux handles the biometric/session unlock).
+fop() {
+  local item pw
+  item=$(op item list --format=json | jq -r '.[].title' | fzf) || return
+  pw=$(op item get "$item" --fields label=password --reveal) || return
+  if [[ "$OSTYPE" == darwin* ]]; then
+    printf '%s' "$pw" | pbcopy
+  else
+    printf '%s' "$pw" | wl-copy
+  fi
 }
 
 fkill() {
