@@ -3,7 +3,8 @@
 # Routes to the correct machine manifest based on the hostname fact.
 #
 # WSL strips underscores from hostnames (RFC 952), so main_pc → mainpc,
-# mini_pc → minipc. Mac and x1 have no underscores and match directly.
+# mini_pc → minipc. Mac, work_mac, and x1 have no underscores in their
+# computer_name (work_mac's is "work-mac", a hyphen) and match directly.
 #
 # Alternate profile (mini_pc_server.yml) is
 # intentionally excluded — invoke it explicitly with -c.
@@ -16,6 +17,9 @@
 
 - import: ./mac.yml
   when: hostname == 'mac'
+
+- import: ./work_mac.yml
+  when: hostname == 'work-mac'
 
 - import: ./x1.yml
   when: hostname == 'x1'
