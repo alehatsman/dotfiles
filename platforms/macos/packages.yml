@@ -57,7 +57,6 @@
       - htop
       - imagemagick
       - jq
-      - lastpass-cli
       - libpq
       - lsd
       - mosh
@@ -110,6 +109,11 @@
       - amazon-workspaces
       - anki
       - docker
+      # 1Password CLI's cask install prompts for sudo (needed once, to link
+      # into the system keychain) — same class of caveat as the alacritty
+      # note above; --keep-going/-K covers it same as any other sudo step.
+      - 1password
+      - 1password-cli
       - font-fira-code
       - google-drive
       - google-cloud-sdk
