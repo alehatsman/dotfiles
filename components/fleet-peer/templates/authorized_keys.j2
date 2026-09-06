@@ -1,0 +1,12 @@
+# Managed by mooncake — components/fleet-peer/templates/authorized_keys.j2
+#
+# DO NOT EDIT BY HAND. Every apply overwrites this file from the
+# fleet_ssh_keys list in shared/variables.yml. A key added here by hand
+# survives exactly until the next `mooncake apply` and is then silently
+# dropped — which is the point: one declared source of truth for who may
+# reach this machine, reviewable in git.
+#
+# To grant a machine access: add its public key to fleet_ssh_keys and
+# apply. To revoke: delete the entry and apply.
+{% for key in fleet_ssh_keys %}{{ key }}
+{% endfor %}

@@ -190,3 +190,36 @@ dex_watch_paths: ""
 # repo's tasks.yml syntax. Shared (not component-local) so both components
 # resolve it regardless of apply order. See moongit#193 / dex#27.
 mooncake_src_dir: "~/projects/mooncake"
+
+# ─── Fleet inbound SSH ──────────────────────────────────────────────────────
+# The fleet's SSH *public* keys — the declared source of truth for which
+# machines may open an inbound connection to a box that runs the fleet-peer
+# component. Rendered to ~/.ssh/authorized_keys (0600); see
+# components/fleet-peer/index.yml.
+#
+# Before this list existed every authorized_keys in the fleet was
+# hand-maintained and no key was recorded in git except x1's, hardcoded in
+# prose in docs/windows-ssh-setup.md — so a new inbound peer could not be
+# provisioned reproducibly. See dotfiles#2.
+#
+# Public keys only. Nothing secret belongs in this repo.
+#
+# Grant = add an entry + apply. Revoke = delete the entry + apply; the
+# render is authoritative, so a removed key is gone from the box on the
+# next run rather than lingering until someone remembers to edit it.
+fleet_ssh_keys:
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMGss5QZDXkBE9WVH1VZLKG5aXH9edCJWUUASJsBBkNS alehatsman@x1"
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM5OzxDgC3g+RJoGmaGg8I0BTjxgJ5M7pvpOc9+E4hfY aleh@DESKTOP-R809R54"
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIClzS70tcJPT2CewdKbHkIB6TfNT+1UyhQokNT0PeKZE aleh.atsman@gmail.com"
+# TODO(dotfiles#2): mini_pc was offline when this list was collected and
+# work_mac was never queried. Append their id_ed25519.pub and re-apply on
+# every peer — until then neither can reach a fleet-peer machine.
+
+# Whether this machine accepts inbound fleet SSH + runs the mooncake agentd.
+# Default false: opening a workstation to inbound SSH is opt-in, never a
+# side effect of importing a platform. Machines that should be reachable set
+# this true in machines/<m>/vars.yml.
+fleet_peer_enabled: "false"
+# TCP port the agentd binds. Matches mooncake's own default; main_pc/mini_pc
+# already use 7878 for their WSL daemons (see machines/*/vars.yml).
+fleet_peer_agentd_port: "7878"
