@@ -107,3 +107,10 @@
     dex_expand_model: "{{ dex_expand_model }}"
     dex_expand_mode: "{{ dex_expand_mode }}"
   tags: [macos, dex]
+
+# Inbound fleet access. Gated on fleet_peer_enabled (true in ./vars.yml) —
+# see components/fleet-peer/index.yml and docs/macos-peer-setup.md.
+# Last, deliberately: it asserts on a live sshd + agentd, so it should fail
+# after the rest of the machine is provisioned rather than before.
+- import: ../../components/fleet-peer/index.yml
+  tags: [macos, fleet-peer]
