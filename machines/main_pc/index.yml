@@ -16,6 +16,23 @@
 # this file directly) sees the same var context as a CLI apply. Order:
 # shared defaults first, machine overrides second, inline identity block
 # last so is_wsl/wsl_distro/wsl_ssh_port always win regardless of source.
+# Refuse to run if the live hostname belongs to a different known machine
+# (cross-provisioning guard, issue #3 — we've hit main_pc/x1 mixups before).
+# Exclusion list, not a strict match: a genuinely fresh box's hostname is
+# neither 'mainpc' nor any of these, so first-time bootstrap is never
+# blocked — only a hostname already claimed by another machine trips it.
+- name: Refuse to apply main_pc's plan on a different known machine
+  assert:
+    command:
+      cmd: |
+        h="{{ hostname }}"
+        case "$h" in
+          minipc|mac|work-mac|x1)
+            echo "refusing: hostname is '$h', not main_pc — wrong machine?" >&2
+            exit 1 ;;
+        esac
+  tags: [safety]
+
 - vars.load: ../../shared/variables.yml
 - vars.load: ./vars.yml
 
