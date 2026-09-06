@@ -1,6 +1,23 @@
 ---
 # mac — macOS workstation. Homebrew + macOS defaults + dotfiles.
 
+# Refuse to run if the live hostname belongs to a different known machine
+# (cross-provisioning guard, issue #3). Exclusion list, not a strict match:
+# a genuinely fresh box's hostname is neither 'mac' nor any of these, so
+# first-time bootstrap (before "Set computer name" below has run) is never
+# blocked — only a hostname already claimed by another machine trips it.
+- name: Refuse to apply mac's plan on a different known machine
+  assert:
+    command:
+      cmd: |
+        h="{{ hostname }}"
+        case "$h" in
+          mainpc|minipc|work-mac|x1)
+            echo "refusing: hostname is '$h', not mac — wrong machine?" >&2
+            exit 1 ;;
+        esac
+  tags: [safety]
+
 - vars.load: ../../shared/variables.yml
 - vars.load: ./vars.yml
 
