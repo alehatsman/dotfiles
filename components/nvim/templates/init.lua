@@ -127,7 +127,6 @@ require('lazy').setup({
   { 'fatih/vim-go', ft = { 'go' } },
   { 'Olical/conjure', branch = 'develop', ft = { 'clj', 'cljs', 'clojure' } },
 
-  'tjdevries/lsp_extensions.nvim',
   'hrsh7th/cmp-nvim-lsp',
   'hrsh7th/cmp-buffer',
   'hrsh7th/nvim-cmp',
@@ -415,9 +414,6 @@ vim.g.maplocalleader   = vim.api.nvim_replace_termcodes('<tab>', true, true, tru
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 
--- autocomplete globals
-vim.g.completion_enable_auto_popup = 0
-vim.g.completion_matching_strategy_list = { 'exact', 'substring', 'fuzzy' }
 vim.g.vim_json_syntax_conceal = 0
 
 ---------------------------------------------
@@ -683,7 +679,7 @@ vim.keymap.set('n', '<leader>to', ':tabonly<CR>')
 vim.keymap.set('n', '<leader>tc', ':tabclose<CR>')
 vim.keymap.set('n', '<leader>tl', ':tabm +1<CR>')
 vim.keymap.set('n', '<leader>th', ':tabm -1<CR>')
-vim.keymap.set('n', '<leader>0', ':tablast')
+vim.keymap.set('n', '<leader>0', ':tablast<CR>')
 for i = 1, 9 do
   vim.keymap.set('n', '<leader>' .. i, i .. 'gt')
 end
@@ -719,16 +715,6 @@ vim.keymap.set('n', '<leader>sx', '<cmd>Inspect<CR>')
 --   local copilot_node = vim.fn.expand('~/.nvm/versions/node/v22.21.0/bin/node')
 --   vim.g.copilot_node_command = (vim.fn.executable(copilot_node) == 1) and copilot_node or 'node'
 -- end
-
----------------------------------------------
--- Minimap
----------------------------------------------
-vim.g.minimap_width = 10
-vim.g.minimap_auto_start = 0
-vim.g.minimap_auto_start_win_enter = 0
-vim.g.minimap_git_colors = 1
-vim.g.minimap_block_filetypes = { 'fugitive', 'nerdtree', 'tagbar', 'fzf', '' }
-vim.keymap.set('n', '<leader>mm', ':MinimapToggle<CR>')
 
 -- Lint
 local lint = require('lint')
@@ -818,8 +804,6 @@ wk.add({
   { "<leader>sx", desc = "Treesitter highlight" },
   { "<leader>l", group = "Lint" },
   { "<leader>ll", desc = "Run linter" },
-  { "<leader>m", group = "Minimap" },
-  { "<leader>mm", desc = "Toggle minimap" },
   { "<leader>hh", desc = "Help" },
 })
 
