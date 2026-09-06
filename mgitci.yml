@@ -6,9 +6,9 @@
 # `mooncake step '<yaml>'` inside it — so the image must carry `mooncake` on PATH.
 #
 # Two-stage gate:
-#   validate — `mooncake validate -c <machine>.yml` on all four machine configs.
+#   validate — `mooncake validate -c <machine>.yml` on all five machine configs.
 #              Pure YAML/schema check; no system state needed.
-#   plan     — `mooncake plan --no-inspect -c <machine>.yml` on all four configs.
+#   plan     — `mooncake plan --no-inspect -c <machine>.yml` on all five configs.
 #              Static template expansion: catches undefined vars, bad imports,
 #              template render errors. --no-inspect skips unless:/when: checks
 #              that require the real target machine.
@@ -39,6 +39,7 @@ jobs:
       - run: mooncake validate -c ./mini_pc.yml
       - run: mooncake validate -c ./x1.yml
       - run: mooncake validate -c ./mac.yml
+      - run: mooncake validate -c ./work_mac.yml
 
   plan:
     image: mooncake-ci:latest
@@ -48,3 +49,4 @@ jobs:
       - run: mooncake plan --no-inspect -c ./mini_pc.yml
       - run: mooncake plan --no-inspect -c ./x1.yml
       - run: mooncake plan --no-inspect -c ./mac.yml
+      - run: mooncake plan --no-inspect -c ./work_mac.yml
