@@ -363,33 +363,25 @@ steps:
         cat >> "$dest" <<'DEXBLOCK'
 
       <!-- dex -->
-      ## Pull intel from dex first (semantic code intel)
+      ## dex — semantic search & context routing (MCP)
 
-      Lead with semantic intel, not blind sweeps:
-      - Query dex (`search_semantic`, `ask`, `search_symbol`, `graph_*`) **before**
-        grepping or reading broadly. `graph_*` only for architecture/call-flow.
-      - Minimal reads. Grep only after semantic search comes up empty. Stop at
-        sufficient confidence; optimize tokens. Fallback: `dex context . "$Q" --format json`.
+      dex exposes a single read verb — `query` — over the codebase intelligence
+      (advisory/retrieval-only; editing and durable findings stay native tools'
+      job). Its tool mapping and workflow are also injected live as MCP server
+      instructions, generated from the installed binary so they never drift —
+      prefer those over this static copy when the two disagree.
 
-      ## Prefer dex tools over native — token compression (MANDATORY)
+      Start each session by calling `query()` with the task description; its
+      input shape picks the lane (path → signatures, `/regex/` → grep,
+      `path:line` → slice, symbol → call graph, prose → semantic pack). Lead
+      with it over blind `Grep`/`Read` sweeps; fall back to native tools for
+      writes, unindexed files, or content outside dex's index.
 
-      dex tools return compact output. Use them instead of native equivalents; fall
-      back to native only for the caveats listed below.
-
-      | Instead of | Use | Key args |
-      |---|---|---|
-      | `Read` | `file_view` | `mode`: `signatures` (~10× smaller), `map` (imports+exports), `lines:N-M` (slice), `full` (LLM summary). Up to 10 `paths`/call. |
-      | `Grep`/`rg` | `search_grep` | `pattern` (RE2), `path`, `ext`, `max_results`. |
-      | `ls`/`find` | `file_tree` | `path`, `depth`; aggregates deep dirs. |
-      | `Bash` (build/test/log) | `ctx_shell` | `command`; auto-compresses output, reports `saved_pct`. |
-      | semantic→read chain | `search_context` / `ask` | one round-trip: hits + signatures + best symbol body. |
-
-      Fall back to NATIVE — don't force a dex tool that can't do the job:
-      - Writes, redirects (`>`/`>>`/`tee`), heredocs, or >60 s commands → native `Bash`
-        (`ctx_shell` blocks writes + times out at 60 s; auth/dev-server/watch pass through).
-      - Unindexed files, or full content >64 KB → native `Read` (`file_view` is
-        index-scoped; `full` caps at 64 KB).
-      - grep features `search_grep` lacks (context lines, fixed-string flags, etc.) → native `Grep`.
+      A `field:pattern` seed selects a symbol set — `pkg:` `func:` `type:`
+      `file:` `kind:` (space-separated = AND, glob `*`/`?`). Compose lanes in
+      ONE call with `|`: `<seed> | callers|callees|impact | signatures|assemble:N`
+      runs the stages left-to-right in one round-trip, e.g.
+      `query("pkg:store | callers | impact")`.
 
       **Never build/install `dex` without `-tags sqlite_fts5`.** CGO `mattn/go-sqlite3`;
       a plain `go install ./cmd/dex` ships a binary missing FTS5, then `reindex`/`index`

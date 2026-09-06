@@ -79,7 +79,7 @@ Git (gitsigns)
 Completion (insert mode)
 - `Ctrl+N / Ctrl+P` next / prev · `Ctrl+Space` complete · `CR` confirm · `Ctrl+E` cancel
 - `Ctrl+F` scroll docs forward (overloaded — same chord is "grep" in normal mode, separate modes so it's fine)
-- `Ctrl+J` accept Copilot suggestion
+- Copilot's `Ctrl+J` accept-suggestion mapping is commented out in `init.lua` — Copilot isn't wired up
 
 Filetype-local
 - Go (`<leader>g…`): `gt` test, `gr` rename, `glr` build-tags

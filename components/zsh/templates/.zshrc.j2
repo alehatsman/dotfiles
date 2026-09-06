@@ -20,7 +20,6 @@ DISABLE_LS_COLORS=true
 DISABLE_AUTO_TITLE=false
 ENABLE_CORRECTION=false
 COMPLETION_WAITING_DOTS=true
-ZSH_DOTENV_PROMPT=false
 
 setopt ignore_eof # don't exit on ctrl-d
 setopt share_history # share history between zsh sessions
@@ -30,16 +29,12 @@ setopt share_history # share history between zsh sessions
 #---------------------------------------------
 export GPG_TTY=$(tty)
 export LANG=en_US.UTF-8
-export PIPENV_VENV_IN_PROJECT=1
-
-export PIPENV_VENV_IN_PROJECT=true
 
 export NODE_MODULES_BIN=./node_modules/.bin
 export GCPATH={{ GCP_PATH }}
 export JAVA_HOME={{ JAVA_HOME }}
 export CARGO_HOME=~/.cargo
 export ZPLUG_HOME={{ ZPLUG_HOME }}
-export RVM_HOME=~/.rvm
 if [[ -d ~/.fzf ]]; then
   export FZF_BASE=~/.fzf
 else
@@ -47,14 +42,7 @@ else
 fi
 export NVIDIA_GIT_BASE=~/projects/nvidia/git-helpers
 
-export PYENV_ROOT=~/.pyenv
-
-export PATH=$PYENV_ROOT/bin:$PATH
-
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-
-export PATH=$PYENV_ROOT/shims:$HOME/bin:$HOME/.local/bin:$HOME/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:$PATH:$NVIDIA_GIT_BASE/bin:$RVM_HOME/bin:$JAVA_HOME/bin:$GCPATH/bin:$HOME/go/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin
+export PATH=$HOME/bin:$HOME/.local/bin:$HOME/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:$PATH:$NVIDIA_GIT_BASE/bin:$JAVA_HOME/bin:$GCPATH/bin:$HOME/go/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin
 export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 
 export VISUAL="nvim"
@@ -67,7 +55,7 @@ if [[ -x "$HOME/.local/bin/gui-askpass" ]]; then
   export SUDO_ASKPASS=$HOME/.local/bin/gui-askpass
 fi
 
-export SSH_KEY_PATH=~/.ssh/rsa_id
+export SSH_KEY_PATH=~/.ssh/id_ed25519
 
 # dex — the DEX_* client exports moved to ~/.zshenv (templates/.zshenv.j2) so
 # non-interactive shells (scripts, cron, agent tool-shells) get them too,
@@ -97,23 +85,19 @@ export NVM_LAZY_LOAD=false
 export NVM_AUTO_USE=true
 source $ZPLUG_HOME/init.zsh
 
-zplug "plugins/fzf", from:oh-my-zsh
-zplug "plugins/vi-mode", from:oh-my-zsh
-zplug "plugins/dotenv", from:oh-my-zsh
-
+# The oh-my-zsh fzf/vi-mode/dotenv plugins used to live here. Dropped
+# (dotfiles#56): fzf/vi-mode were fully redundant with code already below
+# (manual $FZF_BASE sourcing, manual bindkey -v + zle-keymap-select);
+# dotenv silently `source`d any .env on cd (ZSH_DOTENV_PROMPT=false above
+# disabled even its confirm prompt) — a real code-exec risk on `cd` into
+# an untrusted directory, and redundant with direnv (already hooked below)
+# which requires an explicit `direnv allow` before running anything.
 zplug "zsh-users/zsh-autosuggestions"
 zplug "zsh-users/zsh-completions"
 zplug "zsh-users/zsh-history-substring-search"
 
 zplug "lukechilds/zsh-nvm"
 zplug "Aloxaf/fzf-tab"
-
-if ! zplug check; then
-    printf "Install? [y/N]: "
-    if read -q; then
-        echo; zplug install
-    fi
-fi
 
 if ! zplug check; then
     printf "Install? [y/N]: "
@@ -234,7 +218,6 @@ alias gf="git fetch"
 alias gfa="git fetch --all"
 alias gfo="git fetch origin"
 
-alias gra="git reset ."
 alias grh="git reset --hard"
 
 alias gmt="git mergetool"
@@ -429,10 +412,18 @@ fgcb() {
   git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
 }
 
-# Lastpass
-flpass() {
-  lpass login {{ EMAIL }}
-  lpass show -c --password $(lpass ls  | fzf | awk "{print $(NF)}" | sed "s/\]//g")
+# 1Password — fzf-pick an item, copy its password to the clipboard.
+# Assumes `op` is already authenticated (desktop-app integration on both
+# mac and Linux handles the biometric/session unlock).
+fop() {
+  local item pw
+  item=$(op item list --format=json | jq -r '.[].title' | fzf) || return
+  pw=$(op item get "$item" --fields label=password --reveal) || return
+  if [[ "$OSTYPE" == darwin* ]]; then
+    printf '%s' "$pw" | pbcopy
+  else
+    printf '%s' "$pw" | wl-copy
+  fi
 }
 
 fkill() {
@@ -468,7 +459,7 @@ cheat() {
   curl cheat.sh/$@
 }
 
-if type "$kubectl" > /dev/null; then
+if type kubectl > /dev/null 2>&1; then
   alias k8s="kubectl"
   compdef k8s=kubectl
 fi
@@ -590,53 +581,8 @@ alias serve='browser-sync start -s -f . --no-notify --host $LOCAL_IP --port 9000
 alias uuid='uuidgen'
 alias cargo_installed='cargo install --list'
 
-# #---------------------------------------------
-# # Color scheme
-# #---------------------------------------------
-# setopt PROMPT_SUBST
-#
-# export COLOR_SCHEME='molokai'
-#
-# # Molokai
-# if [ $COLOR_SCHEME = "molokai" ]
-# then
-#   RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
-#   PROMPT="%(?:%F{green}:%F{red})"
-#   PROMPT+='${RUNO_ARROW_ICON}'
-#   PROMPT+="%F{red}%B%c "
-#   PROMPT+='%f%b'
-#   export FZF_DEFAULT_OPTS='
-#     --reverse
-#     --color fg:#F8F8F2,bg:#272822,hl:67,fg+:252,bg+:235,hl+:81
-#     --color info:144,prompt:161,spinner:135,pointer:135,marker:118
-#   '
-#   export FZF_PREVIEW_COMMAND='bat --theme Monokai Extended Origin {}'
-# elif [ $COLOR_SCHEME = "runo" ]
-# then
-#   RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
-#   PROMPT="%(?:%F{green}:%F{red})"
-#   PROMPT+='${RUNO_ARROW_ICON}'
-#   PROMPT+="%F{blue}%B%c "
-#   PROMPT+='%f%b'
-#   export FZF_DEFAULT_OPTS='
-#     --color=fg:#313232,bg:#f8f9f9,hl:#FFBC5D
-#     --color=fg+:#313232,bg+:#eeefef,hl+:#FFBC5D
-#     --color=info:#313232,border:#313232,prompt:#313232
-#     --color=pointer:#313232,marker:#313232,spinner:#313232
-#     --color=header:#FFFABC
-#   '
-# elif [ $COLOR_SCHEME = "github-light" ]
-# then
-#   RUNO_ARROW_ICON=${RUNO_ARROW_ICON:-➜ }
-#   PROMPT="%(?:%F{green}:%F{red})"
-#   PROMPT+='${RUNO_ARROW_ICON}'
-#   PROMPT+="%F{red}%B%c "
-#   PROMPT+='%f%b'
-# export FZF_DEFAULT_OPTS='--color=fg:#24292f,bg:#ffffff,hl:#0366d6 --color=fg+:#24292f,bg+:#ffffff,hl+:#0366d6 --color=info:#24292f,prompt:#d73a49,pointer:#24292f --color=marker:#28a745,spinner:#5a32a3,header:#24292f'
-# fi
-
 #---------------------------------------------
-# Color scheme (robust, shellcheck-safe)
+# Color scheme
 #---------------------------------------------
 setopt PROMPT_SUBST
 
@@ -761,8 +707,10 @@ complete -f -F _rush_bash_complete rush
 
 # open notes
 
+{% if os == 'darwin' %}
 NOTES_PATH="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes"
 alias n="cd \"$NOTES_PATH\" && nvim ."
+{% endif %}
 
 # Launch Claude with a fresh moongit identity.
 ce() {
