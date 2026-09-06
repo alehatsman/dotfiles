@@ -2,6 +2,24 @@
 # mini_pc — second Windows 11 box, provisioned via WSL2 Ubuntu.
 # Same structure as main_pc; only vars values differ.
 
+# Refuse to run if the live hostname belongs to a different known machine
+# (cross-provisioning guard, issue #3). Exclusion list, not a strict match:
+# a genuinely fresh box's hostname is neither 'minipc' nor any of these, so
+# first-time bootstrap is never blocked — only a hostname already claimed
+# by another machine trips it. Covers mini_pc.yml and mini_pc_server.yml
+# alike, since both import this file.
+- name: Refuse to apply mini_pc's plan on a different known machine
+  assert:
+    command:
+      cmd: |
+        h="{{ hostname }}"
+        case "$h" in
+          mainpc|mac|work-mac|x1)
+            echo "refusing: hostname is '$h', not mini_pc — wrong machine?" >&2
+            exit 1 ;;
+        esac
+  tags: [safety]
+
 - vars.load: ../../shared/variables.yml
 - vars.load: ./vars.yml
 
