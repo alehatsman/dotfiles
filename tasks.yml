@@ -42,6 +42,11 @@ tasks:
     steps:
       - import: ./mac.yml
 
+  work_mac:
+    desc: Apply on the NVIDIA work macOS box — pass -K for sudo prompt
+    steps:
+      - import: ./work_mac.yml
+
   # backup is a one-off shell script; no machine yml to import. Kept
   # as a shell step because the timestamp computation needs to happen
   # once and be reused across cp invocations.
@@ -64,18 +69,39 @@ tasks:
   # ci mirrors the two-stage gate in mgitci.yml so you can run the same check
   # locally before pushing. `validate` is pure YAML/schema; `plan --no-inspect`
   # is static template expansion with no system-state reads.
+  #
+  # Platform-scoped on purpose. Compiling a config validates every step's
+  # action against the CURRENT platform, and that happens before `when:`
+  # guards are evaluated — so validating main_pc.yml on a mac dies on
+  # `action 'os.systemd' is not supported on platform 'darwin'`. Rather
+  # than fail the whole gate on the wrong host, each config is checked
+  # where it can be, and the rest are named as skipped so the gap is
+  # visible instead of silent. Server-side CI (mgitci.yml) runs on Linux
+  # and therefore still covers the Linux configs on every push.
   ci:
-    desc: Pre-push gate — validate + static plan for all machine configs
+    desc: Pre-push gate — validate + static plan for the configs this platform can compile
     steps:
       - shell:
           cmd: |
             set -euo pipefail
-            for cfg in main_pc.yml mini_pc.yml x1.yml mac.yml; do
+
+            linux_cfgs="main_pc.yml mini_pc.yml x1.yml"
+            mac_cfgs="mac.yml work_mac.yml"
+
+            case "$(uname -s)" in
+              Darwin) cfgs="$mac_cfgs";   skipped="$linux_cfgs" ;;
+              Linux)  cfgs="$linux_cfgs"; skipped="$mac_cfgs"   ;;
+              *)      echo "unsupported platform: $(uname -s)" >&2; exit 1 ;;
+            esac
+
+            for cfg in $cfgs; do
               echo "==> validate $cfg"
               mooncake validate -c "./$cfg"
             done
-            for cfg in main_pc.yml mini_pc.yml x1.yml mac.yml; do
+            for cfg in $cfgs; do
               echo "==> plan --no-inspect $cfg"
               mooncake plan --no-inspect -c "./$cfg"
             done
-            echo "CI gate passed."
+
+            echo "CI gate passed for: $cfgs"
+            echo "Not checkable on $(uname -s): $skipped"

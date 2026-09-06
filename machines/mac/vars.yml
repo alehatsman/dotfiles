@@ -10,7 +10,11 @@ computer_name: mac
 # so the tunnel resolves without any manual prerequisite.
 
 dex_embed_model: "qwen3-embedding:0.6b"
-dex_chat_model: "qwen3:30b-a3b"
+# No chat model here: qwen3:30b-a3b cost 18.6 GB of the ~26 GB dex pulls on
+# this machine and only fed the generate_code / ask_codebase MCP tools, which
+# Claude Code covers already. Empty means index.yml skips the ollama pull
+# (same as work_mac). Search itself needs only the embedder + reranker.
+dex_chat_model: ""
 
 # Cohere-style cross-encoder via Infinity on MPS.
 dex_rerank_style: "cohere"
@@ -22,7 +26,8 @@ dex_rerank_gpu: ""
 dex_tunnel_enabled: "false"
 
 # Query expansion via a small local model (dex #252): widens BM25/symbol
-# lanes with one extra call per ask(). qwen3:4b fits alongside 30b-a3b.
+# lanes with one extra call per ask(). 2.5 GB, and now the only chat-class
+# model on the box.
 dex_expand_model: "qwen3:4b"
 # Default expansion level when a request omits it (off|on|full). Required
 # because mac/index.yml wires dex_expand_mode as a prop with no component

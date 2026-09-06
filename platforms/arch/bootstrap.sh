@@ -22,9 +22,16 @@ fi
 cd "$DOTFILES_DIR"
 
 info "Installing mooncake..."
-bash scripts/install_mooncake.sh
+sh scripts/install_mooncake.sh
+
+# install_mooncake.sh installs to ~/.local/bin, which a fresh Arch login
+# shell has no reason to have on PATH yet (components/zsh puts it there,
+# but that only lands after the apply below).
+export PATH="$HOME/.local/bin:$PATH"
 
 info "Running full setup..."
-mooncake run -c main.yml -v variables.yml
+# x1 is the Arch machine. -K prompts once for sudo (pacman, systemd
+# units, /etc writes). Preview first with: mooncake plan -c ./x1.yml
+mooncake apply -c ./x1.yml -K
 
 info "Done! Restart your shell or run: exec zsh"
