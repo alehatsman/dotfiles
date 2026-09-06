@@ -78,7 +78,6 @@
       - ruby-full
       - postgresql-client
       - wl-clipboard
-      - watchman
       - zstd
       - bat
       - fzf
