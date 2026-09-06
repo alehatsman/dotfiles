@@ -3,6 +3,12 @@
   tags: [macos, packages]
 
 - name: Make sure macos configuration is set
+  # No as_user: root — every domain touched below (NSGlobalDomain,
+  # com.apple.finder, com.apple.screensaver, com.apple.screencapture, the
+  # trackpad domains, systemuiserver) is a per-user preference. Running
+  # this as root writes to /var/root/Library/Preferences instead of the
+  # real login session's ~/Library/Preferences, so none of it would take
+  # effect for the actual user (dotfiles#62).
   shell: |
     set -euo pipefail
     # Disable window animations ('new window' scale effect)
@@ -54,4 +60,3 @@
       "/System/Library/CoreServices/Menu Extras/Volume.menu"
 
     defaults write -g AppleFontSmoothing -int 0
-  as_user: root
