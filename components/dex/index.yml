@@ -627,11 +627,18 @@ steps:
   # (gwc / dex-watch@) are unaffected; they remain for low-latency real-time
   # freshness on the repo you're actively editing.
 
+  # Disabled — `dex sweep` has never existed as a dex CLI subcommand, so this
+  # unit has crash-looped (Restart=always/30s) since the day it was added.
+  # Upstream ask filed as dex#251; tracked here as dotfiles#70. Re-enable
+  # (drop the `and false`) once dex#251 lands a real `sweep` command, or
+  # delete this pair outright if the answer there is "retired, use X
+  # instead". Left as `when: false` rather than deleted so the design
+  # intent (and restore path) isn't lost in the meantime.
   - name: "Deploy dex-sweep user systemd unit"
     file.template:
       src: ./templates/dex-sweep.service.j2
       dest: "~/.config/systemd/user/dex-sweep.service"
-    when: dex_role == 'server' and os == 'linux'
+    when: dex_role == 'server' and os == 'linux' and false
     tags: [dex, sweep]
 
   - name: "Enable + (re)start dex-sweep.service"
@@ -640,7 +647,7 @@ steps:
       systemctl --user daemon-reload
       systemctl --user enable dex-sweep.service
       systemctl --user restart dex-sweep.service
-    when: dex_role == 'server' and os == 'linux'
+    when: dex_role == 'server' and os == 'linux' and false
     changed_when: false
     tags: [dex, sweep]
 
