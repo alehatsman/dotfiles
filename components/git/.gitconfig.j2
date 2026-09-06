@@ -9,16 +9,13 @@
   email = {{ EMAIL }}
   editor = nvim
 [merge]
-  tool = vimdiff
-  guitool = vimdiff
+  tool = nvimdiff
+  guitool = nvimdiff
   conflictstyle = diff3
-[mergetool "vimdiff"]
+[mergetool "nvimdiff"]
   trustExitCode = false
   prompt = false
 [diff]
-  guitool = vimdiff
-[difftool "vimdiff"]
+  guitool = nvimdiff
+[difftool "nvimdiff"]
   trustExitCode = false
-[credential]
-  helper = !aws codecommit credential-helper $@
-  UseHttpPath = true
