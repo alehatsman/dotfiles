@@ -28,6 +28,20 @@ vim.cmd.colorscheme('monokai')
 require('lazy').setup({
   'nvim-lua/plenary.nvim',
 
+  -- MCP server for AI clients (Claude Code, etc.) to inspect/edit a running
+  -- Neovim instance over JSON-RPC — see github.com/alehatsman/nvim-mcp.
+  -- Exploratory/private; lazy so it never loads in normal editing sessions.
+  -- The server itself runs as a *separate* headless process, pointed at
+  -- this plugin's install dir via `set rtp+=...`; from inside this config
+  -- it's not reachable at all until you :lua require('mcp') explicitly
+  -- (lazy-loaded, so :checkhealth mcp won't find it before that).
+  -- Install path once synced: ~/.local/share/nvim/lazy/nvim-mcp
+  {
+    'alehatsman/nvim-mcp',
+    url = 'git@github.com:alehatsman/nvim-mcp.git',
+    lazy = true,
+  },
+
   {
     'lukas-reineke/indent-blankline.nvim',
     config = function()
