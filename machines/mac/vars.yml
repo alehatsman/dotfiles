@@ -37,3 +37,15 @@ dex_expand_mode: "on"
 # More headroom for concurrent agents (M2 Max, 64 GB unified memory).
 dex_ollama_num_parallel: "8"
 dex_ollama_keep_alive: "-1"
+
+# ─── Fleet peer ───────────────────────────────────────────────────────────
+# mac accepts inbound SSH from the fleet and runs the mooncake agentd, so
+# other machines can `fleet apply`/`exec` against it. Before dotfiles#2 this
+# box was a leaf: it could reach main_pc-wsl, but nothing could reach it.
+#
+# Opening a workstation to inbound SSH is a real posture change, which is why
+# the default in shared/variables.yml is false and this is an explicit opt-in.
+# Only the keys in fleet_ssh_keys get in; password auth is untouched (macOS
+# ships PasswordAuthentication yes — see docs/macos-peer-setup.md for the
+# hardening step, which is manual because it edits /etc/ssh/sshd_config).
+fleet_peer_enabled: "true"
