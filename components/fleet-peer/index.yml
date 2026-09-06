@@ -57,10 +57,16 @@
   unless_command: systemsetup -getremotelogin 2>/dev/null | grep -q 'On$'
   tags: [fleet-peer, ssh]
 
+# -w, not -G. Both set a connect timeout on macOS, but -G is BSD-only and
+# GNU/OpenBSD netcat rejects it outright ("invalid option -- 'G'"), which
+# makes every port check here fail on a Linux peer regardless of whether the
+# port is open. That is worst on the unless_command gate below: a gate that
+# can never hold means `agentd bootstrap` re-runs on every apply. -w is
+# accepted by both flavours. See dotfiles#2.
 - name: Verify sshd is accepting connections
   assert:
     command:
-      cmd: nc -z -G 5 127.0.0.1 22
+      cmd: nc -z -w 5 127.0.0.1 22
   when: os == 'darwin' and fleet_peer_enabled == 'true'
   tags: [fleet-peer, verify]
 
@@ -85,12 +91,12 @@
     mooncake agentd bootstrap --port "{{ fleet_peer_agentd_port }}"
   as_user: root
   when: fleet_peer_enabled == 'true'
-  unless_command: nc -z -G 5 127.0.0.1 "{{ fleet_peer_agentd_port }}"
+  unless_command: nc -z -w 5 127.0.0.1 "{{ fleet_peer_agentd_port }}"
   tags: [fleet-peer, agentd]
 
 - name: Verify the agentd is listening
   assert:
     command:
-      cmd: nc -z -G 5 127.0.0.1 "{{ fleet_peer_agentd_port }}"
+      cmd: nc -z -w 5 127.0.0.1 "{{ fleet_peer_agentd_port }}"
   when: fleet_peer_enabled == 'true'
   tags: [fleet-peer, verify]
