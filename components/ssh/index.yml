@@ -1,12 +1,54 @@
 ---
-- name: Make sure ssh key is present
+# ssh — the machine's own identity key.
+#
+# Imported from shared/bootstrap.yml, so every machine gets this before
+# anything that talks to GitHub. It matters on a fresh box: the dex
+# component clones git@github.com:alehatsman/dex.git, and moongit remotes
+# are SSH too, so a machine with no key gets a confusing permission-denied
+# deep inside an apply rather than at the point the key was missing.
+#
+# Passphrase-less by default, deliberately: dex-tunnel (systemd/launchd)
+# and the fleet agentd open SSH connections non-interactively, with no
+# agent and no TTY to prompt on. Set ssh_key_passphrase in a machine's
+# vars.yml if a given host should differ — you then own keeping an agent
+# loaded for it.
+#
+# Registering the public key with GitHub is the one step that cannot be
+# automated from here, so a run that creates a key says so, loudly.
+
+- vars:
+    ssh_key_path: "~/.ssh/id_ed25519"
+    ssh_key_passphrase: ""
+
+- name: Ensure ~/.ssh exists with the permissions sshd insists on
+  file.write:
+    path: ~/.ssh
+    state: directory
+    mode: '0700'
+  tags: [ssh, core]
+
+- name: Generate the {{ ssh_key_path }} identity key
   shell: |
     set -euo pipefail
-    ssh_key="$HOME/.ssh/id_ed25519"
+    key="{{ ssh_key_path | expanduser }}"
+    ssh-keygen -t ed25519 -C "{{ EMAIL }}" -f "$key" -N "{{ ssh_key_passphrase }}"
+    echo
+    echo "────────────────────────────────────────────────────────────────"
+    echo "A NEW SSH KEY WAS CREATED. Add it to GitHub before the dex or"
+    echo "moongit steps need it:"
+    echo
+    echo "    https://github.com/settings/ssh/new"
+    echo
+    cat "${key}.pub"
+    echo "────────────────────────────────────────────────────────────────"
+  # `creates:`-style gate: no key file, no work. Never regenerates over an
+  # existing key — that would lock the machine out of everything it is
+  # already enrolled with.
+  unless_command: test -f "{{ ssh_key_path | expanduser }}"
+  tags: [ssh, core]
 
-    if [ -f "$ssh_key" ]; then
-      echo "$ssh_key already exists"
-    else
-      ssh-keygen -t ed25519 -C "aleh.atsman@gmail.com" -f ~/.ssh/id_ed25519 -P {{SSH_PASSWORD}}
-    fi
-
+- name: Verify the SSH identity key is present
+  assert:
+    command:
+      cmd: test -f "{{ ssh_key_path | expanduser }}"
+  tags: [ssh, verify]

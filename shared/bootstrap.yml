@@ -5,6 +5,11 @@
 # their packages directly until the Git-native module system (mooncake
 # spec-65) lands and these can become `use: github.com/...` refs.
 
+# The machine's SSH identity, before anything that clones over SSH.
+# Idempotent: an existing key is left strictly alone.
+- import: ../components/ssh/index.yml
+  tags: [core, ssh]
+
 - name: Rename ~/Projects to ~/projects (lowercase convention)
   cmd:
     argv: [mv, '{{ "~/Projects" | expanduser }}', '{{ "~/projects" | expanduser }}']

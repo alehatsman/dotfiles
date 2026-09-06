@@ -4,13 +4,49 @@ Personal machine config. Declarative. Reproducible. One source of truth.
 **Deploy only via [mooncake](components/mooncake).** Never `cp`/`ln`/hand-edit
 managed destinations.
 
+## Bootstrap a fresh machine
+
+From nothing to provisioned. The only step that can't be automated is
+putting the generated SSH public key on GitHub — the run prints it and
+tells you when.
+
+```sh
+git clone https://github.com/alehatsman/dotfiles ~/dotfiles && cd ~/dotfiles
+sh scripts/install_mooncake.sh          # → ~/.local/bin/mooncake, no sudo
+export PATH="$HOME/.local/bin:$PATH"    # until components/zsh lands
+mooncake plan -c ./<machine>.yml        # preview; works before anything exists
+mooncake apply -c ./<machine>.yml -K --keep-going
+```
+
+`--keep-going` is the flag that matters on a first run: it finishes every
+step it can and lists the failures at the end (still exiting non-zero)
+instead of stranding the other 160 steps behind one package that went
+away upstream. Re-run after fixing; every step is idempotent.
+
+`install_mooncake.sh` detects OS/arch, and *verifies the binary can parse
+this repo* before accepting it — releases lag `main` by months, so a
+version check isn't enough. When the release is too old it builds from
+source, fetching a Go toolchain into `~/.cache/mooncake-bootstrap` if the
+box has none. Set `VERSION=` to pin a release, `INSTALL_DIR=` to move it.
+
+Per-platform notes:
+
+- **macOS** — `-K` is required (Rosetta, `scutil`, `defaults` run as root).
+  Homebrew installs itself during the run. First apply is ~30 min plus
+  cask downloads; dex adds ~30 GB of models, so `--skip-tags dex` for a
+  usable shell sooner, then apply `-t dex` separately.
+- **Arch** — `platforms/arch/bootstrap.sh` does the clone + install +
+  apply in one shot on first boot.
+- **Windows** — run `platforms/windows/bootstrap.yml` from an Admin
+  PowerShell first, then the sequence above *inside* WSL.
+
 ## Deploy
 
 ```sh
 mooncake task                 # list tasks
-mooncake task <machine>       # apply  (x1|main_pc|mini_pc|mac)
+mooncake task <machine>       # apply  (x1|main_pc|mini_pc|mac|work_mac)
 mooncake task <machine> -p    # plan, no changes
-mooncake task <machine> -K    # apply, prompt for sudo (x1, mac)
+mooncake task <machine> -K    # apply, prompt for sudo (x1, mac, work_mac)
 mooncake task backup          # snapshot rc files → ~/.dotfiles-backup
 ```
 
@@ -37,6 +73,7 @@ tasks.yml          dev surface for `mooncake task`
 | main_pc | Windows 11 + WSL2 Ubuntu| Windows host bootstrap first   |
 | mini_pc | WSL                     | NOPASSWD sudo                  |
 | mac     | macOS                   | `-K` for sudo                  |
+| work_mac| macOS (NVIDIA work box) | `-K` for sudo                  |
 
 main_pc/mini_pc: run `platforms/windows/bootstrap.yml` from an Admin
 PowerShell before applying inside WSL.

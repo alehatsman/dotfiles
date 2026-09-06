@@ -1,5 +1,61 @@
 ---
-# Alacritty configuration deployment (installation handled by preset)
+# alacritty — app + configuration.
+#
+# The app is installed straight from the upstream DMG, NOT from Homebrew:
+# brew disabled the alacritty cask on 2026-09-01 ("does not pass the macOS
+# Gatekeeper check"), so `brew install --cask alacritty` hard-errors and
+# takes the whole apply with it. Upstream still ships the same build as a
+# signed-by-nobody DMG, so we fetch that and clear the quarantine bit
+# ourselves — the deliberate local decision brew is no longer willing to
+# make on our behalf.
+#
+# Bump: set alacritty_version to the new tag; the version gate below
+# reinstalls in place. Releases: github.com/alacritty/alacritty/releases
+
+- vars:
+    alacritty_version: "0.17.0"
+
+- name: Install Alacritty {{ alacritty_version }} from the upstream DMG
+  shell: |
+    set -euo pipefail
+    ver="{{ alacritty_version }}"
+    work=$(mktemp -d)
+    mnt="$work/mnt"
+    mkdir -p "$mnt"
+    cleanup() {
+      hdiutil detach "$mnt" -quiet 2>/dev/null || true
+      rm -rf "$work"
+    }
+    trap cleanup EXIT
+
+    curl -fsSL -o "$work/Alacritty.dmg" \
+      "https://github.com/alacritty/alacritty/releases/download/v${ver}/Alacritty-v${ver}.dmg"
+    hdiutil attach -nobrowse -quiet -mountpoint "$mnt" "$work/Alacritty.dmg"
+
+    # Replace rather than copy over: cp -R into an existing bundle leaves
+    # stale files from the old version behind. /Applications is
+    # group-admin writable, so no sudo.
+    rm -rf /Applications/Alacritty.app
+    cp -R "$mnt/Alacritty.app" /Applications/Alacritty.app
+
+    # Unsigned build → macOS would refuse the first launch without this.
+    xattr -dr com.apple.quarantine /Applications/Alacritty.app
+
+    # The cask used to link the bundled terminfo entry into ~/.terminfo.
+    # Without it TERM=alacritty is unknown to tmux and to anything you
+    # ssh into from here.
+    mkdir -p "$HOME/.terminfo/61"
+    cp "/Applications/Alacritty.app/Contents/Resources/61/alacritty" \
+       "$HOME/.terminfo/61/alacritty"
+  unless_command: |
+    test "$(defaults read /Applications/Alacritty.app/Contents/Info CFBundleShortVersionString 2>/dev/null)" = "{{ alacritty_version }}" \
+      && test -f "$HOME/.terminfo/61/alacritty"
+  when: os == 'darwin'
+  timeout: 5m
+  retry:
+    attempts: 2
+    delay: 5s
+  tags: [alacritty, install]
 
 - name: Create alacritty config directory
   file.write:
