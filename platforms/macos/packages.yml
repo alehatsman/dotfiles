@@ -39,14 +39,11 @@
       - { name: wata727-tflint,       tap: wata727/tflint }
       - { name: borkdude-brew,        tap: borkdude/brew }
       - { name: wagoodman-dive,       tap: wagoodman/dive }
-      - { name: adoptopenjdk-openjdk, tap: AdoptOpenJDK/openjdk }
       # HashiCorp relicensed to BSL and pulled packer/terraform from
       # homebrew-core; their tap is now the only brew source.
       - { name: hashicorp-tap,        tap: hashicorp/tap }
     apps:
       - aria2
-      - autoenv
-      - autojump
       - aws-iam-authenticator
       - awscli
       - caddy
@@ -58,35 +55,28 @@
       - git
       - git-delta
       - htop
-      - hub
       - imagemagick
       - jq
-      - lastpass-cli
       - libpq
       - lsd
       - mosh
       - nmap
       - hashicorp/tap/packer
-      - pyenv
-      - pyenv-virtualenv
       - python
       - ripgrep
       - rustup
       - shellcheck
       - shfmt
       - hashicorp/tap/terraform
-      - terraform-inventory
       - tig
       - tldr
       - tree
-      - watchman
       - wget
-      - xsv
       - yamllint
+      - zoxide
       - yq
       - clojure
       - leiningen
-      - boot-clj
       - clj-kondo
       - dive
       - kubernetes-cli
@@ -97,7 +87,6 @@
       - tmux
       - uv
       - ollama
-      - reattach-to-user-namespace
       - neovim
       - zsh
       - httpie
@@ -119,6 +108,11 @@
       - amazon-workspaces
       - anki
       - docker
+      # 1Password CLI's cask install prompts for sudo (needed once, to link
+      # into the system keychain) — same class of caveat as the alacritty
+      # note above; --keep-going/-K covers it same as any other sudo step.
+      - 1password
+      - 1password-cli
       - font-fira-code
       - google-drive
       - google-cloud-sdk

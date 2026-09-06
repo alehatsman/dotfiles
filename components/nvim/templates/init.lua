@@ -64,19 +64,6 @@ require('lazy').setup({
   'christoomey/vim-tmux-navigator',
   'jeffkreeftmeijer/vim-numbertoggle',
 
-  { 'junegunn/fzf', build = function() vim.fn['fzf#install']() end },
-  'junegunn/fzf.vim',
-  {
-    'ojroques/nvim-lspfuzzy',
-    dependencies = { 'junegunn/fzf', 'junegunn/fzf.vim' },
-  },
-  {
-    'gfanto/fzf-lsp.nvim',
-    config = function()
-      require('fzf_lsp').setup()
-    end,
-  },
-
   'mbbill/undotree',
   'numToStr/Comment.nvim',
   'JoosepAlviste/nvim-ts-context-commentstring',
@@ -140,7 +127,6 @@ require('lazy').setup({
   { 'fatih/vim-go', ft = { 'go' } },
   { 'Olical/conjure', branch = 'develop', ft = { 'clj', 'cljs', 'clojure' } },
 
-  'tjdevries/lsp_extensions.nvim',
   'hrsh7th/cmp-nvim-lsp',
   'hrsh7th/cmp-buffer',
   'hrsh7th/nvim-cmp',
@@ -269,9 +255,23 @@ require('lazy').setup({
   },
   'ojroques/nvim-osc52',
 
+  -- Single fuzzy-finder / LSP-picker plugin (dotfiles#58 — used to be 4
+  -- overlapping ones: fzf/fzf.vim, nvim-lspfuzzy, fzf-lsp.nvim). rg flags
+  -- mirror the old fzf.vim FZF_DEFAULT_COMMAND (hidden + follow symlinks,
+  -- skip the usual noise dirs).
   {
     'ibhagwan/fzf-lua',
     dependencies = { 'nvim-tree/nvim-web-devicons' },
+    config = function()
+      require('fzf-lua').setup({
+        winopts = { preview = { layout = 'flex' } },
+        files = { rg_opts = '--hidden --follow -g "!{.git,node_modules,dist,target,.cache}/*"' },
+        grep = { rg_opts = table.concat({
+          '--column --line-number --no-heading --color=always --smart-case',
+          '--hidden --follow -g "!{.git,node_modules,dist,target,.cache}/*"',
+        }, ' ') },
+      })
+    end,
   },
 
   {
@@ -414,9 +414,6 @@ vim.g.maplocalleader   = vim.api.nvim_replace_termcodes('<tab>', true, true, tru
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 
--- autocomplete globals
-vim.g.completion_enable_auto_popup = 0
-vim.g.completion_matching_strategy_list = { 'exact', 'substring', 'fuzzy' }
 vim.g.vim_json_syntax_conceal = 0
 
 ---------------------------------------------
@@ -593,11 +590,13 @@ vim.call('sign_define', 'DiagnosticSignWarn',  { text = "•", texthl = "Diagnos
 vim.call('sign_define', 'DiagnosticSignInfo',  { text = "•", texthl = "DiagnosticSignInfo" })
 vim.call('sign_define', 'DiagnosticSignHint',  { text = "•", texthl = "DiagnosticSignHint" })
 
--- lsp mappings
-vim.keymap.set('n', '<c-]>', '<cmd>lua vim.lsp.buf.definition()<CR>')
+-- lsp mappings (definition/code-actions go through fzf-lua — dotfiles#58 —
+-- which jumps directly on a single result, same as the old handler-override
+-- plugins did, and shows a picker on multiple)
+vim.keymap.set('n', '<c-]>', '<cmd>FzfLua lsp_definitions<CR>')
 vim.keymap.set('n', '<c-k>', '<cmd>lua vim.lsp.buf.signature_help()<CR>')
 vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
-vim.keymap.set('n', '<c-space>', '<cmd>:CodeActions<CR>')
+vim.keymap.set('n', '<c-space>', '<cmd>FzfLua lsp_code_actions<CR>')
 vim.keymap.set('n', '<leader>rn', '<cmd>lua vim.lsp.buf.rename()<CR>')
 vim.keymap.set('n', '<leader>dd', '<cmd>lua vim.diagnostic.setqflist()<CR>')
 -- vim.keymap.set('n', '<leader>f', '<cmd>lua vim.lsp.buf.format()<CR>')
@@ -648,26 +647,11 @@ vim.g.lightline = {
 }
 
 ---------------------------------------------
--- FZF
+-- FZF (fzf-lua — see the plugin spec above for setup/rg options)
 ---------------------------------------------
--- Better defaults for fzf/rg (optional)
-if vim.fn.executable('rg') == 1 then
-  vim.env.FZF_DEFAULT_COMMAND =
-    [[rg --files --hidden --follow --smart-case -g "!{.git,node_modules,dist,target,.cache}/*"]]
-end
-vim.g.fzf_layout = { window = { width = 0.9, height = 0.6 } }
-vim.g.fzf_preview_window = { 'right:60%', 'ctrl-/' }
-
-vim.cmd([[
-  command! -bang -nargs=* Rg call fzf#vim#grep('rg --column --line-number --no-heading --color=never --smart-case '.shellescape(<q-args>), 1, {'options': '--delimiter : --nth 4..'}, <bang>0)
-]])
-
-vim.keymap.set('n', '<c-p>', ':Files<cr>')
-vim.keymap.set('n', '<c-f>', ':Rg<cr>')
+vim.keymap.set('n', '<c-p>', '<cmd>FzfLua files<cr>')
+vim.keymap.set('n', '<c-f>', '<cmd>FzfLua live_grep<cr>')
 vim.keymap.set('n', '<leader>hh', ':help<cr>')  -- avoid conflict with window nav
-
-require('lspfuzzy').setup()
-require('fzf_lsp').setup()
 
 -- Splits
 -- vim.keymap.set('n', '<c-h>', '<c-w>h')
@@ -695,7 +679,7 @@ vim.keymap.set('n', '<leader>to', ':tabonly<CR>')
 vim.keymap.set('n', '<leader>tc', ':tabclose<CR>')
 vim.keymap.set('n', '<leader>tl', ':tabm +1<CR>')
 vim.keymap.set('n', '<leader>th', ':tabm -1<CR>')
-vim.keymap.set('n', '<leader>0', ':tablast')
+vim.keymap.set('n', '<leader>0', ':tablast<CR>')
 for i = 1, 9 do
   vim.keymap.set('n', '<leader>' .. i, i .. 'gt')
 end
@@ -731,16 +715,6 @@ vim.keymap.set('n', '<leader>sx', '<cmd>Inspect<CR>')
 --   local copilot_node = vim.fn.expand('~/.nvm/versions/node/v22.21.0/bin/node')
 --   vim.g.copilot_node_command = (vim.fn.executable(copilot_node) == 1) and copilot_node or 'node'
 -- end
-
----------------------------------------------
--- Minimap
----------------------------------------------
-vim.g.minimap_width = 10
-vim.g.minimap_auto_start = 0
-vim.g.minimap_auto_start_win_enter = 0
-vim.g.minimap_git_colors = 1
-vim.g.minimap_block_filetypes = { 'fugitive', 'nerdtree', 'tagbar', 'fzf', '' }
-vim.keymap.set('n', '<leader>mm', ':MinimapToggle<CR>')
 
 -- Lint
 local lint = require('lint')
@@ -830,8 +804,6 @@ wk.add({
   { "<leader>sx", desc = "Treesitter highlight" },
   { "<leader>l", group = "Lint" },
   { "<leader>ll", desc = "Run linter" },
-  { "<leader>m", group = "Minimap" },
-  { "<leader>mm", desc = "Toggle minimap" },
   { "<leader>hh", desc = "Help" },
 })
 

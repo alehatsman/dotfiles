@@ -96,7 +96,7 @@
       - nodejs
       - npm
       - yarn
-      - pyenv
+      - uv
       - clojure
       - rlwrap
       - lua51
