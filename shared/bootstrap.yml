@@ -61,6 +61,26 @@
   when: os == "linux"
   tags: [core, sudo]
 
+# Same as above, for macOS. Split into its own step rather than dropping
+# the `os == "linux"` guard because the sudoers file must be group-owned
+# by root's *name*, and that name differs per OS: gid 0 is "root" on
+# Linux but "wheel" on Darwin (there's no "root" group there). Path and
+# content are identical — macOS symlinks /etc -> /private/etc and ships
+# the same `#includedir /private/etc/sudoers.d` line, and BSD sudo's
+# sudoers(5) syntax matches Linux's here.
+- name: Configure passwordless sudo for {{ username }} (darwin)
+  file.write:
+    path: /etc/sudoers.d/{{ username }}-nopasswd
+    state: file
+    content: |
+      {{ username }} ALL=(ALL) NOPASSWD: ALL
+    mode: '0440'
+    owner: root
+    group: wheel
+  as_user: root
+  when: os == "darwin"
+  tags: [core, sudo]
+
 # Docker Desktop's WSL integration writes `credsStore: desktop.exe` into
 # ~/.docker/config.json. That Windows credential helper isn't on PATH in this
 # Linux env, so any image pull dies with exit 127 (`docker-credential-
