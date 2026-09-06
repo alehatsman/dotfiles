@@ -33,7 +33,7 @@ run '~/.config/tmux/plugins/tpm/tpm'
 #---------------------------------------------
 # Configuration
 #---------------------------------------------
-{% if os == 'Archlinux' %}
+{% if os == 'linux' %}
 set-option -g default-shell $SHELL
 {% endif %}
 
@@ -146,9 +146,6 @@ bind -T copy-mode-vi 'Enter' send -X copy-pipe-and-cancel
 
 # paste
 bind p paste-buffer
-
-# paste from system clipboard MacOS
-# bind-key -n 'C-v' run \"tmux set-buffer \"$(reattach-to-user-namespace pbpaste)\"; tmux paste-buffer"
 
 #---------------------------------------------
 # Vim like navigation
