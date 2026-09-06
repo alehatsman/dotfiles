@@ -32,5 +32,7 @@ thermal_cpu_max_perf_bat: 60
 # otherwise dex-tunnel.service won't come up.
 # Client tunnels to main_pc's 5090 — model names must match what's loaded there.
 dex_embed_model: "qwen3-embedding:0.6b"
-dex_chat_model: "qwen2.5-coder:32b"
+# Must match what main_pc actually serves (machines/main_pc/vars.yml) —
+# was stale at 32b after main_pc demoted its chat model to 14b (dotfiles#52).
+dex_chat_model: "qwen2.5-coder:14b"
 
