@@ -20,14 +20,25 @@ mooncake apply -c ./mac.yml -K -t fleet-peer
    plist at `/Library/LaunchDaemons/com.mooncake.agentd.plist`.
 4. Asserts both ports are actually listening.
 
-`-K` is required. Steps 2 and 3 are `as_user: root`.
+Steps 2 and 3 are `as_user: root`. `-K` was required until passwordless sudo
+was provisioned on darwin (`shared/bootstrap.yml`, `/etc/sudoers.d/<user>-nopasswd`);
+on a machine that has been bootstrapped since, it is harmless but unnecessary.
+Keep it for a first-run box whose sudoers drop-in is not in place yet.
 
 ## Prerequisite that cannot be automated: Full Disk Access
 
 `systemsetup -setremotelogin on` needs the **calling terminal** to hold Full
-Disk Access. Without it the command exits 0 and does nothing — Remote Login
-stays off and there is no error to catch. This is why the component asserts on
-`nc -z 127.0.0.1 22` afterwards instead of trusting the exit code.
+Disk Access. On macOS 15 it fails loudly without it:
+
+```
+setremotelogin: Turning Remote Login on or off requires Full Disk Access privileges.
+command failed with exit code 1
+```
+
+Older releases exited 0 and did nothing, leaving Remote Login off with no error
+to catch. The component's `nc -z 127.0.0.1 22` assert was added for that silent
+case and is worth keeping — it is the honest end-state check either way — but on
+current macOS the shell step fails first.
 
 Grant it before applying:
 
@@ -35,6 +46,32 @@ System Settings → Privacy & Security → Full Disk Access → add your termina
 (Alacritty, Terminal.app, iTerm — whichever runs `mooncake`), then **fully quit
 and reopen it**. The permission is read at process start; a running terminal
 does not pick it up.
+
+**Restarting the terminal is not enough on its own if you run under tmux.** TCC
+grants attach to the responsible process, and a tmux server started before the
+grant keeps the old context — every `mooncake` invocation inside it inherits the
+denial no matter how many times the terminal is reopened. Kill the server too:
+
+```sh
+tmux kill-server    # ends any session running inside it, including this one
+```
+
+Confirm the new process chain actually holds the grant before re-applying — this
+read succeeds only with Full Disk Access:
+
+```sh
+sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "select count(*) from access;"
+```
+
+### Or skip TCC entirely
+
+Flipping the GUI toggle does the same thing with no Full Disk Access involved:
+
+System Settings → General → Sharing → **Remote Login** → on
+
+The component's `unless_command` gate (`systemsetup -getremotelogin | grep -q
+'On$'`) then skips the step cleanly on the next apply, leaving only the agentd
+bootstrap to run. Usually the faster path.
 
 Verify:
 
@@ -108,7 +145,10 @@ apply does not turn it back on, and drop the peer from the controller's
 
 | Symptom | Cause |
 |---|---|
-| `setremotelogin` succeeds, `:22` still closed | Terminal lacks Full Disk Access, or was not restarted after granting it |
+| `setremotelogin: ... requires Full Disk Access privileges`, exit 1 | Terminal lacks Full Disk Access (macOS 15+ fails loudly) |
+| `setremotelogin` succeeds, `:22` still closed | Older macOS silent no-op; or FDA granted but the tmux server predates the grant |
 | Key rejected, right key in `authorized_keys` | Permissions — sshd ignores the file unless it is `0600` and `~/.ssh` is `0700` |
 | `agentd bootstrap` refuses on version | Peer and controller disagree; run `mooncake task install` here, do not pass `--upgrade` blindly |
 | `fleet status` red, `:22` fine | agentd not running, or `:7878` blocked; check `sudo launchctl print system/com.mooncake.agentd` |
+| agentd installs, then `never reachable after 10s` | mooncake predating alehatsman/mooncake#50 — `--system` used the Linux `/run/mooncake`, which macOS cannot create. Read `/var/log/mooncake-agentd.log`; upgrade the peer's binary |
+| `Permission denied (publickey)` with the right key | Wrong username. The account is `alehatsman`, not `aleh` — `ssh alehatsman@<host>` |
