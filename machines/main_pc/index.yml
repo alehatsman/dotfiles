@@ -141,3 +141,11 @@
 - name: Use mooncake component
   use: ../../components/mooncake/index.yml
   tags: [tools, mooncake]
+
+# Inbound fleet access. Gated on fleet_peer_enabled (false in ./vars.yml
+# until dotfiles#2's authorized_keys reconciliation is done) — see
+# components/fleet-peer/index.yml. Last, deliberately: it asserts on a
+# live agentd, so it should fail after the rest of the machine is
+# provisioned rather than before.
+- import: ../../components/fleet-peer/index.yml
+  tags: [wsl, fleet-peer]
