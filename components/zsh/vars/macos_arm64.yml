@@ -1,8 +1,15 @@
 ---
-FZF_BASE: /opt/local/opt/fzf
-GCP_PATH: /opt/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk
+FZF_BASE: /opt/homebrew/opt/fzf
+GCP_PATH: /opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk
 # openjdk@21 is keg-only (brew doesn't symlink/register it) — languages
 # component installs this formula on every platform (dotfiles#52).
 JAVA_HOME: /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 ZPLUG_HOME: ~/.zplug
-zsh_shell_path: /opt/local/bin/zsh
+# /opt/homebrew, not /opt/local: /opt/local is MacPorts, which isn't
+# installed here. Getting this wrong does not fail loudly — it sets the
+# account's login shell to a nonexistent binary, and sshd then refuses
+# the user at preauth ("not allowed because shell ... does not exist")
+# before it ever reads authorized_keys. Interactive use never notices,
+# because terminals exec zsh directly rather than via the login shell.
+# See dotfiles#6.
+zsh_shell_path: /opt/homebrew/bin/zsh

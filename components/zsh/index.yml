@@ -68,12 +68,47 @@ steps:
       delay: 5s
     tags: [zsh, plugins]
 
+  # Guard the path BEFORE setting it. os.user will happily point the
+  # account at a binary that doesn't exist, and the failure surfaces
+  # nowhere near here: sshd rejects the user at preauth with "not
+  # allowed because shell ... does not exist", before authorized_keys
+  # is even read, so every key auth dies with a bare "Permission
+  # denied (publickey)". Interactive terminals exec zsh directly and
+  # never consult the login shell, so nothing else notices. dotfiles#6.
+  - name: Verify the configured login shell exists before adopting it
+    assert:
+      command:
+        cmd: test -x "{{ zsh_shell_path }}"
+    tags: [zsh, shell, verify]
+
+  # chsh refuses a shell missing from /etc/shells, and a Homebrew zsh
+  # is never registered there by the install. os.user does not need
+  # this, but keeping the file honest means a later manual chsh, and
+  # anything else consulting getusershell(3), agrees with what we set.
+  - name: Register the login shell in /etc/shells
+    shell: |
+      set -euo pipefail
+      printf '%s\n' "{{ zsh_shell_path }}" >> /etc/shells
+    as_user: root
+    unless_command: grep -qxF "{{ zsh_shell_path }}" /etc/shells
+    tags: [zsh, shell]
+
   - name: Set zsh as default shell
     os.user:
       name: "{{ username }}"
       shell: "{{ zsh_shell_path }}"
     as_user: root
     tags: [zsh, shell]
+
+  # `which zsh` would pass here off PATH even when the account's login
+  # shell is broken — which is exactly how #6 stayed hidden. Assert on
+  # what was actually set instead.
+  - name: Verify zsh is the account's login shell
+    assert:
+      command:
+        cmd: test "$(dscl . -read /Users/{{ username }} UserShell | awk '{print $2}')" = "{{ zsh_shell_path }}"
+    when: os == 'darwin'
+    tags: [zsh, verify]
 
   - name: Verify zsh installation
     assert:
