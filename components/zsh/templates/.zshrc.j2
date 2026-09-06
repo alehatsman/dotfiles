@@ -20,7 +20,6 @@ DISABLE_LS_COLORS=true
 DISABLE_AUTO_TITLE=false
 ENABLE_CORRECTION=false
 COMPLETION_WAITING_DOTS=true
-ZSH_DOTENV_PROMPT=false
 
 setopt ignore_eof # don't exit on ctrl-d
 setopt share_history # share history between zsh sessions
@@ -86,10 +85,13 @@ export NVM_LAZY_LOAD=false
 export NVM_AUTO_USE=true
 source $ZPLUG_HOME/init.zsh
 
-zplug "plugins/fzf", from:oh-my-zsh
-zplug "plugins/vi-mode", from:oh-my-zsh
-zplug "plugins/dotenv", from:oh-my-zsh
-
+# The oh-my-zsh fzf/vi-mode/dotenv plugins used to live here. Dropped
+# (dotfiles#56): fzf/vi-mode were fully redundant with code already below
+# (manual $FZF_BASE sourcing, manual bindkey -v + zle-keymap-select);
+# dotenv silently `source`d any .env on cd (ZSH_DOTENV_PROMPT=false above
+# disabled even its confirm prompt) — a real code-exec risk on `cd` into
+# an untrusted directory, and redundant with direnv (already hooked below)
+# which requires an explicit `direnv allow` before running anything.
 zplug "zsh-users/zsh-autosuggestions"
 zplug "zsh-users/zsh-completions"
 zplug "zsh-users/zsh-history-substring-search"

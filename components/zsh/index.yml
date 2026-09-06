@@ -68,17 +68,6 @@ steps:
       delay: 5s
     tags: [zsh, plugins]
 
-  - name: Clone oh-my-zsh
-    git.clone:
-      repo: https://github.com/ohmyzsh/ohmyzsh.git
-      dest: ~/.zplug/repos/ohmyzsh/ohmyzsh
-      depth: 1
-    timeout: 5m
-    retry:
-      attempts: 3
-      delay: 5s
-    tags: [zsh, plugins]
-
   - name: Set zsh as default shell
     os.user:
       name: "{{ username }}"

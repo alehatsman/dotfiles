@@ -68,13 +68,12 @@
       - shellcheck
       - shfmt
       - hashicorp/tap/terraform
-      - terraform-inventory
       - tig
       - tldr
       - tree
-      - watchman
       - wget
       - yamllint
+      - zoxide
       - yq
       - clojure
       - leiningen
