@@ -260,9 +260,45 @@ gbd!() { # git delete branch force
   git push origin --delete --force $@
 }
 
-# Worktree helpers — sibling layout: ../<repo>-<name>
-_gw_root()    { git rev-parse --show-toplevel 2>/dev/null }
-_gw_path()    { echo "$(dirname "$(_gw_root)")/$(basename "$(_gw_root)")-$1" }
+# Worktree helpers — layout: ~/worktrees/<repo>/<branch>, outside the repo.
+# This is the convention CLAUDE.md mandates, so agents and humans land in the
+# same checkout. It replaced a sibling layout (../<repo>-<name>) that put
+# worktrees next to the repo and, for a conventional branch name containing a
+# slash, produced paths like ~/dotfiles-fix/foo. See dotfiles#85.
+_gw_root() { git rev-parse --show-toplevel 2>/dev/null }
+
+# The MAIN repo's root, stable from inside any linked worktree. --show-toplevel
+# returns the *current* worktree, so deriving the repo name from it made every
+# helper misbehave once you were standing in a worktree; the common git dir is
+# shared by all of them.
+_gw_main_root() {
+  local common
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  [[ -n "$common" ]] || return 1
+  print -r -- "${common:h}"
+}
+
+_gw_path() {
+  local main
+  main=$(_gw_main_root) || return 1
+  print -r -- "$HOME/worktrees/${main:t}/$1"
+}
+
+# Remove the now-empty parent dirs a nested branch name left behind
+# (~/worktrees/dotfiles/fix/ after deleting fix/85-foo), stopping at
+# ~/worktrees/<repo>. rmdir only ever removes empty directories, and the loop
+# stops at the first non-empty one, so a sibling worktree is never touched.
+_gw_prune_dirs() {
+  local dir="${1:h}" main stop
+  main=$(_gw_main_root) || return 0
+  stop="$HOME/worktrees/${main:t}"
+  # The pattern excludes $stop itself, so ~/worktrees/<repo> always survives.
+  while [[ "$dir" == "$stop"/* ]]; do
+    rmdir "$dir" 2>/dev/null || break
+    dir="${dir:h}"
+  done
+}
+
 _gw_default() {
   local ref
   ref=$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null)
@@ -342,14 +378,20 @@ gwc() { # git worktree create: gwc <name> [base]
   [[ $# -lt 1 ]] && { echo "usage: gwc <name> [base]" >&2; return 1 }
   local name="$1" base="${2:-$(_gw_default)}" wt
   _gw_root >/dev/null || { echo "not in a git repo" >&2; return 1 }
-  wt=$(_gw_path "$name")
+  wt=$(_gw_path "$name") || { echo "cannot resolve repo root" >&2; return 1 }
   [[ -e "$wt" ]] && { echo "path exists: $wt" >&2; return 1 }
+  # A conventional branch name (fix/85-foo) nests under the repo dir, so the
+  # parent may not exist yet.
+  mkdir -p "${wt:h}" || return 1
   git fetch origin "$base" --quiet 2>/dev/null
+  # On any failure, take the parent dirs just created back out — otherwise a
+  # failed add (a colliding ref, say) leaves empty scaffolding behind.
   if git show-ref --verify --quiet "refs/heads/$name"; then
-    git worktree add "$wt" "$name" || return 1
+    git worktree add "$wt" "$name" || { _gw_prune_dirs "$wt"; return 1 }
   else
     git worktree add -b "$name" "$wt" "origin/$base" 2>/dev/null \
-      || git worktree add -b "$name" "$wt" "$base" || return 1
+      || git worktree add -b "$name" "$wt" "$base" \
+      || { _gw_prune_dirs "$wt"; return 1 }
   fi
   cd "$wt"
   _dex_watch_enable "$wt"
@@ -359,8 +401,11 @@ gwc() { # git worktree create: gwc <name> [base]
 gwd() { # git worktree delete (safe): gwd <name>
   [[ $# -lt 1 ]] && { echo "usage: gwd <name>" >&2; return 1 }
   local name="$1" root wt
-  root=$(_gw_root) || { echo "not in a git repo" >&2; return 1 }
-  wt=$(_gw_path "$name")
+  # The MAIN root, not _gw_root: when you run this from inside the worktree
+  # being deleted, _gw_root is that worktree, so the `cd` below would land in
+  # the directory git is about to remove and the removal would fail.
+  root=$(_gw_main_root) || { echo "not in a git repo" >&2; return 1 }
+  wt=$(_gw_path "$name") || return 1
   [[ -d "$wt" ]] || { echo "no worktree at $wt" >&2; return 1 }
 
   if ! git -C "$wt" diff --quiet || ! git -C "$wt" diff --cached --quiet; then
@@ -387,6 +432,7 @@ gwd() { # git worktree delete (safe): gwd <name>
   _dex_watch_disable "$wt"
   _dex_index_nuke "$wt"
   git worktree remove "$wt" || return 1
+  _gw_prune_dirs "$wt"
   git branch -d "$name"
   git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1 \
     && git push origin --delete "$name"
@@ -395,12 +441,13 @@ gwd() { # git worktree delete (safe): gwd <name>
 gwd!() { # git worktree delete force: gwd! <name>
   [[ $# -lt 1 ]] && { echo "usage: gwd! <name>" >&2; return 1 }
   local name="$1" root wt
-  root=$(_gw_root) || { echo "not in a git repo" >&2; return 1 }
-  wt=$(_gw_path "$name")
+  root=$(_gw_main_root) || { echo "not in a git repo" >&2; return 1 }
+  wt=$(_gw_path "$name") || return 1
   [[ "$PWD/" == "$wt/"* ]] && cd "$root"
   _dex_watch_disable "$wt"
   _dex_index_nuke "$wt"
   [[ -d "$wt" ]] && git worktree remove --force "$wt"
+  _gw_prune_dirs "$wt"
   git branch -D "$name" 2>/dev/null
   git ls-remote --exit-code --heads origin "$name" >/dev/null 2>&1 \
     && git push origin --delete --force "$name"
