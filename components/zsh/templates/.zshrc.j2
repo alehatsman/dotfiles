@@ -92,9 +92,11 @@ fi
 #      ":0". The gateway address never worked here — measured on main_pc,
 #      `DISPLAY=:0 xdpyinfo` succeeds and `DISPLAY=10.255.255.254:0 xdpyinfo`
 #      fails.
-#   2. Since Tailscale landed fleet-wide (#9) resolv.conf carries TWO
-#      nameserver lines, so the substitution produced a DISPLAY containing a
-#      newline that no client can parse.
+#   2. When Tailscale landed fleet-wide (#9) its MagicDNS resolver added a
+#      second nameserver line to resolv.conf, so the substitution produced a
+#      DISPLAY containing a newline that no client can parse. The WSL guests
+#      now run with --accept-dns=false (#90) and are back to one line, but
+#      the substitution stays gone — it was wrong for WSLg regardless.
 #
 # Ubuntu ships no WSLg profile hook (/etc/profile.d has none) and the WSL user
 # systemd manager has DISPLAY unset, so nothing else in the distro sets it —

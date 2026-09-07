@@ -90,6 +90,96 @@
   as_user: root
   unless_command: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
 
+# ─── Tailscale ────────────────────────────────────────────────────────────
+# The WSL guest owns the tailnet node on these boxes, NOT the Windows host
+# (dotfiles#90). Everything a tailnet peer wants here — sshd :{{ wsl_ssh_port }},
+# the mooncake agentd, moongitd — is bound inside this VM, so running
+# tailscaled here puts those ports on tailscale0 directly: no Windows
+# Firewall rule, no Hyper-V firewall rule, no dependency on mirrored
+# networking carrying inbound traffic across the VM boundary.
+#
+# The trade accepted with that: the Windows host itself (its own agentd on
+# windows_agentd_port, RDP) stays off the tailnet, and a downed WSL VM has no
+# remote recovery path. vmIdleTimeout=-1 plus the keepalive task cover the
+# routine cases; the LAN covers the rest.
+#
+# Not in packages.yml — tailscale needs its own apt repo, so the repo +
+# package + service belong together as one block.
+
+# main_pc reached the tailnet before this repo managed it, via a hand-written
+# /etc/apt/sources.list.d/tailscale.list pointing at
+# /usr/share/keyrings/tailscale-archive-keyring.gpg. pkg.repo writes DEB822
+# (tailscale.sources) with its own keyring under /etc/apt/keyrings — two
+# sources naming the same repo with different Signed-By values, which apt
+# rejects outright: "Conflicting values set for option Signed-By".
+#
+# So this runs BEFORE the pkg.repo step, not after: pkg.repo does its own
+# apt-get update inside the step, and that update is what blows up. Dropping
+# a source never touches the installed package.
+- name: Drop the legacy hand-written Tailscale apt list
+  file.write:
+    path: /etc/apt/sources.list.d/tailscale.list
+    state: absent
+  as_user: root
+  tags: [wsl, tailscale]
+
+- name: Register Tailscale apt repo
+  pkg.repo:
+    name: tailscale
+    state: present
+    apt:
+      uri: https://pkgs.tailscale.com/stable/ubuntu
+      suites: ["{{ ubuntu_codename }}"]
+      components: [main]
+      gpg_key_url: https://pkgs.tailscale.com/stable/ubuntu/{{ ubuntu_codename }}.noarmor.gpg
+      gpg_check: false
+  as_user: root
+  tags: [wsl, tailscale]
+
+- name: Install tailscale
+  pkg:
+    name: tailscale
+    state: present
+  as_user: root
+  timeout: 10m
+  retry:
+    attempts: 3
+    delay: 10s
+  tags: [wsl, tailscale]
+
+# `tailscale up` (login/authkey) stays manual — that's a secret, not
+# something to script into version control. Same posture as arch/macos.
+# Gated on systemd for the same reason as the SSH step above: the first
+# apply on a fresh distro runs before systemd is up.
+- name: Enable tailscaled
+  os.service:
+    name: tailscaled
+    state: started
+    enabled: true
+  as_user: root
+  unless_command: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
+  tags: [wsl, tailscale]
+
+# MagicDNS off inside WSL, deliberately (dotfiles#90). With CorpDNS on,
+# tailscaled rewrites /etc/resolv.conf and WSL regenerates it right back
+# (generateResolvConf=true in wsl.conf) — that's the standing
+# "/etc/resolv.conf overwritten" health warning, and the same churn that
+# produced the newline-in-DISPLAY bug in #71. The fleet addresses peers by
+# IP (dex_remote_ip, peers.toml), so nothing here needs MagicDNS names.
+#
+# Skipped unless the daemon is up AND logged in — a logged-out node has no
+# prefs to change yet. Until the operator runs `tailscale up`, use
+# `tailscale up --accept-dns=false`; after that this step keeps it that way.
+- name: Disable Tailscale MagicDNS in the WSL guest
+  shell: tailscale set --accept-dns=false
+  as_user: root
+  unless_command: |
+    [ "$(ps -p 1 -o comm= 2>/dev/null)" != systemd ] \
+      || ! systemctl is-active --quiet tailscaled \
+      || ! tailscale status >/dev/null 2>&1 \
+      || tailscale debug prefs 2>/dev/null | grep -q '"CorpDNS": false'
+  tags: [wsl, tailscale]
+
 # GPU tooling. nvtop is a small Vulkan/NVIDIA monitor; CUDA is the heavy
 # toolkit (multi-GB, ~30 min on first install). Both are skipped on
 # machines without an NVIDIA GPU.
