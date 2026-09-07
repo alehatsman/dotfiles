@@ -30,8 +30,18 @@ steps:
       state: directory
     tags: [zsh, config]
 
-  - vars.load: ./vars/ubuntu_vars.yml
-    when: os == 'linux'
+  # Per-distro, not per-OS. The three Linux boxes do not share fzf's install
+  # layout, so one file cannot serve them: apt puts the shell integration in
+  # /usr/share/doc/fzf/examples, pacman puts it flat in /usr/share/fzf. The
+  # old single ubuntu_vars.yml loaded on `os == 'linux'` — i.e. on Arch too,
+  # despite the name — and shipped Arch's path to the Ubuntu boxes, leaving
+  # ^P and ^@ bound to widgets that were never defined (dotfiles#72).
+  # apt_available / pacman_available are the same facts the languages and
+  # usql components already select on.
+  - vars.load: ./vars/ubuntu.yml
+    when: apt_available
+  - vars.load: ./vars/arch.yml
+    when: pacman_available
 
   - vars.load: ./vars/macos_{{arch}}.yml
     when: os == "darwin"

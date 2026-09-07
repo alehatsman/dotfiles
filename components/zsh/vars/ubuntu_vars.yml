@@ -1,6 +1,0 @@
----
-FZF_BASE: /usr/share/fzf
-GCP_PATH: ''
-JAVA_HOME: ''
-ZPLUG_HOME: ~/.zplug
-zsh_shell_path: /usr/bin/zsh

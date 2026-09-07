@@ -1,0 +1,16 @@
+---
+# Debian/Ubuntu (main_pc, mini_pc — the WSL boxes).
+#
+# apt's fzf ships its shell integration under /usr/share/doc/fzf/examples/
+# and creates no /usr/share/fzf at all — that path is Arch's layout, see
+# arch.yml. Getting this wrong leaves key-bindings.zsh unsourced, which
+# silently kills ^P and ^@ (dotfiles#72).
+#
+#   $ dpkg -L fzf | grep zsh
+#   /usr/share/doc/fzf/examples/completion.zsh
+#   /usr/share/doc/fzf/examples/key-bindings.zsh
+FZF_BASE: /usr/share/doc/fzf/examples
+GCP_PATH: ''
+JAVA_HOME: ''
+ZPLUG_HOME: ~/.zplug
+zsh_shell_path: /usr/bin/zsh

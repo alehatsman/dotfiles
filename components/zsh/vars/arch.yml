@@ -1,0 +1,12 @@
+---
+# Arch (x1).
+#
+# pacman's fzf installs key-bindings.zsh and completion.zsh flat under
+# /usr/share/fzf. This is the layout the old shared ubuntu_vars.yml
+# encoded for every Linux box, which is why it happened to work here and
+# nowhere else (dotfiles#72).
+FZF_BASE: /usr/share/fzf
+GCP_PATH: ''
+JAVA_HOME: ''
+ZPLUG_HOME: ~/.zplug
+zsh_shell_path: /usr/bin/zsh
