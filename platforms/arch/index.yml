@@ -2,19 +2,15 @@
 # Was `upgrade: true` — a full `pacman -Syu` on every apply. Dropped for
 # the same reason as the apt side (migration §2, decided 2026-09-08): a
 # distro upgrade is a choice, not declared state. `just upgrade` when you
-# mean it. The database refresh stays, because every pkg step below
-# installs against it and nothing else refreshes it.
-- name: Refresh the pacman package database
-  pkg:
-    manager: pacman
-    update_cache: true
-  sudo: true
-  timeout: 15m
-  retry:
-    attempts: 3
-    delay: 10s
-  tags: [arch, system, packages]
-
+# mean it.
+#
+# The standalone `Refresh the pacman package database` step that replaced it
+# is gone too. `pkg` ensures packages, and a step naming none of them is not
+# a state to declare — provision rejects it (spec §6.5). It was also refreshing
+# at the wrong moment: it ran *before* multilib was enabled below, so the
+# database it built did not yet know about the repository the later steps
+# install from. The install step already carries `update_cache: true`, which
+# refreshes after the multilib change, which is the refresh that matters.
 - name: Enable multilib repository (uncomment block in pacman.conf)
   # Stock pacman.conf ships these two lines commented:
   #   #[multilib]
@@ -28,8 +24,10 @@
   tags: [arch, system, packages]
 
 - name: Install base-devel and git (refreshes pacman db too)
-  # update_cache: true subsumes the explicit `pacman -Sy --noconfirm`
-  # that previously chased the multilib enable above.
+  # update_cache: true subsumes both the explicit `pacman -Sy --noconfirm`
+  # that previously chased the multilib enable above, and the standalone
+  # refresh step that used to open this file. This is the first refresh
+  # after multilib is enabled, so it is the one the later installs need.
   pkg:
     manager: pacman
     state: present
