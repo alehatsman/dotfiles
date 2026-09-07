@@ -495,18 +495,22 @@ _fzf_npm_script() {
   echo "$npm_script"
 }
 
+# Print the package manager this tree is locked to, and exit 0 when one was
+# found. Both branches used to `return 1` on success and `return 0` on
+# not-found; callers only ever tested the captured string, so it worked by
+# accident and would have inverted under set -e or an && chain (dotfiles#76).
 _get_npm_client() {
   if [[ $(upsearch 'yarn.lock') ]]; then
     echo 'yarn'
-    return 1
+    return 0
   fi
 
   if [[ $(upsearch 'package-lock.json') ]]; then
     echo 'npm'
-    return 1
+    return 0
   fi
 
-  return 0
+  return 1
 }
 
 # nr - npm run script
@@ -533,8 +537,10 @@ ni() {
   local npm_client
   npm_client=$(_get_npm_client)
   if [ -z "$npm_client" ]; then
-    echo "no package-lock.json or yarn.lock"
-    return 0
+    # Match nr's behaviour: a package.json with no lockfile yet is the normal
+    # state of a fresh project, and doing nothing there looked like success.
+    echo "no package-lock.json or yarn.lock - using npm"
+    npm_client='npm'
   fi
 
   echo "$npm_client" install
