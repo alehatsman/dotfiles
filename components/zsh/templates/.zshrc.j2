@@ -75,8 +75,30 @@ elif [[ -f $FZF_BASE/key-bindings.zsh ]]; then
   source $FZF_BASE/completion.zsh
 fi
 
-if [[ $(uname) != 'Darwin' ]]; then
-  export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+# X11 display. Only WSLg needs a value from us (dotfiles#71).
+#
+# This replaced a WSL1-era hack that derived DISPLAY from the first
+# /etc/resolv.conf nameserver — an address to reach an X server running on the
+# Windows host (VcXsrv era). Two things broke it:
+#
+#   1. WSLg supersedes that model entirely. It runs Xwayland *inside* the
+#      distro, bound to the local socket /tmp/.X11-unix/X0, so the display is
+#      ":0". The gateway address never worked here — measured on main_pc,
+#      `DISPLAY=:0 xdpyinfo` succeeds and `DISPLAY=10.255.255.254:0 xdpyinfo`
+#      fails.
+#   2. Since Tailscale landed fleet-wide (#9) resolv.conf carries TWO
+#      nameserver lines, so the substitution produced a DISPLAY containing a
+#      newline that no client can parse.
+#
+# Ubuntu ships no WSLg profile hook (/etc/profile.d has none) and the WSL user
+# systemd manager has DISPLAY unset, so nothing else in the distro sets it —
+# dropping this outright would leave X11 clients with no display at all. Hence
+# an explicit ":0" gated on WSLg actually being present.
+#
+# Non-WSL Linux is left alone on purpose: XWayland sets DISPLAY under Hyprland
+# on x1, and it knows better than we do which display number it took.
+if [[ -d /mnt/wslg ]]; then
+  export DISPLAY=:0
 fi
 
 #---------------------------------------------
