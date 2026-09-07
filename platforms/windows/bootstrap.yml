@@ -60,6 +60,7 @@
         Write-Host "Installing Tailscale via winget..."
         winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements
       }
+  tags: [tailscale, network]
 
 # Fast Startup ("hybrid shutdown") hibernates the kernel on shutdown
 # instead of doing a clean boot next time. It's a known source of WSL2
