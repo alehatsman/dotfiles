@@ -3,7 +3,7 @@
     <server>
        <id>cognitect-dev-tools</id>
        <username>aleh.atsman@gmail.com</username>
-       <password>{{ cognitec_dev_tools_password }}</password>
+       <password>{{ env.COGNITECT_DEV_TOOLS_PASSWORD }}</password>
     </server>
   </servers>
 </settings>

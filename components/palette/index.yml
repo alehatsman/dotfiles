@@ -1,31 +1,23 @@
 ---
-# Color palette component — single source of truth for the Monokai look
-# across every templated config in this repo (alacritty, waybar, wofi,
-# dunst, hyprlock, hyprland, tmux, zsh fzf, and the vendored vim
-# colorscheme).
+# Color palette — single source of truth for the Monokai look across every
+# templated config in this repo (alacritty, waybar, wofi, dunst, hyprlock,
+# hyprland, tmux, zsh fzf, and the vendored vim colorscheme).
 #
-# Variant is selected by the caller via `with: { variant: ... }`.
-# Default variant is monokai_dark. Per-machine override flows from
-# machines/<m>/vars.yml -> the `palette_variant` global -> the `with:`
-# block at the call site.
+# This is an `import`, not a `use`, and that is deliberate: its whole job is
+# to put palette.* / editor.* into the CALLER's scope so every later
+# component's templates can read them. `use` builds a child scope that does
+# not leak back (spec §5), which is correct for a component and exactly
+# wrong for this file. Under mooncake it was a `use` that worked only
+# because vars.load mutated the global table — the old comment here said so.
 #
-# IMPORTANT: call this component BEFORE any consumer in each machine
-# entry — vars.load runs at expansion time and mutates the global vars
-# table, so palette.* / editor.* must be in scope when subsequent
-# components' templates render.
+# Variant comes from the `palette_variant` global, set per machine in
+# machines/<m>/vars.yml. A variant with no matching vars/<variant>.yml is a
+# positioned validation error, which is the check the old `enum:` prop did.
 #
-# This component intentionally has no file.template steps of its own —
-# the vendored vim colorscheme is deployed by the nvim component (it
-# needs {{ config_path }}, which is loaded later by nvim/index.yml). All
-# other consumers just read palette.* / editor.* directly in their
-# existing templates.
+# IMPORTANT: import this BEFORE any consumer in each machine entry.
+#
+# No template steps of its own — the vendored vim colorscheme is deployed by
+# the nvim component (it needs {{ config_path }}, loaded later by
+# nvim/index.yml). Every other consumer reads palette.* / editor.* directly.
 
-props:
-  variant:
-    type: string
-    enum: [monokai_dark, monokai_light]
-    default: monokai_dark
-    description: Color palette variant. Selects vars/<variant>.yml.
-
-steps:
-  - vars.load: ./vars/{{ props.variant }}.yml
+- vars_file: ./vars/{{ palette_variant }}.yml

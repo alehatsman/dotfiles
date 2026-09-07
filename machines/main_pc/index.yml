@@ -3,10 +3,10 @@
 #
 # Two-step provisioning:
 #   1. Windows host (from an Administrator PowerShell):
-#        mooncake.exe apply -c platforms\windows\bootstrap.yml \
+#        provision.exe apply platforms\windows\bootstrap.yml \
 #                           -v shared/variables.yml -v machines/main_pc/vars.yml
 #   2. Inside WSL Ubuntu, via the root entry (NOPASSWD sudo, no -K):
-#        mooncake apply -c ./main_pc.yml
+#        provision apply ./main_pc.yml
 #      or via the daemon:
 #        curl --unix-socket /run/user/$UID/mooncake/agentd.sock \
 #             -d '{"plan_path":"<abs>/main_pc.yml",
@@ -23,18 +23,17 @@
 # blocked — only a hostname already claimed by another machine trips it.
 - name: Refuse to apply main_pc's plan on a different known machine
   assert:
-    command:
-      cmd: |
-        h="{{ hostname }}"
-        case "$h" in
-          minipc|mac|work-mac|x1)
-            echo "refusing: hostname is '$h', not main_pc — wrong machine?" >&2
-            exit 1 ;;
-        esac
+    command: |
+      h="{{ hostname }}"
+      case "$h" in
+        minipc|mac|work-mac|x1)
+          echo "refusing: hostname is '$h', not main_pc — wrong machine?" >&2
+          exit 1 ;;
+      esac
   tags: [safety]
 
-- vars.load: ../../shared/variables.yml
-- vars.load: ./vars.yml
+- vars_file: ../../shared/variables.yml
+- vars_file: ./vars.yml
 
 - vars:
     is_wsl: true
@@ -49,10 +48,7 @@
 # Cross-platform components
 # Palette must come first — every later component's templates read
 # palette.* / editor.* from the variant selected by `palette_variant`.
-- name: Use palette component
-  use: ../../components/palette/index.yml
-  props:
-    variant: "{{ palette_variant }}"
+- import: ../../components/palette/index.yml
   tags: [core, palette]
 
 - import: ../../components/claude/index.yml

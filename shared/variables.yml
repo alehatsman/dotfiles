@@ -2,7 +2,7 @@
 # Cross-machine identity. Per-machine vars live in vars/<machine>.yml and
 # are layered on top via a second `-v` flag.
 #
-#   mooncake apply -c entries/<machine>.yml -v variables.yml -v vars/<machine>.yml -K
+#   provision apply <machine>.yml --ask-sudo-pass
 #
 # The current OS username is exposed by mooncake as {{ username }} — no
 # need to set it here.

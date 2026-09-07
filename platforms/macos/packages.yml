@@ -7,7 +7,7 @@
       exit 0
     fi
     exit 2
-  as: xcode_result
+  register: xcode_result
   failed_when: result.rc not in [0, 2]
   changed_when: result.rc == 0
   timeout: 10m
@@ -16,15 +16,15 @@
   shell: |
     set -euo pipefail
     softwareupdate --install-rosetta --agree-to-license
-  unless_command: pkgutil --pkg-info com.apple.pkg.RosettaUpdateAuto >/dev/null 2>&1
-  as_user: root
+  unless: pkgutil --pkg-info com.apple.pkg.RosettaUpdateAuto >/dev/null 2>&1
+  sudo: true
   timeout: 10m
 
 - name: Make sure brew is installed
   shell: |
     set -euo pipefail
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  unless_command: test -x /opt/homebrew/bin/brew || test -x /usr/local/bin/brew
+  unless: test -x /opt/homebrew/bin/brew || test -x /usr/local/bin/brew
   timeout: 10m
   retry:
     attempts: 3
@@ -32,16 +32,16 @@
 
 - name: Define brew taps, formulae, and casks
   vars:
-    # taps are objects rather than strings because mooncake's pkg.repo
-    # `name:` field doesn't allow slashes (it's a filesystem label).
-    # `tap` keeps the canonical `<owner>/<repo>` brew expects.
+    # Plain strings now: the `name:` field existed only to feed
+    # mooncake's pkg.repo, whose `name:` was a filesystem label and so
+    # could not hold a slash. HashiCorp relicensed to BSL and pulled
+    # packer/terraform from homebrew-core; their tap is the only brew
+    # source for them.
     taps:
-      - { name: wata727-tflint,       tap: wata727/tflint }
-      - { name: borkdude-brew,        tap: borkdude/brew }
-      - { name: wagoodman-dive,       tap: wagoodman/dive }
-      # HashiCorp relicensed to BSL and pulled packer/terraform from
-      # homebrew-core; their tap is now the only brew source.
-      - { name: hashicorp-tap,        tap: hashicorp/tap }
+      - wata727/tflint
+      - borkdude/brew
+      - wagoodman/dive
+      - hashicorp/tap
     apps:
       - aria2
       - aws-iam-authenticator
@@ -128,27 +128,22 @@
       - xmind
       - font-jetbrains-mono-nerd-font
 
-- name: Register brew taps
-  # mooncake's pkg.repo brew driver lists current taps first and only
-  # calls `brew tap` on drift — drops the failed_when/changed_when
-  # boilerplate the shell version needed for brew's rc=1 on "already
-  # tapped" (proposal-08).
-  pkg.repo:
-    name: "{{ item.name }}"
-    state: present
-    brew:
-      tap: "{{ item.tap }}"
-  for_each: "{{ taps }}"
-  timeout: 5m
-
-- name: Trust brew taps
-  # Homebrew 6.0 refuses to load formulae from third-party taps unless the
-  # tap is explicitly trusted; `brew tap` no longer implies trust. `brew
-  # trust` is idempotent, so re-running a trusted tap is a clean no-op.
+# Two for_each passes over the same list collapse into one shell loop
+# (migration §3.6). provision has no loop construct — deliberately — and
+# a literal `for` reads better than either pass did.
+#
+# `brew tap | grep -qx` is the drift check mooncake's pkg.repo brew driver
+# did internally, and it is what keeps brew's rc=1 on "already tapped"
+# from failing the step. Homebrew 6.0 refuses to load formulae from a
+# third-party tap unless it is explicitly trusted — `brew tap` no longer
+# implies trust — and `brew trust` is idempotent, so it runs every time.
+- name: Tap and trust brew taps
   shell: |
     set -euo pipefail
-    brew trust "{{ item.tap }}"
-  for_each: "{{ taps }}"
+    for t in {{ taps | join(' ') }}; do
+      brew tap | grep -qx "$t" || brew tap "$t"
+      brew trust "$t"
+    done
   changed_when: false
   timeout: 5m
 

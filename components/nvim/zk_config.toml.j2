@@ -1,7 +1,7 @@
-{% verbatim %}# Managed by mooncake (components/nvim/index.yml). Do not edit by hand —
+{% raw %}# Managed by mooncake (components/nvim/index.yml). Do not edit by hand —
 # change components/nvim/zk_config.toml.j2 and re-apply the `zk` tag.
 #
-# The whole file is wrapped in a {% verbatim %} block so zk's own
+# The whole file is wrapped in a {% raw %} block so zk's own
 # {{ }} handlebars pass through unevaluated by the mooncake templater.
 
 [note]
@@ -32,4 +32,4 @@ filename = "{{format-date now '%Y-%m-%d'}}"
 editor = "nvim"
 pager = "less -FIRX"
 fzf-preview = "bat -p --color always {-1}"
-{% endverbatim %}
+{% endraw %}

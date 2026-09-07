@@ -11,10 +11,9 @@
   tags: [core, ssh]
 
 - name: Rename ~/Projects to ~/projects (lowercase convention)
-  cmd:
-    argv: [mv, '{{ "~/Projects" | expanduser }}', '{{ "~/projects" | expanduser }}']
+  cmd: [mv, '{{ "~/Projects" | expanduser }}', '{{ "~/projects" | expanduser }}']
   when: os == "linux"
-  unless_command: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
+  unless: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
   tags: [core, home]
 
 # User-scope systemd units (moongit, and the mooncake agentd itself once
@@ -25,8 +24,8 @@
   shell: loginctl enable-linger {{ username }}
   # agentd runs without DBUS_SESSION_BUS_ADDRESS so loginctl cannot talk to
   # the bus; check the linger sentinel file directly instead (mooncake#21).
-  unless_command: test -f /var/lib/systemd/linger/{{ username }}
-  as_user: root
+  unless: test -f /var/lib/systemd/linger/{{ username }}
+  sudo: true
   when: os == "linux"
   tags: [core, systemd]
 
@@ -48,7 +47,7 @@
 # out owned by {{ username }}, and sudo then refuses to honor it
 # ("owned by uid N, should be 0") on every subsequent invocation.
 - name: Configure passwordless sudo for {{ username }}
-  file.write:
+  file:
     path: /etc/sudoers.d/{{ username }}-nopasswd
     state: file
     content: |
@@ -56,7 +55,7 @@
     mode: '0440'
     owner: root
     group: root
-  as_user: root
+  sudo: true
   when: os == "linux"
   tags: [core, sudo]
 
@@ -68,7 +67,7 @@
 # the same `#includedir /private/etc/sudoers.d` line, and BSD sudo's
 # sudoers(5) syntax matches Linux's here.
 - name: Configure passwordless sudo for {{ username }} (darwin)
-  file.write:
+  file:
     path: /etc/sudoers.d/{{ username }}-nopasswd
     state: file
     content: |
@@ -76,7 +75,7 @@
     mode: '0440'
     owner: root
     group: wheel
-  as_user: root
+  sudo: true
   when: os == "darwin"
   tags: [core, sudo]
 
@@ -93,7 +92,7 @@
     cfg="$HOME/.docker/config.json"
     tmp=$(mktemp)
     jq 'del(.credsStore)' "$cfg" > "$tmp" && mv "$tmp" "$cfg"
-  unless_command: |
+  unless: |
     cfg="$HOME/.docker/config.json"
     ! test -f "$cfg" || ! jq -e '.credsStore == "desktop.exe"' "$cfg" >/dev/null 2>&1
   when: os == "linux"

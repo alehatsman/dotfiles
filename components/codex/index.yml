@@ -3,5 +3,5 @@
   # OpenAI Codex CLI ships on npm; npm is provisioned on every platform
   # (arch nodejs/npm, mac node, windows nodejs/npm) so this stays portable.
   shell: npm install -g @openai/codex
-  unless_command: which codex
+  unless: which codex
   tags: [codex]

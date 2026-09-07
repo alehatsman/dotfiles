@@ -1,0 +1,10 @@
+[Unit]
+Description=Cap Intel RAPL power limits (PL1/PL2) for thermals
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/intel-rapl-cap
+
+[Install]
+WantedBy=multi-user.target

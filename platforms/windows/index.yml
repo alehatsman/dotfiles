@@ -10,10 +10,10 @@
 # Deploy /etc/wsl.conf — enables systemd so services survive WSL restarts.
 # Note: changes take effect after 'wsl --shutdown' + reconnect.
 - name: Deploy /etc/wsl.conf
-  file.template:
+  template:
     src: ./templates/wsl.conf.j2
     dest: /etc/wsl.conf
-  as_user: root
+  sudo: true
 
 # Just the WSL-only piece — the SSH server that lets the Windows host reach
 # this guest. Everything else common (git, tmux, htop, ...) comes from
@@ -22,7 +22,7 @@
   pkg:
     name: openssh-server
     state: present
-  as_user: root
+  sudo: true
   timeout: 10m
   retry:
     attempts: 3
@@ -30,16 +30,16 @@
 
 # Drop-in config avoids clobbering the base sshd_config
 - name: Configure SSH server (config dir)
-  file.write:
+  file:
     path: /etc/ssh/sshd_config.d
-    state: directory
-  as_user: root
+    state: dir
+  sudo: true
 
 - name: Deploy SSH server config
-  file.template:
+  template:
     src: ./templates/sshd_config.j2
     dest: /etc/ssh/sshd_config.d/wsl.conf
-  as_user: root
+  sudo: true
 
 # WSL2 mirrored networking shares the Windows host's port 22 binding (the
 # host's OpenSSH listens there for cross-machine SSH). Ubuntu's default
@@ -47,14 +47,14 @@
 # fails its socket dependency. Disable ssh.socket and let ssh.service own
 # the listener on port 2222 (from our drop-in above).
 - name: Disable ssh.socket (conflicts with port 22 under mirrored networking)
-  os.service:
+  service:
     name: ssh.socket
     state: stopped
     enabled: false
-  as_user: root
+  sudo: true
   # Skip when systemd isn't running (first-apply on fresh WSL) and
   # skip when ssh.socket isn't a known unit (already-fresh distros).
-  unless_command: |
+  unless: |
     [ "$(ps -p 1 -o comm= 2>/dev/null)" != systemd ] || ! systemctl list-unit-files ssh.socket >/dev/null 2>&1
 
 # Ubuntu's stock ssh.service is Restart=on-failure, which only covers
@@ -63,16 +63,16 @@
 # task still handles the VM-down case (idle-shutdown or `wsl --shutdown`);
 # this drop-in handles sshd-down-but-VM-up.
 - name: Ensure /etc/systemd/system/ssh.service.d exists
-  file.write:
+  file:
     path: /etc/systemd/system/ssh.service.d
-    state: directory
-  as_user: root
+    state: dir
+  sudo: true
 
 - name: Deploy ssh.service Restart=always drop-in
-  file.template:
+  template:
     src: ./templates/ssh-restart.conf.j2
     dest: /etc/systemd/system/ssh.service.d/restart.conf
-  as_user: root
+  sudo: true
 
 # First apply on a fresh WSL distro happens BEFORE systemd is up
 # (systemd is opt-in via the /etc/wsl.conf we just deployed). The
@@ -81,14 +81,18 @@
 # step on the init-is-systemd predicate. After the operator runs
 # `wsl --shutdown` and reconnects, the re-apply finds systemd up
 # and completes the start.
+- name: Reload systemd so the ssh.service drop-in above takes effect
+  cmd: [systemctl, daemon-reload]
+  sudo: true
+  unless: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
+
 - name: Enable and start SSH (requires systemd)
-  os.service:
+  service:
     name: ssh
     state: restarted
     enabled: true
-    daemon_reload: true
-  as_user: root
-  unless_command: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
+  sudo: true
+  unless: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
 
 # ─── Tailscale ────────────────────────────────────────────────────────────
 # The WSL guest owns the tailnet node on these boxes, NOT the Windows host
@@ -117,30 +121,52 @@
 # apt-get update inside the step, and that update is what blows up. Dropping
 # a source never touches the installed package.
 - name: Drop the legacy hand-written Tailscale apt list
-  file.write:
+  file:
     path: /etc/apt/sources.list.d/tailscale.list
     state: absent
-  as_user: root
+  sudo: true
   tags: [wsl, tailscale]
 
-- name: Register Tailscale apt repo
-  pkg.repo:
-    name: tailscale
-    state: present
-    apt:
-      uri: https://pkgs.tailscale.com/stable/ubuntu
-      suites: ["{{ ubuntu_codename }}"]
-      components: [main]
-      gpg_key_url: https://pkgs.tailscale.com/stable/ubuntu/{{ ubuntu_codename }}.noarmor.gpg
-      gpg_check: false
-  as_user: root
+# pkg.repo did keyring + DEB822 source + apt-get update in one step;
+# provision spells the three out (migration §3.11). The DEB822 `.sources`
+# form is deliberate — it is what pkg.repo wrote, so the Signed-By
+# conflict described above stays resolved.
+#
+# gpg_check was false here, i.e. the fingerprint was never pinned. The
+# rewrite does not change that posture. A rotated key needs the keyring
+# file deleted, since `creates` is what makes the fetch idempotent.
+- name: Fetch the Tailscale apt keyring
+  shell: curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/{{ ubuntu_codename }}.noarmor.gpg -o /etc/apt/keyrings/tailscale.gpg
+  creates: /etc/apt/keyrings/tailscale.gpg
+  sudo: true
+  tags: [wsl, tailscale]
+
+- name: Register the Tailscale apt source
+  file:
+    path: /etc/apt/sources.list.d/tailscale.sources
+    state: file
+    content: |
+      Types: deb
+      URIs: https://pkgs.tailscale.com/stable/ubuntu
+      Suites: {{ ubuntu_codename }}
+      Components: main
+      Signed-By: /etc/apt/keyrings/tailscale.gpg
+    mode: '0644'
+  sudo: true
+  register: tailscale_repo
+  tags: [wsl, tailscale]
+
+- name: Refresh apt after the Tailscale source changed
+  cmd: [apt-get, update]
+  when: tailscale_repo.changed
+  sudo: true
   tags: [wsl, tailscale]
 
 - name: Install tailscale
   pkg:
     name: tailscale
     state: present
-  as_user: root
+  sudo: true
   timeout: 10m
   retry:
     attempts: 3
@@ -152,12 +178,12 @@
 # Gated on systemd for the same reason as the SSH step above: the first
 # apply on a fresh distro runs before systemd is up.
 - name: Enable tailscaled
-  os.service:
+  service:
     name: tailscaled
     state: started
     enabled: true
-  as_user: root
-  unless_command: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
+  sudo: true
+  unless: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
   tags: [wsl, tailscale]
 
 # MagicDNS off inside WSL, deliberately (dotfiles#90). With CorpDNS on,
@@ -172,8 +198,8 @@
 # `tailscale up --accept-dns=false`; after that this step keeps it that way.
 - name: Disable Tailscale MagicDNS in the WSL guest
   shell: tailscale set --accept-dns=false
-  as_user: root
-  unless_command: |
+  sudo: true
+  unless: |
     [ "$(ps -p 1 -o comm= 2>/dev/null)" != systemd ] \
       || ! systemctl is-active --quiet tailscaled \
       || ! tailscale status >/dev/null 2>&1 \
@@ -187,10 +213,10 @@
   pkg:
     name: nvtop
     state: present
-  as_user: root
+  sudo: true
   # Skip when no NVIDIA GPU on this host. `unless_command` reads as
   # "skip step if this exits 0", so we negate the lspci match.
-  unless_command: "! lspci 2>/dev/null | grep -qi nvidia"
+  unless: "! lspci 2>/dev/null | grep -qi nvidia"
   timeout: 10m
 
 # WSL injects /usr/lib/wsl/lib (nvidia-smi, libcuda.so) only for interactive
@@ -202,8 +228,8 @@
   shell: |
     set -euo pipefail
     sed -i 's|PATH="\(.*\)"|PATH="\1:/usr/lib/wsl/lib"|' /etc/environment
-  as_user: root
-  unless_command: "grep -q '/usr/lib/wsl/lib' /etc/environment || [ ! -f /usr/lib/wsl/lib/nvidia-smi ]"
+  sudo: true
+  unless: "grep -q '/usr/lib/wsl/lib' /etc/environment || [ ! -f /usr/lib/wsl/lib/nvidia-smi ]"
   tags: [wsl, gpu]
 
 # CUDA stays shell until mooncake's pkg.repo apt driver gains the
@@ -220,7 +246,7 @@
     apt-get update
     apt-get install -y cuda-toolkit
     rm -f /tmp/cuda-keyring.deb
-  as_user: root
+  sudo: true
   # Skip when no GPU OR nvcc is already on PATH.
-  unless_command: "! lspci 2>/dev/null | grep -qi nvidia || command -v nvcc"
+  unless: "! lspci 2>/dev/null | grep -qi nvidia || command -v nvcc"
   timeout: 45m

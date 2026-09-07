@@ -522,7 +522,7 @@ alias my_ip="curl ifconfig.me/ip"
 # npm / yarn
 
 # search for file recursively up
-{% verbatim %}
+{% raw %}
 upsearch() {
   slashes=${PWD//[^\/]/}
   directory="$PWD"
@@ -532,7 +532,7 @@ upsearch() {
     directory="$directory/.."
   done
 }
-{% endverbatim %}
+{% endraw %}
 
 # fzf_npm_script - opens fzf for npm script
 # selection. Prints selected script back

@@ -1,5 +1,5 @@
 ---
-# Root dispatcher — run `mooncake apply` from the repo root without -c.
+# Root dispatcher — run `provision apply provision.yml` from the repo root.
 # Routes to the correct machine manifest based on the hostname fact.
 #
 # WSL strips underscores from hostnames (RFC 952), so main_pc → mainpc,
@@ -7,7 +7,7 @@
 # computer_name (work_mac's is "work-mac", a hyphen) and match directly.
 #
 # Alternate profile (mini_pc_server.yml) is
-# intentionally excluded — invoke it explicitly with -c.
+# intentionally excluded — invoke it explicitly by path.
 
 - import: ./main_pc.yml
   when: hostname == 'mainpc'

@@ -18,7 +18,7 @@
   shell: |
     set -euo pipefail
     go install github.com/xo/usql@latest
-  unless_command: command -v usql >/dev/null 2>&1
+  unless: command -v usql >/dev/null 2>&1
   when: brew_available
   tags: [usql]
 
@@ -26,12 +26,11 @@
   shell: |
     set -euo pipefail
     go install github.com/xo/usql@latest
-  unless_command: command -v usql >/dev/null 2>&1
+  unless: command -v usql >/dev/null 2>&1
   when: apt_available
   tags: [usql]
 
 - name: Verify usql is installed
   assert:
-    command:
-      cmd: command -v usql || test -x "$HOME/go/bin/usql"
+    command: command -v usql || test -x "$HOME/go/bin/usql"
   tags: [usql, verify]

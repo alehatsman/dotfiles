@@ -3,28 +3,30 @@
   # Upstream install script uses bashisms; pipe into bash explicitly
   # because /bin/sh is dash on Ubuntu.
   shell: curl -sSL https://claude.ai/install.sh | bash
-  unless_command: which claude
+  unless: which claude
   tags: [claude]
 
 - name: "Make sure claude config directory exists"
-  file.write:
+  file:
     path: "~/.claude"
-    state: directory
+    state: dir
   tags: [claude]
 
 - name: "Deploy claude settings"
-  file.copy:
+  file:
+    path: "~/.claude/settings.json"
     src: "./settings.json"
-    dest: "~/.claude/settings.json"
+    state: file
   tags: [claude]
 
 - name: "Deploy claude system prompt"
   # Source defaults to ./CLAUDE.md (shared trooper prompt); per-machine
   # vars override claude_system_prompt_src to ship a host-specific prompt.
   # Path resolves relative to this component dir.
-  file.copy:
+  file:
+    path: "~/.claude/CLAUDE.md"
     src: "{{ claude_system_prompt_src }}"
-    dest: "~/.claude/CLAUDE.md"
+    state: file
   tags: [claude]
 
 - name: "Install claude-autoapprove"
@@ -57,15 +59,15 @@
 
 - name: "Install gopls LSP plugin"
   shell: claude plugins install gopls-lsp@claude-plugins-official --scope user
-  unless_command: claude plugins list 2>/dev/null | grep -q 'gopls-lsp@claude-plugins-official'
+  unless: claude plugins list 2>/dev/null | grep -q 'gopls-lsp@claude-plugins-official'
   tags: [claude]
 
 - name: "Install lua LSP plugin"
   shell: claude plugins install lua-lsp@claude-plugins-official --scope user
-  unless_command: claude plugins list 2>/dev/null | grep -q 'lua-lsp@claude-plugins-official'
+  unless: claude plugins list 2>/dev/null | grep -q 'lua-lsp@claude-plugins-official'
   tags: [claude]
 
 - name: "Install typescript LSP plugin"
   shell: claude plugins install typescript-lsp@claude-plugins-official --scope user
-  unless_command: claude plugins list 2>/dev/null | grep -q 'typescript-lsp@claude-plugins-official'
+  unless: claude plugins list 2>/dev/null | grep -q 'typescript-lsp@claude-plugins-official'
   tags: [claude]

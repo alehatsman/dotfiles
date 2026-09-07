@@ -2,20 +2,29 @@
 # Windows host bootstrap — replaces the old bootstrap.ps1.
 #
 # Run from an Administrator PowerShell on a fresh Windows 11 box:
-#   mooncake.exe apply -c platforms/windows/bootstrap.yml -v variables.yml
+#   provision.exe apply platforms\windows\bootstrap.yml `
+#       --vars-file machines\<machine>\vars.yml
 #
-# After this finishes: reboot, finish Ubuntu first-run setup, then run
-# mooncake apply -c main.yml -v variables.yml from inside WSL.
+# After this finishes: see platforms/windows/README.md.
 #
-# Idempotency: each step's inner PowerShell script does its own "if not
-# present" check, so re-running is safe. (Mooncake's shell action will
-# still report changed=true; that's a cosmetic issue, not a correctness one.)
+# Elevation is process-wide on Windows (UAC), not per-step: there is no
+# `sudo:` here and there was no `run_as_admin:` worth keeping — run the
+# whole file from an Administrator PowerShell.
+#
+# Idempotency: each step's inner PowerShell does its own "if not present"
+# check and exits 3 when there is nothing to do, so `changed` is honest.
+# mooncake's shell action reported changed=true unconditionally.
+
+# The repo's shared defaults — windows_prevent_sleep, wsl_networking_mode,
+# windows_sleep_timeout_ac and friends. mooncake got these from a second
+# `-v` flag the operator had to remember; loading them here makes the plan
+# self-contained, so the only file to pass is the machine's own vars.
+- vars_file: ../../shared/variables.yml
 
 - name: Set computer name
   shell:
     interpreter: powershell
-    run_as_admin: true
-    cmd: |
+    script: |
       if ($env:COMPUTERNAME -eq "{{ computer_name }}") {
         Write-Host "Computer name already set to {{ computer_name }}"
       } else {
@@ -24,15 +33,12 @@
       }
 
 - name: Set WSL default version to 2
-  shell:
-    cmd: wsl --set-default-version 2
-    run_as_admin: true
+  shell: wsl --set-default-version 2
 
 - name: Install Ubuntu in WSL (if no Ubuntu* distro is present)
   shell:
     interpreter: powershell
-    run_as_admin: true
-    cmd: |
+    script: |
       # wsl --list output is UTF-16 with embedded NULs — strip them before
       # matching so PowerShell's -match works against ASCII.
       $distros = (wsl --list --quiet 2>$null) -replace "`0", ""
@@ -60,8 +66,7 @@
 - name: Disable Windows Fast Startup (HiberbootEnabled=0) for stable WSL boot
   shell:
     interpreter: powershell
-    run_as_admin: true
-    cmd: |
+    script: |
       $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power'
       $cur = (Get-ItemProperty -Path $key -Name HiberbootEnabled -ErrorAction SilentlyContinue).HiberbootEnabled
       if ($cur -eq 0) {
@@ -77,8 +82,7 @@
 - name: Disable sleep and hibernate on AC power
   shell:
     interpreter: powershell
-    run_as_admin: true
-    cmd: |
+    script: |
       # Never sleep on AC
       $acSleep = (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE |
                   Select-String "Current AC Power Setting Index" |
@@ -115,8 +119,7 @@
 - name: Restore AC sleep timeout
   shell:
     interpreter: powershell
-    run_as_admin: true
-    cmd: |
+    script: |
       $target = {{ windows_sleep_timeout_ac }}
       $acSleep = (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE |
                   Select-String "Current AC Power Setting Index" |
@@ -138,8 +141,7 @@
 - name: Set Windows OpenSSH default shell to PowerShell
   shell:
     interpreter: powershell
-    run_as_admin: true
-    cmd: |
+    script: |
       $key = 'HKLM:\SOFTWARE\OpenSSH'
       $want = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
       if (-not (Test-Path $key)) {
@@ -155,50 +157,87 @@
       }
 
 - name: Deploy .wslconfig to the Windows user home
-  file.template:
+  # `home` is a provision fact, so this no longer needs an operator-supplied
+  # `user_home` var. On the Windows host it is the user profile directory.
+  template:
     src: ./templates/wslconfig.j2
-    dest: "{{ user_home }}/.wslconfig"
+    dest: "{{ home }}/.wslconfig"
 
-- name: Add firewall rule for WSL SSH
-  windows.firewall_rule:
-    name: "WSL2 SSH"
-    description: "WSL guest SSH (mirrored networking exposes the port on the host NIC)"
-    direction: inbound
-    protocol: tcp
-    local_port: ["{{ wsl_ssh_port }}"]
-    profile: [domain, private]
+- name: Add firewall rule for SSH
+  # exit 3 = already present. `changed` is therefore honest here, which it
+  # never was under the typed action (migration §3.4).
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL2 SSH"
+      if (Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue) { exit 3 }
+      New-NetFirewallRule -DisplayName $name `
+        -Description "WSL guest SSH (mirrored networking exposes the port on the host NIC)" `
+        -Direction Inbound -Protocol TCP -LocalPort {{ wsl_ssh_port }} `
+        -Action Allow -Profile Domain,Private | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
 
 # With networkingMode=mirrored + firewall=true in .wslconfig, the WSL VM
 # sits behind the Hyper-V Firewall — a separate stack from the regular
 # Windows Firewall. The native action below opens the host's NICs;
 # the Hyper-V rule below opens the VM boundary. Both are required.
-- name: Add Hyper-V firewall rule for WSL SSH
-  windows.hyperv_firewall_rule:
-    name: "WSL2 SSH"
-    description: "WSL guest SSH (Hyper-V VM boundary; mirrored networking)"
-    direction: inbound
-    protocol: tcp
-    local_port: ["{{ wsl_ssh_port }}"]
-    # vm_creator_id defaults to "auto": discovers WSL's GUID via
-    # Get-NetFirewallHyperVVMCreator at apply time, with a fallback
-    # constant ({40E0AC32-…}) for fresh boxes pre-first-VM-boot.
+- name: Add Hyper-V firewall rule for SSH
+  # New-NetFirewallHyperVRule takes no -Description, so the description
+  # stays a comment: WSL guest SSH (Hyper-V VM boundary; mirrored networking)
+  # vm_creator_id: auto — discover WSL's subscriber GUID at apply time,
+  # falling back to the well-known constant on a box that has never
+  # booted a WSL VM. Both halves are mooncake's, verbatim.
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL2 SSH"
+      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match 'WSL' } |
+        Select-Object -First 1 -ExpandProperty VMCreatorID)
+      if (-not $wslId) { $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' }
+      if (Get-NetFirewallHyperVRule -VMCreatorID $wslId -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -eq $name }) { exit 3 }
+      New-NetFirewallHyperVRule -DisplayName $name -VMCreatorID $wslId `
+        -Direction Inbound -Protocol TCP -LocalPorts {{ wsl_ssh_port }} -Action Allow | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
 
-- name: Add firewall rule for WSL mooncake agentd
-  windows.firewall_rule:
-    name: "WSL2 Mooncake Agentd"
-    description: "WSL Linux agentd (port exposed via mirrored networking)"
-    direction: inbound
-    protocol: tcp
-    local_port: ["{{ wsl_agentd_port }}"]
-    profile: [domain, private]
+- name: Add firewall rule for Mooncake Agentd
+  # exit 3 = already present. `changed` is therefore honest here, which it
+  # never was under the typed action (migration §3.4).
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL2 Mooncake Agentd"
+      if (Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue) { exit 3 }
+      New-NetFirewallRule -DisplayName $name `
+        -Description "WSL Linux agentd (port exposed via mirrored networking)" `
+        -Direction Inbound -Protocol TCP -LocalPort {{ wsl_agentd_port }} `
+        -Action Allow -Profile Domain,Private | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
 
-- name: Add Hyper-V firewall rule for WSL mooncake agentd
-  windows.hyperv_firewall_rule:
-    name: "WSL2 Mooncake Agentd"
-    description: "WSL Linux agentd (Hyper-V VM boundary)"
-    direction: inbound
-    protocol: tcp
-    local_port: ["{{ wsl_agentd_port }}"]
+- name: Add Hyper-V firewall rule for Mooncake Agentd
+  # New-NetFirewallHyperVRule takes no -Description, so the description
+  # stays a comment: WSL Linux agentd (Hyper-V VM boundary)
+  # vm_creator_id: auto — discover WSL's subscriber GUID at apply time,
+  # falling back to the well-known constant on a box that has never
+  # booted a WSL VM. Both halves are mooncake's, verbatim.
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL2 Mooncake Agentd"
+      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match 'WSL' } |
+        Select-Object -First 1 -ExpandProperty VMCreatorID)
+      if (-not $wslId) { $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' }
+      if (Get-NetFirewallHyperVRule -VMCreatorID $wslId -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -eq $name }) { exit 3 }
+      New-NetFirewallHyperVRule -DisplayName $name -VMCreatorID $wslId `
+        -Direction Inbound -Protocol TCP -LocalPorts {{ wsl_agentd_port }} -Action Allow | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
 
 # moongit server: moongitd binds *:8080 inside WSL; mirrored networking
 # exposes it on the host NIC, so other boxes on the LAN can hit
@@ -206,26 +245,44 @@
 # the SSE transcript stream). Same two-rule shape as SSH/agentd above:
 # the WinFW rule opens the host's NICs, the Hyper-V rule opens the VM
 # boundary. Both required under networkingMode=mirrored + firewall=true.
-- name: Add firewall rule for WSL moongit
-  windows.firewall_rule:
-    name: "WSL2 moongit"
-    description: "WSL moongit server (port exposed via mirrored networking)"
-    direction: inbound
-    protocol: tcp
-    local_port: ["{{ wsl_moongit_port }}"]
-    profile: [domain, private]
-  # Tagged so a fleet/local apply can target just these two rules without
-  # re-running the whole host bootstrap: --step-filter tag=moongit
-  # (fleet) or -t moongit (local mooncake.exe apply).
+- name: Add firewall rule for moongit
+  # exit 3 = already present. `changed` is therefore honest here, which it
+  # never was under the typed action (migration §3.4).
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL2 moongit"
+      if (Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue) { exit 3 }
+      New-NetFirewallRule -DisplayName $name `
+        -Description "WSL moongit server (port exposed via mirrored networking)" `
+        -Direction Inbound -Protocol TCP -LocalPort {{ wsl_moongit_port }} `
+        -Action Allow -Profile Domain,Private | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
+  # Tagged so an apply can target just these two rules without re-running
+  # the whole host bootstrap: --tags moongit
   tags: [moongit, firewall]
 
-- name: Add Hyper-V firewall rule for WSL moongit
-  windows.hyperv_firewall_rule:
-    name: "WSL2 moongit"
-    description: "WSL moongit server (Hyper-V VM boundary; mirrored networking)"
-    direction: inbound
-    protocol: tcp
-    local_port: ["{{ wsl_moongit_port }}"]
+- name: Add Hyper-V firewall rule for moongit
+  # New-NetFirewallHyperVRule takes no -Description, so the description
+  # stays a comment: WSL moongit server (Hyper-V VM boundary; mirrored networking)
+  # vm_creator_id: auto — discover WSL's subscriber GUID at apply time,
+  # falling back to the well-known constant on a box that has never
+  # booted a WSL VM. Both halves are mooncake's, verbatim.
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL2 moongit"
+      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match 'WSL' } |
+        Select-Object -First 1 -ExpandProperty VMCreatorID)
+      if (-not $wslId) { $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' }
+      if (Get-NetFirewallHyperVRule -VMCreatorID $wslId -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -eq $name }) { exit 3 }
+      New-NetFirewallHyperVRule -DisplayName $name -VMCreatorID $wslId `
+        -Direction Inbound -Protocol TCP -LocalPorts {{ wsl_moongit_port }} -Action Allow | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
   tags: [moongit, firewall]
 
 # ---- Mooncake agentd on the Windows host: HANDLED BY THE CONTROLLER ------
@@ -258,28 +315,28 @@
 # user's registered WSL distros are visible. S4U logon means the task
 # fires even when the user isn't logged in.
 - name: Register Task Scheduler entry to keep WSL SSH alive
-  windows.scheduled_task:
-    name: WSL2-SSH-Keepalive
-    description: "Wake WSL VM + ensure ssh service is up (5-minute repetition)"
-    triggers:
-      - type: repetition
-        interval: 5m
-    actions:
-      - execute: 'C:\Windows\System32\wsl.exe'
-        arguments: '-d {{ wsl_distro }} -u root -- systemctl start ssh'
-    principal:
-      # {{ username }} on Windows resolves to DOMAIN\USER from
-      # user.Current() — matches the COMPUTERNAME\USERNAME form the
-      # old PowerShell version used and the agentd autostart task
-      # mooncake fleet bootstrap registers.
-      user: "{{ username }}"
-      logon_type: s4u
-      run_level: highest
-    settings:
-      execution_time_limit: 2m
-      allow_start_if_on_batteries: true
-      dont_stop_if_going_on_batteries: true
-      start_when_available: true
+  # exit 3 = task already registered (migration §3.4). {{ username }} on
+  # Windows resolves to DOMAIN\USER, matching the COMPUTERNAME\USERNAME
+  # form the old PowerShell version used.
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL2-SSH-Keepalive"
+      if (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue) { exit 3 }
+      $action = New-ScheduledTaskAction -Execute 'C:\Windows\System32\wsl.exe' `
+        -Argument '-d {{ wsl_distro }} -u root -- systemctl start ssh'
+      $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
+        -RepetitionInterval (New-TimeSpan -Minutes 5)
+      $principal = New-ScheduledTaskPrincipal -UserId "{{ username }}" `
+        -LogonType S4U -RunLevel Highest
+      $settings = New-ScheduledTaskSettingsSet `
+        -ExecutionTimeLimit (New-TimeSpan -Minutes 2) `
+        -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+      Register-ScheduledTask -TaskName $name `
+        -Description "Wake WSL VM + ensure ssh service is up (5-minute repetition)" `
+        -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
 
 # Windows re-marks the LAN as Public (Unidentified) on most boots, and the
 # fleet firewall rules above are scoped Domain,Private only (opening a
@@ -289,26 +346,28 @@
 # flips any Public profile back to Private so the rules apply. Interface
 # index changes across boots, so match by category, not index.
 - name: Register Task Scheduler entry to pin LAN profile Private at boot
-  windows.scheduled_task:
-    name: Set-Network-Private
-    description: "Reclassify any Public connection profile to Private at boot (fleet rules are Domain,Private)"
-    triggers:
-      - type: boot
-    actions:
-      - execute: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-        arguments: >-
-          -NoProfile -Command "Get-NetConnectionProfile |
-          Where-Object { $_.NetworkCategory -eq 'Public' } |
-          Set-NetConnectionProfile -NetworkCategory Private"
-    principal:
-      user: "{{ username }}"
-      logon_type: s4u
-      run_level: highest
-    settings:
-      execution_time_limit: 2m
-      allow_start_if_on_batteries: true
-      dont_stop_if_going_on_batteries: true
-      start_when_available: true
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "Set-Network-Private"
+      if (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue) { exit 3 }
+      $inner = '-NoProfile -Command "Get-NetConnectionProfile | ' +
+               'Where-Object { $_.NetworkCategory -eq ''Public'' } | ' +
+               'Set-NetConnectionProfile -NetworkCategory Private"'
+      $action = New-ScheduledTaskAction `
+        -Execute 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' `
+        -Argument $inner
+      $trigger = New-ScheduledTaskTrigger -AtStartup
+      $principal = New-ScheduledTaskPrincipal -UserId "{{ username }}" `
+        -LogonType S4U -RunLevel Highest
+      $settings = New-ScheduledTaskSettingsSet `
+        -ExecutionTimeLimit (New-TimeSpan -Minutes 2) `
+        -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+      Register-ScheduledTask -TaskName $name `
+        -Description "Reclassify any Public connection profile to Private at boot (fleet rules are Domain,Private)" `
+        -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
 
 # vmIdleTimeout=-1 in .wslconfig prevents idle-based shutdown but NOT
 # session-based shutdown: WSL exits when the last wsl.exe session closes,
@@ -317,66 +376,43 @@
 # Same shape as WSL-Network-Keepalive (NAT mode) but unconditional on
 # networking mode — mirrored-networking boxes need this too.
 - name: Register WSL session keepalive task (always-on)
-  windows.scheduled_task:
-    name: WSL-Session-Keepalive
-    description: "Persistent wsl session so WSL2 never exits on session-based shutdown (server boxes)"
-    triggers:
-      - type: boot
-    actions:
-      - execute: 'C:\Windows\System32\wsl.exe'
-        arguments: '-d {{ wsl_distro }} -u root -- sleep infinity'
-    principal:
-      user: "{{ username }}"
-      logon_type: s4u
-      run_level: highest
-    settings:
-      execution_time_limit: "0"
-      restart_count: 999
-      restart_interval: 1m
-      allow_start_if_on_batteries: true
-      dont_stop_if_going_on_batteries: true
-      start_when_available: true
+  # ExecutionTimeLimit 0 = no limit; the task is meant to run forever.
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL-Session-Keepalive"
+      if (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue) { exit 3 }
+      $action = New-ScheduledTaskAction -Execute 'C:\Windows\System32\wsl.exe' `
+        -Argument '-d {{ wsl_distro }} -u root -- sleep infinity'
+      $trigger = New-ScheduledTaskTrigger -AtStartup
+      $principal = New-ScheduledTaskPrincipal -UserId "{{ username }}" `
+        -LogonType S4U -RunLevel Highest
+      $settings = New-ScheduledTaskSettingsSet `
+        -ExecutionTimeLimit (New-TimeSpan -Seconds 0) `
+        -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) `
+        -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+      Register-ScheduledTask -TaskName $name `
+        -Description "Persistent wsl session so WSL2 never exits on session-based shutdown (server boxes)" `
+        -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
   when: windows_prevent_sleep
   tags: [wsl, windows, always-on]
 
 # Inverse: remove the keepalive task on non-server boxes so it can't block
 # sleep. No-ops cleanly if the task doesn't exist.
 - name: Remove WSL session keepalive task (non-server boxes)
-  windows.scheduled_task:
-    name: WSL-Session-Keepalive
-    state: absent
+  # exit 3 = already absent, so this is a clean no-op on a box that never
+  # had the task.
+  shell:
+    interpreter: powershell
+    script: |
+      $name = "WSL-Session-Keepalive"
+      if (-not (Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue)) { exit 3 }
+      Unregister-ScheduledTask -TaskName $name -Confirm:$false
+  failed_when: result.rc not in [0, 3]
+  changed_when: result.rc == 0
   when: not windows_prevent_sleep
   tags: [wsl, windows]
 
-- name: Print next steps
-  log:
-    msg: |
-      Windows host bootstrap complete. Next steps:
-        1. Reboot the machine (picks up scheduled tasks + WSL changes cleanly)
-        2. Finish Ubuntu first-run setup (set username + password)
-        3. Inside WSL, clone dotfiles + apply the per-machine entry:
-             git clone https://github.com/alehatsman/dotfiles ~/dotfiles
-             cd ~/dotfiles && bash scripts/install_mooncake.sh
-             mooncake apply -c ./<this-machine>.yml
-        4. Add your SSH public key to ~/.ssh/authorized_keys (WSL side)
-        5. wsl --shutdown, then verify: ssh <this-pc-ip> -p {{ wsl_ssh_port }}
-        6. From your controller machine (e.g. x1), bootstrap BOTH agentd
-           daemons — one inside the WSL distro, one on the Windows host.
-           Each command SCPs the right mooncake binary, installs the
-           OS-native autostart (systemd unit on Linux, Task Scheduler
-           entry on Windows), opens the firewall, and writes the peer
-           entry to peers.toml.
-
-           # WSL (Linux) peer — goes through WSL's OpenSSH on :{{ wsl_ssh_port }}
-             mooncake fleet bootstrap <user>@<this-pc-ip> \
-                 --port {{ wsl_ssh_port }} --agentd-port {{ wsl_agentd_port }} \
-                 --name <machine> --tag <machine> --upgrade
-
-           # Windows-host peer — goes through Windows OpenSSH on :22
-             mooncake fleet bootstrap <user>@<this-pc-ip> \
-                 --port 22 --agentd-port {{ windows_agentd_port }} \
-                 --name <machine>-win --tag windows --upgrade
-
-        7. Confirm both peers green:
-             mooncake fleet status
-           Expect: 2/2 accessible, <machine> (linux) + <machine>-win (windows).
+# Next steps after this finishes: platforms/windows/README.md.

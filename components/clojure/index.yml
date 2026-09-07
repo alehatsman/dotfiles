@@ -2,37 +2,45 @@
 # Clojure configuration deployment (installation handled by preset)
 
 - name: Make sure .lein folder is present
-  file.write:
+  file:
     path: ~/.lein
-    state: directory
+    state: dir
   tags: [clojure, config]
 
 - name: Make sure .clojure folder is present
-  file.write:
+  file:
     path: ~/.clojure
-    state: directory
+    state: dir
   tags: [clojure, config]
 
 - name: Make sure .m2 folder is present
-  file.write:
+  file:
     path: ~/.m2
-    state: directory
+    state: dir
   tags: [clojure, config]
 
 - name: Make sure deps.edn is present
-  file.template:
+  template:
     src: ./templates/deps.edn
     dest: ~/.clojure/deps.edn
   tags: [clojure, config]
 
 - name: Make sure rebel_readline.edn present
-  file.template:
+  template:
     src: ./templates/rebel_readline.edn
     dest: ~/.clojure/rebel_readline.edn
   tags: [clojure, config]
 
+# The password comes from the environment, never the repo. Gated so the
+# file is written only when the secret is actually present — under
+# mooncake the var was undefined everywhere and rendered empty, so this
+# step had been writing an unauthenticatable settings.xml on every apply
+# since it was added. provision's strict undefined is what surfaced it.
+#
+#   COGNITECT_DEV_TOOLS_PASSWORD=... provision apply x1.yml
 - name: Make sure settings.xml present
-  file.template:
+  template:
     src: ./templates/settings.xml
     dest: ~/.m2/settings.xml
+  when: env.COGNITECT_DEV_TOOLS_PASSWORD is defined
   tags: [clojure, config]

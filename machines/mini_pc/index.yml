@@ -10,18 +10,17 @@
 # alike, since both import this file.
 - name: Refuse to apply mini_pc's plan on a different known machine
   assert:
-    command:
-      cmd: |
-        h="{{ hostname }}"
-        case "$h" in
-          mainpc|mac|work-mac|x1)
-            echo "refusing: hostname is '$h', not mini_pc — wrong machine?" >&2
-            exit 1 ;;
-        esac
+    command: |
+      h="{{ hostname }}"
+      case "$h" in
+        mainpc|mac|work-mac|x1)
+          echo "refusing: hostname is '$h', not mini_pc — wrong machine?" >&2
+          exit 1 ;;
+      esac
   tags: [safety]
 
-- vars.load: ../../shared/variables.yml
-- vars.load: ./vars.yml
+- vars_file: ../../shared/variables.yml
+- vars_file: ./vars.yml
 
 - vars:
     is_wsl: true
@@ -36,10 +35,7 @@
 # Cross-platform components
 # Palette must come first — every later component's templates read
 # palette.* / editor.* from the variant selected by `palette_variant`.
-- name: Use palette component
-  use: ../../components/palette/index.yml
-  props:
-    variant: "{{ palette_variant }}"
+- import: ../../components/palette/index.yml
   tags: [core, palette]
 
 - import: ../../components/claude/index.yml

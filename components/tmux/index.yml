@@ -5,7 +5,7 @@
   pkg:
     name: tmux
     state: present
-  as_user: root
+  sudo: true
   when: os == 'linux'
   tags: [tmux, install]
 
@@ -22,10 +22,8 @@
   tags: [tmux, install]
 
 - name: Clone tmux plugin manager (tpm)
-  git.clone:
-    repo: https://github.com/tmux-plugins/tpm
-    dest: ~/.config/tmux/plugins/tpm
-    depth: 1
+  shell: git clone --depth 1 https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
+  creates: ~/.config/tmux/plugins/tpm
   timeout: 5m
   retry:
     attempts: 3
@@ -34,49 +32,47 @@
 
 - name: Verify tmux installation
   assert:
-    command:
-      cmd: which tmux
+    command: which tmux
   tags: [tmux, verify]
 
 - name: Create tmux config directory
-  file.write:
+  file:
     path: ~/.config/tmux
-    state: directory
+    state: dir
   tags: [tmux, config]
 
 - name: Create tmux plugins directory
-  file.write:
+  file:
     path: ~/.config/tmux/plugins
-    state: directory
+    state: dir
   tags: [tmux, config]
 
 - name: Deploy .tmux.conf
-  file.template:
+  template:
     src: ./.tmux.conf.j2
     dest: ~/.tmux.conf
   tags: [tmux, config]
 
 - name: Ensure ~/.local/bin exists
-  file.write:
+  file:
     path: ~/.local/bin
-    state: directory
+    state: dir
   tags: [tmux, scripts]
 
 - name: Deploy tmux-claude-jump
-  file.copy:
+  file:
+    path: ~/.local/bin/tmux-claude-jump
     src: ./scripts/tmux-claude-jump.sh
-    dest: ~/.local/bin/tmux-claude-jump
+    state: file
     mode: '0755'
   tags: [tmux, scripts]
 
 - name: Verify tmux config
   assert:
-    command:
-      cmd: test -f ~/.tmux.conf
+    command: test -f ~/.tmux.conf
   tags: [tmux, verify]
 
 - name: Verify tpm installation
   assert:
-    command:
-      cmd: test -d ~/.config/tmux/plugins/tpm
+    command: test -d ~/.config/tmux/plugins/tpm
   tags: [tmux, verify]

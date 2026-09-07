@@ -20,9 +20,9 @@
     ssh_key_passphrase: ""
 
 - name: Ensure ~/.ssh exists with the permissions sshd insists on
-  file.write:
+  file:
     path: ~/.ssh
-    state: directory
+    state: dir
     mode: '0700'
   tags: [ssh, core]
 
@@ -43,11 +43,10 @@
   # `creates:`-style gate: no key file, no work. Never regenerates over an
   # existing key — that would lock the machine out of everything it is
   # already enrolled with.
-  unless_command: test -f "{{ ssh_key_path | expanduser }}"
+  unless: test -f "{{ ssh_key_path | expanduser }}"
   tags: [ssh, core]
 
 - name: Verify the SSH identity key is present
   assert:
-    command:
-      cmd: test -f "{{ ssh_key_path | expanduser }}"
+    command: test -f "{{ ssh_key_path | expanduser }}"
   tags: [ssh, verify]

@@ -8,15 +8,3 @@ autoload_path: "~/.config/nvim/autoload"
 python_venv_path: "~/.config/nvim/python_venv"
 python3_venv_path: "~/.config/nvim/python3_venv"
 
-python_libs:
-  - neovim
-  - websocket-client
-  - sexpdata
-  - neovim-remote
-
-python3_libs:
-  - pynvim
-  - neovim
-  - websocket-client
-  - sexpdata
-  - neovim-remote

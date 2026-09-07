@@ -13,7 +13,7 @@
 # flips after the new revision is fully live.
 #
 # Force a rebuild:
-#   rm {{ moongit_bin_path }}.sha && mooncake apply -c ./main_pc.yml -t moongit
+#   rm {{ moongit_bin_path }}.sha && provision apply ./main_pc.yml --tags moongit
 
 props:
   moongit_addr:
@@ -30,7 +30,7 @@ props:
     description: Run slots reserved for agents so CI backlog can't lock them out.
 
 steps:
-  - vars.load: ./variables.yml
+  - vars_file: ./variables.yml
 
   # ───────────────── TOOLCHAIN GUARDS ────────────────────────────────────────
 
@@ -38,42 +38,40 @@ steps:
     # Provided by components/languages — fail-fast guard so the build step
     # doesn't error out cryptically.
     assert:
-      command:
-        cmd: command -v go
+      command: command -v go
     tags: [moongit, build]
 
   - name: "Ensure Node toolchain is installed (for building the web UI)"
     assert:
-      command:
-        cmd: command -v npm
+      command: command -v npm
     tags: [moongit, build]
 
   - name: "Ensure git is installed"
     pkg:
       name: git
       state: present
-    as_user: root
+    sudo: true
     tags: [moongit, build]
 
   # ───────────────── DIRECTORIES ─────────────────────────────────────────────
 
   - name: "Ensure ~/.local/bin exists"
-    file.write:
+    file:
       path: ~/.local/bin
-      state: directory
+      state: dir
     tags: [moongit, build]
 
   - name: "Ensure data + repos dirs exist"
     # Creating the leaf repos dir materializes the parent data dir too.
-    file.write:
+    file:
       path: "{{ moongit_repos_dir }}"
-      state: directory
+      state: dir
     tags: [moongit, build]
 
   - name: "Ensure config dir for the env file exists"
-    file.write:
+    file:
       path: ~/.config/moongit
-      state: directory
+      state: dir
     tags: [moongit, service]
 
   # ───────────────── BUILD (sha-gated on committed HEAD) ──────────────────────
@@ -86,7 +84,7 @@ steps:
       cd {{ moongit_src_dir }}
       go build -trimpath -ldflags "-s -w" -o ./bin/moongitd ./cmd/moongitd
       go build -trimpath -ldflags "-s -w" -o ./bin/moongit  ./cmd/moongit
-    unless_command: |
+    unless: |
       test -x {{ moongit_bin_path }} && \
         [ "$(cat {{ moongit_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ moongit_src_dir }} rev-parse HEAD 2>/dev/null)" ]
     tags: [moongit, build]
@@ -97,7 +95,7 @@ steps:
       cd {{ moongit_src_dir }}/web
       npm install
       npm run build
-    unless_command: |
+    unless: |
       test -x {{ moongit_bin_path }} && \
         [ "$(cat {{ moongit_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ moongit_src_dir }} rev-parse HEAD 2>/dev/null)" ]
     timeout: 10m
@@ -110,32 +108,32 @@ steps:
       set -euo pipefail
       install -m 0755 {{ moongit_src_dir }}/bin/moongitd {{ moongit_bin_path }}
       install -m 0755 {{ moongit_src_dir }}/bin/moongit  {{ moongit_client_path }}
-    unless_command: |
+    unless: |
       test -x {{ moongit_bin_path }} && \
         [ "$(cat {{ moongit_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ moongit_src_dir }} rev-parse HEAD 2>/dev/null)" ]
     tags: [moongit, build]
 
   - name: "Create mgitd alias → moongitd"
-    file.write:
+    file:
       path: ~/.local/bin/mgitd
       src: "{{ moongit_bin_path }}"
       state: link
     tags: [moongit, build]
 
   - name: "Create mgit alias → moongit"
-    file.write:
+    file:
       path: ~/.local/bin/mgit
       src: "{{ moongit_client_path }}"
       state: link
     tags: [moongit, build]
 
-  # ───────────────── SERVICE (native os.systemd, user scope) ──────────────────
+  # ───────────────── SERVICE (user-scope systemd unit) ───────────────────────
 
   - name: "Render moongit environment file"
     # Host-specific absolute paths live here, not in the unit. systemd does
     # not expand ~, so every path is run through expanduser. No secrets —
     # those live in the secret env file seeded below.
-    file.write:
+    file:
       path: "{{ moongit_env_file }}"
       state: file
       content: |
@@ -154,51 +152,65 @@ steps:
     # umask 077 makes the file 0600 from birth (it carries the password).
     # Empty values = basic auth disabled. The systemd unit references it
     # with a leading `-`, so a missing/empty file is fine.
-    shell:
-      cmd: |
-        set -eu
-        umask 077
-        cat > {{ moongit_secret_env_file }} <<'EOF'
-        # HTTP Basic auth for the moongit web UI + git smart-HTTP.
-        # Fill both in, then: systemctl --user restart moongit.service
-        # Leave empty to disable. This file is never committed or clobbered.
-        MOONGIT_BASIC_USER=
-        MOONGIT_BASIC_PASS=
-        EOF
-      creates: "{{ moongit_secret_env_file | expanduser }}"
+    shell: |
+      set -eu
+      umask 077
+      cat > {{ moongit_secret_env_file }} <<'EOF'
+      # HTTP Basic auth for the moongit web UI + git smart-HTTP.
+      # Fill both in, then: systemctl --user restart moongit.service
+      # Leave empty to disable. This file is never committed or clobbered.
+      MOONGIT_BASIC_USER=
+      MOONGIT_BASIC_PASS=
+      EOF
+    creates: "{{ moongit_secret_env_file | expanduser }}"
     tags: [moongit, service]
 
-  - name: "Deploy + start moongit user systemd service"
-    # Native unit management: writes ~/.config/systemd/user/moongit.service,
-    # daemon-reloads, enables, and starts it. reload_on_change restarts the
-    # service when the unit itself changes (e.g. ExecStart/EnvironmentFile);
-    # binary changes are handled by the restart step below.
-    os.systemd:
+  # os.systemd wrote the unit, reloaded, enabled and started it in one
+  # step, and reload_on_change restarted it when the unit body drifted.
+  # provision splits that into five (migration §3.8). The unit body now
+  # lives in ./units/, so `plan` diffs it — os.systemd never did.
+  # os.systemd also created the unit directory; that is explicit now.
+  - name: "Ensure the user unit directory exists"
+    file:
+      path: ~/.config/systemd/user
+      state: dir
+      mode: '0755'
+    tags: [moongit, service]
+
+  - name: "Deploy the moongit user unit"
+    template:
+      src: ./units/moongit.service.j2
+      dest: ~/.config/systemd/user/moongit.service
+      mode: '0644'
+    register: moongit_unit
+    tags: [moongit, service]
+
+  - name: "Reload the user systemd manager"
+    cmd: [systemctl, --user, daemon-reload]
+    when: moongit_unit.changed
+    tags: [moongit, service]
+
+  - name: "Enable + start moongit"
+    service:
       name: moongit.service
       scope: user
-      unit:
-        Description: "moongit — private self-hosted git host"
-        After: network.target
-      service:
-        Type: simple
-        ExecStart: "{{ moongit_bin_path | expanduser }} serve"
-        # Two env files: the managed one (paths) and the secret one (basic
-        # auth creds). The leading `-` marks the secret file optional, so a
-        # fresh host with no creds yet still starts.
-        EnvironmentFile:
-          - "{{ moongit_env_file | expanduser }}"
-          - "-{{ moongit_secret_env_file | expanduser }}"
-        Restart: on-failure
-        RestartSec: "3"
-      install:
-        WantedBy: default.target
+      state: started
       enabled: true
-      started: true
-      reload_on_change: true
+    tags: [moongit, service]
+
+  # This is reload_on_change: restart when the UNIT body changed. Binary
+  # changes are handled by the stamp step below, EnvironmentFile content
+  # changes by the drift probe.
+  - name: "Restart moongit when its unit changed"
+    service:
+      name: moongit.service
+      scope: user
+      state: restarted
+    when: moongit_unit.changed
     tags: [moongit, service]
 
   - name: "Restart moongit if the managed env file drifted from the running process"
-    # The unit's reload_on_change only fires on UNIT changes, not on
+    # The unit-changed restart above only fires on UNIT changes, not on
     # EnvironmentFile content changes. So when a managed env value is
     # added/changed, the running process keeps the stale env until
     # restarted. Compare the live process env to the rendered file and
@@ -226,27 +238,29 @@ steps:
       systemctl --user restart moongit.service
       git -C {{ moongit_src_dir }} rev-parse HEAD > {{ moongit_bin_path }}.sha
       chmod 0644 {{ moongit_bin_path }}.sha
-    unless_command: |
+    unless: |
       test -x {{ moongit_bin_path }} && \
         [ "$(cat {{ moongit_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ moongit_src_dir }} rev-parse HEAD 2>/dev/null)" ]
     tags: [moongit, service]
 
   # ───────────────── READINESS ───────────────────────────────────────────────
 
+  # 30 attempts x 2s is the 60s timeout wait.http declared (migration
+  # §3.10). `retry` composes with `assert` (spec §6.7), which is how a
+  # readiness gate is written.
   - name: "Wait for moongit to become ready"
-    wait.http:
-      url: "http://127.0.0.1{{ props.moongit_addr }}/healthz"
-      status: [200]
-      timeout: 60s
-      poll_interval: 2s
+    assert:
+      command: curl -fsS -o /dev/null http://127.0.0.1{{ props.moongit_addr }}/healthz
+      msg: "moongit did not become ready"
+    retry: { attempts: 30, delay: 2s }
     tags: [moongit, verify]
 
   - name: "Note: mint an API token to use /api/*"
     # The daemon rejects all /api/* calls until a token exists. Minting is
     # interactive (the secret prints once), so it's not part of declarative
     # apply. git smart-HTTP and the web UI work without one.
-    log:
-      msg: "moongit up on {{ props.moongit_addr }}. If /api/* 401s, run: {{ moongit_bin_path }} token create <name>"
+    shell: echo "moongit up on {{ props.moongit_addr }}. If /api/* 401s, run:{{ ' ' }}{{ moongit_bin_path }} token create <name>"
+    changed_when: false
     tags: [moongit, verify]
 
   # ───────────────── AGENT IDENTITY (baseline token + shell env) ──────────────
@@ -258,21 +272,20 @@ steps:
     # name. CREATED ONCE and never clobbered — the plaintext is shown only at
     # mint time, so a re-render can't recover it. zsh sources this file.
     # To rotate: revoke the token, delete its row, remove this file, re-apply.
-    shell:
-      cmd: |
-        set -eu
-        umask 077
-        export MOONGIT_DATA_DIR="{{ moongit_data_dir | expanduser }}"
-        tok=$({{ moongit_bin_path }} token create "{{ computer_name }}" 2>/dev/null | grep -oE 'mgt_[0-9a-f]+' | head -1)
-        [ -n "$tok" ] || { echo "token mint failed (name '{{ computer_name }}' may already exist — revoke + delete the row, then retry)" >&2; exit 1; }
-        mkdir -p ~/.config/moongit
-        cat > "{{ moongit_agent_env_file | expanduser }}" <<EOF
-        export MOONGIT_SERVER=http://127.0.0.1{{ props.moongit_addr }}
-        export MOONGIT_DATA_DIR={{ moongit_data_dir | expanduser }}
-        export MOONGIT_TOKEN=$tok
-        EOF
-        chmod 0600 "{{ moongit_agent_env_file | expanduser }}"
-      creates: "{{ moongit_agent_env_file | expanduser }}"
+    shell: |
+      set -eu
+      umask 077
+      export MOONGIT_DATA_DIR="{{ moongit_data_dir | expanduser }}"
+      tok=$({{ moongit_bin_path }} token create "{{ computer_name }}" 2>/dev/null | grep -oE 'mgt_[0-9a-f]+' | head -1)
+      [ -n "$tok" ] || { echo "token mint failed (name '{{ computer_name }}' may already exist — revoke + delete the row, then retry)" >&2; exit 1; }
+      mkdir -p ~/.config/moongit
+      cat > "{{ moongit_agent_env_file | expanduser }}" <<EOF
+      export MOONGIT_SERVER=http://127.0.0.1{{ props.moongit_addr }}
+      export MOONGIT_DATA_DIR={{ moongit_data_dir | expanduser }}
+      export MOONGIT_TOKEN=$tok
+      EOF
+      chmod 0600 "{{ moongit_agent_env_file | expanduser }}"
+    creates: "{{ moongit_agent_env_file | expanduser }}"
     tags: [moongit, token]
 
   # ───────────────── CI CONTAINER IMAGES (sha-gated on mooncake + repo) ───────
@@ -286,7 +299,7 @@ steps:
   # tracks both. Builds moongit-ci:latest + moongit-ci-dev:latest.
   #
   # Force a rebuild:
-  #   rm {{ moongit_ci_image_sha }} && mooncake apply -c ./main_pc.yml -t ci-images
+  #   rm {{ moongit_ci_image_sha }} && provision apply ./main_pc.yml --tags ci-images
   - name: "Build moongit CI container images (refresh when mooncake or the repo move)"
     shell: |
       set -euo pipefail
@@ -298,7 +311,7 @@ steps:
       rm -f "$vars"
       mkdir -p "$(dirname {{ moongit_ci_image_sha }})"
       { git -C {{ moongit_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; } > {{ moongit_ci_image_sha }}
-    unless_command: |
+    unless: |
       docker image inspect moongit-ci:latest >/dev/null 2>&1 && \
       docker image inspect moongit-ci-dev:latest >/dev/null 2>&1 && \
       [ "$(cat {{ moongit_ci_image_sha }} 2>/dev/null)" = "$({ git -C {{ moongit_src_dir }} rev-parse HEAD; git -C {{ mooncake_src_dir }} rev-parse HEAD; })" ]

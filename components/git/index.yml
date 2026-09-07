@@ -3,24 +3,22 @@
   pkg:
     name: git
     state: present
-  as_user: root
+  sudo: true
   when: os == 'linux'
   tags: [git, install]
 
 - name: Deploy .gitconfig
-  file.template:
+  template:
     src: ./.gitconfig.j2
     dest: ~/.gitconfig
   tags: [git, config]
 
 - name: Verify git installation
   assert:
-    command:
-      cmd: which git
+    command: which git
   tags: [git, verify]
 
 - name: Verify git config
   assert:
-    command:
-      cmd: git config --get user.name
+    command: git config --get user.name
   tags: [git, verify]

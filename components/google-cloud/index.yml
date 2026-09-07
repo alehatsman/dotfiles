@@ -1,29 +1,43 @@
 ---
 # Google Cloud SDK install.
 #
-# Linux: pkg.repo apt driver handles keyring + DEB822 source + apt-get
-# update atomically.
+# Linux: keyring + DEB822 source + apt-get update, spelled out — mooncake's
+# pkg.repo apt driver did the three in one step (migration §3.11). The key
+# was never fingerprint-pinned; that posture is unchanged.
 #
-# macOS: brew cask (proposal-20 shipped in mooncake).
+# macOS: brew cask.
 
-- name: Register Google Cloud apt repo
-  pkg.repo:
-    name: google-cloud-sdk
-    state: present
-    apt:
-      uri: https://packages.cloud.google.com/apt
-      suites: [cloud-sdk]
-      components: [main]
-      gpg_key_url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
-      gpg_check: false
-  as_user: root
+- name: Fetch the Google Cloud apt keyring
+  shell: curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/google-cloud.gpg
+  creates: /etc/apt/keyrings/google-cloud.gpg
+  sudo: true
   when: os == 'linux'
+
+- name: Register the Google Cloud apt source
+  file:
+    path: /etc/apt/sources.list.d/google-cloud-sdk.sources
+    state: file
+    content: |
+      Types: deb
+      URIs: https://packages.cloud.google.com/apt
+      Suites: cloud-sdk
+      Components: main
+      Signed-By: /etc/apt/keyrings/google-cloud.gpg
+    mode: '0644'
+  sudo: true
+  register: google_cloud_repo
+  when: os == 'linux'
+
+- name: Refresh apt after the Google Cloud source changed
+  cmd: [apt-get, update]
+  when: os == 'linux' and google_cloud_repo.changed
+  sudo: true
 
 - name: Install google-cloud-cli (apt)
   pkg:
     name: google-cloud-cli
     state: present
-  as_user: root
+  sudo: true
   when: os == 'linux'
 
 - name: Install google-cloud-sdk (brew cask, macOS)

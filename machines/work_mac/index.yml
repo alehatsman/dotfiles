@@ -8,18 +8,17 @@
 # never blocked — only a hostname already claimed by another machine trips it.
 - name: Refuse to apply work_mac's plan on a different known machine
   assert:
-    command:
-      cmd: |
-        h="{{ hostname }}"
-        case "$h" in
-          mainpc|minipc|mac|x1)
-            echo "refusing: hostname is '$h', not work_mac — wrong machine?" >&2
-            exit 1 ;;
-        esac
+    command: |
+      h="{{ hostname }}"
+      case "$h" in
+        mainpc|minipc|mac|x1)
+          echo "refusing: hostname is '$h', not work_mac — wrong machine?" >&2
+          exit 1 ;;
+      esac
   tags: [safety]
 
-- vars.load: ../../shared/variables.yml
-- vars.load: ./vars.yml
+- vars_file: ../../shared/variables.yml
+- vars_file: ./vars.yml
 
 - vars:
     is_wsl: false
@@ -35,15 +34,12 @@
     scutil --set ComputerName "{{ computer_name }}"
     scutil --set LocalHostName "{{ computer_name }}"
     scutil --set HostName "{{ computer_name }}"
-  as_user: root
+  sudo: true
   tags: [macos]
 
 # Palette must come first — every later component's templates read
 # palette.* / editor.* from the variant selected by `palette_variant`.
-- name: Use pallete component
-  use: ../../components/palette/index.yml
-  props:
-    variant: "{{ palette_variant }}"
+- import: ../../components/palette/index.yml
   tags: [core, palette]
 
 - import: ../../components/claude/index.yml

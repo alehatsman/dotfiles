@@ -1,0 +1,10 @@
+[Unit]
+Description=Cap Intel iGPU max frequency for thermals
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/intel-gt-freq-cap
+
+[Install]
+WantedBy=multi-user.target

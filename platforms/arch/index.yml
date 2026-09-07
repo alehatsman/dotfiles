@@ -1,9 +1,14 @@
 ---
-- name: Update pacman mirrors and upgrade system
+# Was `upgrade: true` — a full `pacman -Syu` on every apply. Dropped for
+# the same reason as the apt side (migration §2, decided 2026-09-08): a
+# distro upgrade is a choice, not declared state. `just upgrade` when you
+# mean it. The database refresh stays, because every pkg step below
+# installs against it and nothing else refreshes it.
+- name: Refresh the pacman package database
   pkg:
     manager: pacman
-    upgrade: true
-  as_user: root
+    update_cache: true
+  sudo: true
   timeout: 15m
   retry:
     attempts: 3
@@ -14,20 +19,12 @@
   # Stock pacman.conf ships these two lines commented:
   #   #[multilib]
   #   #Include = /etc/pacman.d/mirrorlist
-  # text.replace uncomments both atomically. Idempotent: a second run
-  # finds neither commented line and (with allow_no_match) is a no-op.
-  text.replace:
-    path: /etc/pacman.conf
-    pattern: |
-      #[multilib]
-      #Include = /etc/pacman.d/mirrorlist
-    replace: |
-      [multilib]
-      Include = /etc/pacman.d/mirrorlist
-    allow_no_match: true
-    flags:
-      regex: false
-  as_user: root
+  # sed uncomments the header, then the Include line immediately after
+  # it. `unless` makes the second run a no-op — the same guarantee
+  # text.replace got from allow_no_match, stated explicitly.
+  shell: sed -i 's/^#\[multilib\]/[multilib]/; /^\[multilib\]/{n;s/^#Include/Include/}' /etc/pacman.conf
+  unless: grep -qx '\[multilib\]' /etc/pacman.conf
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Install base-devel and git (refreshes pacman db too)
@@ -40,7 +37,7 @@
     names:
       - base-devel
       - git
-  as_user: root
+  sudo: true
   timeout: 5m
   tags: [arch, system, packages]
 
@@ -56,7 +53,7 @@
     mkdir -p "$builddir"
     git clone https://aur.archlinux.org/yay.git "$builddir/yay"
     cd "$builddir/yay" && makepkg -s --noconfirm
-  unless_command: pacman -Qi yay
+  unless: pacman -Qi yay
   timeout: 10m
   tags: [arch, system, packages]
 
@@ -68,8 +65,8 @@
     builddir="/home/{{ username }}/.cache/yay-build"
     pacman -U --noconfirm "$builddir"/yay/yay-*.pkg.tar.zst
     rm -rf "$builddir"
-  unless_command: pacman -Qi yay
-  as_user: root
+  unless: pacman -Qi yay
+  sudo: true
   timeout: 5m
   tags: [arch, system, packages]
 
@@ -77,60 +74,59 @@
   tags: [arch, system, packages]
 
 - name: Enable NetworkManager
-  os.service:
+  service:
     name: NetworkManager
     state: started
     enabled: true
-  as_user: root
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Enable TLP for battery management
-  os.service:
+  service:
     name: tlp
     state: started
     enabled: true
-  as_user: root
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Enable bluetooth
-  os.service:
+  service:
     name: bluetooth
     state: started
     enabled: true
-  as_user: root
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Enable SSH daemon
-  os.service:
+  service:
     name: sshd
     state: started
     enabled: true
-  as_user: root
+  sudo: true
   tags: [arch, system, packages]
 
 # `tailscale up` (login/authkey) stays manual — that's a secret, not
 # something to script into version control.
 - name: Enable tailscaled
-  os.service:
+  service:
     name: tailscaled
     state: started
     enabled: true
-  as_user: root
+  sudo: true
   tags: [arch, tailscale]
 
 - name: Enable firmware update timer
-  os.service:
+  service:
     name: fwupd-refresh.timer
     state: started
     enabled: true
-  as_user: root
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Set default shell to zsh
-  os.user:
-    name: "{{ username }}"
-    shell: /usr/bin/zsh
-  as_user: root
+  shell: chsh -s /usr/bin/zsh "{{ username }}"
+  unless: 'test "$(getent passwd {{ username }} | cut -d: -f7)" = /usr/bin/zsh'
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Make Intel RAPL energy_uj readable by non-root (waybar power module)
@@ -143,7 +139,7 @@
     for f in /sys/class/powercap/intel-rapl:*/energy_uj; do
       [ -e "$f" ] && chmod 0444 "$f" || true
     done
-  as_user: root
+  sudo: true
   tags: [arch, system, packages, rapl]
 
 # CapsLock → Ctrl remap, decomposed from a single shell block into
@@ -152,43 +148,48 @@
 # with no idempotency surface to check against.
 
 - name: Create kbd keymaps directory
-  file.write:
+  file:
     path: /usr/local/share/kbd/keymaps
-    state: directory
-  as_user: root
+    state: dir
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Deploy us-caps-ctrl keymap (CapsLock acts as Control)
-  file.write:
+  file:
     path: /usr/local/share/kbd/keymaps/us-caps-ctrl.map
     state: file
     content: |
       include "/usr/share/kbd/keymaps/i386/qwerty/us.map.gz"
       keycode 58 = Control
     mode: '0644'
-  as_user: root
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Set KEYMAP in /etc/vconsole.conf
-  # text.line replaces an existing KEYMAP= line (anchored by regexp)
-  # or appends one if absent. Idempotent on both branches of the
-  # pre-fix shell.
-  text.line:
-    path: /etc/vconsole.conf
-    line: KEYMAP=/usr/local/share/kbd/keymaps/us-caps-ctrl.map
-    regexp: '^KEYMAP='
-    state: present
-  as_user: root
+  # Replaces an existing KEYMAP= line or appends one if absent — the
+  # same two branches text.line had. `unless` short-circuits both once
+  # the desired line is in place.
+  shell: |
+    set -euo pipefail
+    line='KEYMAP=/usr/local/share/kbd/keymaps/us-caps-ctrl.map'
+    touch /etc/vconsole.conf
+    if grep -q '^KEYMAP=' /etc/vconsole.conf; then
+      sed -i "s|^KEYMAP=.*|$line|" /etc/vconsole.conf
+    else
+      echo "$line" >> /etc/vconsole.conf
+    fi
+  unless: grep -qxF 'KEYMAP=/usr/local/share/kbd/keymaps/us-caps-ctrl.map' /etc/vconsole.conf
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Deploy udev rule keeping CapsLock LED off
-  file.write:
+  file:
     path: /etc/udev/rules.d/99-capslock-led.rules
     state: file
     content: |
       ACTION=="add", SUBSYSTEM=="leds", KERNEL=="input*::capslock", ATTR{brightness}="0"
     mode: '0644'
-  as_user: root
+  sudo: true
   tags: [arch, system, packages]
 
 - name: Apply CapsLock remap to running session (best-effort)
@@ -200,5 +201,5 @@
     localectl set-x11-keymap us "" "" ctrl:nocaps
     loadkeys /usr/local/share/kbd/keymaps/us-caps-ctrl.map
     echo 0 > /sys/class/leds/input3::capslock/brightness 2>/dev/null || true
-  as_user: root
+  sudo: true
   tags: [arch, system, packages]

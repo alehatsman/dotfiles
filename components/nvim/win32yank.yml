@@ -1,13 +1,12 @@
 ---
 - name: Ensure ~/bin exists
-  file.write:
+  file:
     path: ~/bin
-    state: directory
+    state: dir
 
 - name: Download win32yank zip
-  file.download:
-    url: https://github.com/equalsraf/win32yank/releases/download/v0.0.4/win32yank-x64.zip
-    dest: /tmp/win32yank.zip
+  shell: curl -fsSL https://github.com/equalsraf/win32yank/releases/download/v0.0.4/win32yank-x64.zip -o /tmp/win32yank.zip
+  creates: /tmp/win32yank.zip
 
 # The zip ships a LICENSE alongside win32yank.exe and zip mode bits are
 # unreliable for the executable bit, so we extract just the binary and

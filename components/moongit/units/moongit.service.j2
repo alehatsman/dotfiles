@@ -1,0 +1,17 @@
+[Unit]
+Description=moongit — private self-hosted git host
+After=network.target
+
+[Service]
+Type=simple
+ExecStart={{ moongit_bin_path | expanduser }} serve
+# Two env files: the managed one (paths) and the secret one (basic auth
+# creds). The leading `-` marks the secret file optional, so a fresh host
+# with no creds yet still starts.
+EnvironmentFile={{ moongit_env_file | expanduser }}
+EnvironmentFile=-{{ moongit_secret_env_file | expanduser }}
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

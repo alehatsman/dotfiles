@@ -10,7 +10,7 @@ Applies to any macOS box with `fleet_peer_enabled: "true"` in
 ## What the apply does for you
 
 ```
-mooncake apply -c ./mac.yml -K -t fleet-peer
+provision apply ./mac.yml --ask-sudo-pass --tags fleet-peer
 ```
 
 1. `~/.ssh` at `0700`, `~/.ssh/authorized_keys` at `0600`, rendered from

@@ -6,7 +6,7 @@ steps:
     pkg:
       name: zsh
       state: present
-    as_user: root
+    sudo: true
     when: os == "linux"
     tags: [zsh, install]
 
@@ -23,9 +23,9 @@ steps:
     tags: [zsh, install]
 
   - name: Make sure zsh config directory is present
-    file.write:
+    file:
       path: ~/.config/zsh
-      state: directory
+      state: dir
     tags: [zsh, config]
 
   # Per-distro, not per-OS. The three Linux boxes do not share fzf's install
@@ -36,40 +36,38 @@ steps:
   # ^P and ^@ bound to widgets that were never defined (dotfiles#72).
   # apt_available / pacman_available are the same facts the languages and
   # usql components already select on.
-  - vars.load: ./vars/ubuntu.yml
+  - vars_file: ./vars/ubuntu.yml
     when: apt_available
-  - vars.load: ./vars/arch.yml
+  - vars_file: ./vars/arch.yml
     when: pacman_available
 
-  - vars.load: ./vars/macos_{{arch}}.yml
+  - vars_file: ./vars/macos_{{arch}}.yml
     when: os == "darwin"
 
   - name: Deploy .zshenv
     # Sourced by ALL zsh (incl. non-interactive scripts/cron/agent shells) —
     # holds env that must apply regardless of shell type (cargo). See
     # templates/.zshenv.j2 (dotfiles #33).
-    file.template:
+    template:
       src: ./templates/.zshenv.j2
       dest: ~/.zshenv
     tags: [zsh, config]
 
   - name: Deploy .zshrc
-    file.template:
+    template:
       src: ./templates/.zshrc.j2
       dest: ~/.zshrc
     tags: [zsh, config]
 
   - name: Deploy .ignore
-    file.template:
+    template:
       src: ./templates/.ignore.j2
       dest: ~/.ignore
     tags: [zsh, config]
 
   - name: Clone zplug
-    git.clone:
-      repo: https://github.com/zplug/zplug.git
-      dest: ~/.zplug
-      depth: 1
+    shell: git clone --depth 1 https://github.com/zplug/zplug.git "$HOME/.zplug"
+    creates: ~/.zplug
     timeout: 5m
     retry:
       attempts: 3
@@ -85,8 +83,7 @@ steps:
   # never consult the login shell, so nothing else notices. dotfiles#6.
   - name: Verify the configured login shell exists before adopting it
     assert:
-      command:
-        cmd: test -x "{{ zsh_shell_path }}"
+      command: test -x "{{ zsh_shell_path }}"
     tags: [zsh, shell, verify]
 
   # chsh refuses a shell missing from /etc/shells, and a Homebrew zsh
@@ -97,15 +94,24 @@ steps:
     shell: |
       set -euo pipefail
       printf '%s\n' "{{ zsh_shell_path }}" >> /etc/shells
-    as_user: root
-    unless_command: grep -qxF "{{ zsh_shell_path }}" /etc/shells
+    sudo: true
+    unless: grep -qxF "{{ zsh_shell_path }}" /etc/shells
     tags: [zsh, shell]
 
-  - name: Set zsh as default shell
-    os.user:
-      name: "{{ username }}"
-      shell: "{{ zsh_shell_path }}"
-    as_user: root
+  # macOS keeps the login shell in Directory Services, not /etc/passwd,
+  # so the idempotence guard differs by platform (migration §3.5).
+  - name: Set zsh as default shell (linux)
+    shell: chsh -s "{{ zsh_shell_path }}" "{{ username }}"
+    unless: 'test "$(getent passwd {{ username }} | cut -d: -f7)" = "{{ zsh_shell_path }}"'
+    sudo: true
+    when: os == 'linux'
+    tags: [zsh, shell]
+
+  - name: Set zsh as default shell (macos)
+    shell: chsh -s "{{ zsh_shell_path }}" "{{ username }}"
+    unless: "test \"$(dscl . -read /Users/{{ username }} UserShell | awk '{print $2}')\" = \"{{ zsh_shell_path }}\""
+    sudo: true
+    when: os == 'darwin'
     tags: [zsh, shell]
 
   # `which zsh` would pass here off PATH even when the account's login
@@ -113,25 +119,21 @@ steps:
   # what was actually set instead.
   - name: Verify zsh is the account's login shell
     assert:
-      command:
-        cmd: test "$(dscl . -read /Users/{{ username }} UserShell | awk '{print $2}')" = "{{ zsh_shell_path }}"
+      command: test "$(dscl . -read /Users/{{ username }} UserShell | awk '{print $2}')" = "{{ zsh_shell_path }}"
     when: os == 'darwin'
     tags: [zsh, verify]
 
   - name: Verify zsh installation
     assert:
-      command:
-        cmd: which zsh
+      command: which zsh
     tags: [zsh, verify]
 
   - name: Verify zsh config
     assert:
-      command:
-        cmd: test -f ~/.zshrc
+      command: test -f ~/.zshrc
     tags: [zsh, verify]
 
   - name: Verify zplug installation
     assert:
-      command:
-        cmd: test -d ~/.zplug
+      command: test -d ~/.zplug
     tags: [zsh, verify]

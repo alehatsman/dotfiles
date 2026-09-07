@@ -161,7 +161,7 @@
       - ttf-jetbrains-mono-nerd
       - noto-fonts
       - noto-fonts-emoji
-  as_user: root
+  sudo: true
   timeout: 20m
   retry:
     attempts: 3

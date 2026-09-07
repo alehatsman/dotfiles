@@ -6,7 +6,7 @@ computer_name: x1
 
 # ─── Thermal tuning (Ultra 7 255U, Arrow Lake-U, Xe-LPG iGPU) ───────────────
 # Re-apply any change with:
-#   mooncake apply -c ./x1.yml -K -t thermal
+#   provision apply ./x1.yml --ask-sudo-pass --tags thermal
 
 # ACPI hint to firmware/EC — drives fan curve + firmware power envelope.
 #   Allowed: low-power | balanced | performance

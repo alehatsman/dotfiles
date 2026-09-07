@@ -1,11 +1,8 @@
 ---
-- name: Upgrade all installed apt packages
-  pkg.upgrade: {}
-  as_user: root
-  timeout: 15m
-  retry:
-    attempts: 3
-    delay: 10s
+# The blanket `apt-get upgrade` that used to run here is gone
+# (migration §2, decided 2026-09-08): a full distro upgrade is a choice,
+# not declared state, and it made every apply slow and irreproducible.
+# Upgrade deliberately instead.
 
 - name: Install bootstrap packages (needed before add-apt-repository / pkg.repo)
   pkg:
@@ -16,7 +13,7 @@
       - curl
       - ca-certificates
       - apt-transport-https
-  as_user: root
+  sudo: true
   timeout: 10m
   retry:
     attempts: 3
@@ -31,7 +28,7 @@
     set -euo pipefail
     add-apt-repository ppa:neovim-ppa/unstable -y
     apt-get update
-  as_user: root
+  sudo: true
   timeout: 5m
   retry:
     attempts: 2
@@ -81,7 +78,7 @@
       - zstd
       - bat
       - fzf
-  as_user: root
+  sudo: true
   timeout: 20m
   retry:
     attempts: 3
@@ -94,4 +91,4 @@
     set -euo pipefail
     mkdir -p ~/.local/bin
     ln -sf /usr/bin/batcat ~/.local/bin/bat
-  unless_command: "command -v bat"
+  unless: "command -v bat"

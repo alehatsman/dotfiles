@@ -1,30 +1,41 @@
 ---
-# HashiCorp APT repo + terraform install via mooncake's pkg.repo apt
-# driver. The action handles keyring fetch, DEB822 sources, and
-# apt-get update atomically — replaces the old keyring shell + file.write
-# pair.
+# HashiCorp APT repo + terraform install. mooncake's pkg.repo apt driver
+# did keyring fetch, DEB822 source and apt-get update in one step;
+# provision spells the three out (migration §3.11).
 #
-# gpg_check: false matches the prior security posture (the curl-based
-# shell did not pin the fingerprint either). Pin
-# `gpg_key_fingerprint: 798AEC654E5C15428C8E42EEAA16FCBCA621E701`
-# and flip `gpg_check: true` to upgrade key trust.
+# The key was never fingerprint-pinned here (gpg_check was false), and
+# this rewrite does not change that. To upgrade key trust, verify against
+# 798AEC654E5C15428C8E42EEAA16FCBCA621E701 in the fetch step.
 
-- name: Register HashiCorp apt repo
-  pkg.repo:
-    name: hashicorp
-    state: present
-    apt:
-      uri: https://apt.releases.hashicorp.com
-      suites: ["{{ ubuntu_codename | default:'jammy' }}"]
-      components: [main]
-      gpg_key_url: https://apt.releases.hashicorp.com/gpg
-      gpg_check: false
-  as_user: root
+- name: Fetch the HashiCorp apt keyring
+  shell: curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /etc/apt/keyrings/hashicorp.gpg
+  creates: /etc/apt/keyrings/hashicorp.gpg
+  sudo: true
   when: os == 'linux'
+
+- name: Register the HashiCorp apt source
+  file:
+    path: /etc/apt/sources.list.d/hashicorp.sources
+    state: file
+    content: |
+      Types: deb
+      URIs: https://apt.releases.hashicorp.com
+      Suites: {{ ubuntu_codename | default('jammy') }}
+      Components: main
+      Signed-By: /etc/apt/keyrings/hashicorp.gpg
+    mode: '0644'
+  sudo: true
+  register: hashicorp_repo
+  when: os == 'linux'
+
+- name: Refresh apt after the HashiCorp source changed
+  cmd: [apt-get, update]
+  when: os == 'linux' and hashicorp_repo.changed
+  sudo: true
 
 - name: Install terraform
   pkg:
     name: terraform
     state: present
-  as_user: root
+  sudo: true
   when: os == 'linux'

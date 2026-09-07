@@ -1,8 +1,8 @@
 # dotfiles
 
 Personal machine config. Declarative. Reproducible. One source of truth.
-**Deploy only via [mooncake](components/mooncake).** Never `cp`/`ln`/hand-edit
-managed destinations.
+**Deploy only via [provision](https://github.com/alehatsman/provision).** Never
+`cp`/`ln`/hand-edit managed destinations.
 
 ## Bootstrap a fresh machine
 
@@ -12,26 +12,23 @@ tells you when.
 
 ```sh
 git clone https://github.com/alehatsman/dotfiles ~/dotfiles && cd ~/dotfiles
-sh scripts/install_mooncake.sh          # → ~/.local/bin/mooncake, no sudo
-export PATH="$HOME/.local/bin:$PATH"    # until components/zsh lands
-mooncake plan -c ./<machine>.yml        # preview; works before anything exists
-mooncake apply -c ./<machine>.yml -K --keep-going
+export PATH="$HOME/.local/bin:$PATH"      # until components/zsh lands
+provision plan ./<machine>.yml            # preview; works before anything exists
+provision apply ./<machine>.yml --ask-sudo-pass
 ```
 
-`--keep-going` is the flag that matters on a first run: it finishes every
-step it can and lists the failures at the end (still exiting non-zero)
-instead of stranding the other 160 steps behind one package that went
-away upstream. Re-run after fixing; every step is idempotent.
+Every step is idempotent — re-run after fixing anything that fails.
 
-`install_mooncake.sh` detects OS/arch, and *verifies the binary can parse
-this repo* before accepting it — releases lag `main` by months, so a
-version check isn't enough. When the release is too old it builds from
-source, fetching a Go toolchain into `~/.cache/mooncake-bootstrap` if the
-box has none. Set `VERSION=` to pin a release, `INSTALL_DIR=` to move it.
+`provision validate ./<machine>.yml` is the cheap check: it parses every
+imported file and renders every template without touching the machine, and
+every error it reports carries `file:line:col`. `provision plan
+--plan-no-probe` does the same and prints the step list. Both run on any
+host for any machine, so a mac can check main_pc's config.
 
 Per-platform notes:
 
-- **macOS** — `-K` is required (Rosetta, `scutil`, `defaults` run as root).
+- **macOS** — `--ask-sudo-pass` is required (Rosetta, `scutil`, `defaults`
+  run as root).
   Homebrew installs itself during the run. First apply is ~30 min plus
   cask downloads.
 - **Arch** — `platforms/arch/bootstrap.sh` does the clone + install +
@@ -42,14 +39,17 @@ Per-platform notes:
 ## Deploy
 
 ```sh
-mooncake task                 # list tasks
-mooncake task <machine>       # apply  (x1|main_pc|mini_pc|mac|work_mac)
-mooncake task <machine> -p    # plan, no changes
-mooncake task <machine> -K    # apply, prompt for sudo (x1, mac, work_mac)
-mooncake task backup          # snapshot rc files → ~/.dotfiles-backup
+just                       # list recipes
+just <machine>             # apply  (x1|main_pc|mini_pc|mac|work_mac)
+just plan <machine>        # plan, no changes
+just ci                    # parse + render all five plans, no system reads
+just backup                # snapshot rc files → ~/.dotfiles-backup
+just upgrade               # deliberate full system upgrade (never part of apply)
 ```
 
-Direct: `mooncake apply -c ./<machine>.yml` (`plan` to preview).
+Direct: `provision apply ./<machine>.yml` (`plan` to preview). Add
+`--ask-sudo-pass` on x1, mac and work_mac; main_pc and mini_pc have
+NOPASSWD sudo.
 
 ## Layout
 
@@ -61,7 +61,7 @@ platforms/<p>/     OS-specific: arch, macos, windows
 shared/            variables.yml, bootstrap.yml
 scripts/           install_mooncake.sh, test-docker.sh
 docs/              nvim, tmux, keybindings, windows-ssh-setup
-tasks.yml          dev surface for `mooncake task`
+justfile           dev surface (`just`); replaces the old tasks.yml
 ```
 
 ## Machines
@@ -88,7 +88,7 @@ into place. Add a component → reference it from a machine's `index.yml`.
 
 ## Rules of engagement
 
-- All config flows through dotfiles + mooncake. No drift.
+- All config flows through dotfiles + provision. No drift.
 - Templates are Jinja2; pass literal `{{ }}` via `{% verbatim %}`.
 - Track work as moongit issues (`mgit`): claim before coding, close when
   merged. Worktrees for non-trivial changes. Never auto-push. See

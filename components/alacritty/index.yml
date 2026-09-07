@@ -47,7 +47,7 @@
     mkdir -p "$HOME/.terminfo/61"
     cp "/Applications/Alacritty.app/Contents/Resources/61/alacritty" \
        "$HOME/.terminfo/61/alacritty"
-  unless_command: |
+  unless: |
     test "$(defaults read /Applications/Alacritty.app/Contents/Info CFBundleShortVersionString 2>/dev/null)" = "{{ alacritty_version }}" \
       && test -f "$HOME/.terminfo/61/alacritty"
   when: os == 'darwin'
@@ -58,13 +58,13 @@
   tags: [alacritty, install]
 
 - name: Create alacritty config directory
-  file.write:
+  file:
     path: ~/.config/alacritty
-    state: directory
+    state: dir
   tags: [alacritty, config]
 
 - name: Deploy alacritty config
-  file.template:
+  template:
     src: ./alacritty.toml
     dest: ~/.config/alacritty/alacritty.toml
   tags: [alacritty, config]

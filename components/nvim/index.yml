@@ -10,42 +10,42 @@ props:
     description: Install win32yank for clipboard integration (WSL2 only).
 
 steps:
-  - vars.load: ./variables.yml
+  - vars_file: ./variables.yml
 
   - name: Make sure undo dir is present
-    file.write:
+    file:
       path: "{{ config_path }}/undodir"
-      state: directory
+      state: dir
     tags: [nvim, setup]
 
   - name: Create directory after
-    file.write:
+    file:
       path: "{{ config_path }}/after"
-      state: directory
+      state: dir
     tags: [nvim, setup]
 
   - name: Create directory ftplugin
-    file.write:
+    file:
       path: "{{ config_path }}/ftplugin"
-      state: directory
+      state: dir
     tags: [nvim, setup]
 
   - name: Create directory lua
-    file.write:
+    file:
       path: "{{ config_path }}/lua"
-      state: directory
+      state: dir
     tags: [nvim, setup]
 
   - name: Create directory lua/claude_nvim
-    file.write:
+    file:
       path: "{{ config_path }}/lua/claude_nvim"
-      state: directory
+      state: dir
     tags: [nvim, setup]
 
   - name: Create directory colors
-    file.write:
+    file:
       path: "{{ config_path }}/colors"
-      state: directory
+      state: dir
     tags: [nvim, setup]
 
   # Vendored Monokai colorscheme — generated from the palette component so
@@ -53,17 +53,20 @@ steps:
   # (alacritty/waybar/wofi/dunst/tmux/zsh fzf). Edit components/palette/vars/
   # to change colors; never edit the generated file under ~/.config/nvim/colors/.
   - name: Deploy vendored Monokai colorscheme (palette-driven)
-    file.template:
+    template:
       src: ../palette/templates/monokai.vim.j2
       dest: "{{ config_path }}/colors/monokai.vim"
     tags: [nvim, colorscheme, palette]
 
-  - name: Deploy config file {{ item.Path }}
-    file.template:
-      src: "{{ item.Src }}"
-      dest: "{{ config_path }}/{{ item.Path }}"
-    for_each_file: "./templates"
-    when: not item.IsDir
+  # Directory mode (spec §6.4): renders the whole tree in one step —
+  # 14 files across 3 levels, one output line. Use `plan` for per-file
+  # diffs. NOT a sync: deleting a template here leaves the rendered file
+  # behind on the machine.
+  - name: Deploy nvim config tree
+    template:
+      src: ./templates/
+      dest: "{{ config_path }}/"
+      mode: '0644'
     tags: [nvim, config]
 
   - import: ./win32yank.yml
@@ -83,7 +86,7 @@ steps:
       gunzip -c "$tmp.gz" > "$HOME/.local/bin/tree-sitter"
       chmod +x "$HOME/.local/bin/tree-sitter"
       rm -f "$tmp" "$tmp.gz"
-    unless_command: command -v tree-sitter >/dev/null 2>&1 || test -x "$HOME/.local/bin/tree-sitter"
+    unless: command -v tree-sitter >/dev/null 2>&1 || test -x "$HOME/.local/bin/tree-sitter"
     when: os == 'linux'
     tags: [nvim, treesitter]
 
@@ -106,7 +109,7 @@ steps:
       tar -xzf "$tmp/zk.tar.gz" -C "$tmp"
       install -m 0755 "$tmp/zk" "$HOME/.local/bin/zk"
       rm -rf "$tmp"
-    unless_command: command -v zk >/dev/null 2>&1 || test -x "$HOME/.local/bin/zk"
+    unless: command -v zk >/dev/null 2>&1 || test -x "$HOME/.local/bin/zk"
     when: os == 'linux'
     tags: [nvim, zk]
 
@@ -120,33 +123,33 @@ steps:
   # Notebook root + managed config. Presence of .zk/config.toml is what
   # marks the directory as a zk notebook, so no `zk init` is needed.
   - name: Create zk notebook directory
-    file.write:
+    file:
       path: "{{ props.notes_dir }}/.zk"
-      state: directory
+      state: dir
     tags: [nvim, zk]
 
   - name: Deploy managed zk config
-    file.template:
+    template:
       src: ./zk_config.toml.j2
       dest: "{{ props.notes_dir }}/.zk/config.toml"
     tags: [nvim, zk]
 
   - name: Create zk templates directory
-    file.write:
+    file:
       path: "{{ props.notes_dir }}/.zk/templates"
-      state: directory
+      state: dir
     tags: [nvim, zk]
 
   # zk refuses to create a note in a missing directory, so the daily-note
   # group path (config.toml [group.daily]) must exist up front.
   - name: Create zk daily journal directory
-    file.write:
+    file:
       path: "{{ props.notes_dir }}/journal/daily"
-      state: directory
+      state: dir
     tags: [nvim, zk]
 
   - name: Deploy default note template
-    file.template:
+    template:
       src: ./zk_template_default.md.j2
       dest: "{{ props.notes_dir }}/.zk/templates/default.md"
     tags: [nvim, zk]
@@ -182,18 +185,15 @@ steps:
 
   - name: Verify nvim installation
     assert:
-      command:
-        cmd: which nvim
+      command: which nvim
     tags: [nvim, verify]
 
   - name: Verify nvim config
     assert:
-      command:
-        cmd: test -f ~/.config/nvim/init.lua
+      command: test -f ~/.config/nvim/init.lua
     tags: [nvim, verify]
 
   - name: Verify lazy.nvim installation
     assert:
-      command:
-        cmd: test -d ~/.local/share/nvim/lazy/lazy.nvim
+      command: test -d ~/.local/share/nvim/lazy/lazy.nvim
     tags: [nvim, verify]
