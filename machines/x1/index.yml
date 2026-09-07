@@ -66,11 +66,8 @@
   tags: [dev, clojure, config]
 
 - name: Use zsh component
-  # dex's DEX_* env now flows through ~/.config/dex/dex.env (components/dex);
-  # this box doesn't use the proxy, so no zsh dex props are needed.
   use: ../../components/zsh/index.yml
   tags: [core, shell]
-
 
 - import: ../../components/tmux/index.yml
   tags: [tools, tmux]
@@ -80,10 +77,6 @@
   props:
     use_win32yank: "false"
   tags: [editor, nvim]
-
-# Semantic-search MCP helper. Disabled — uncomment to re-enable.
-# - import: ../../components/dex/index.yml
-#   tags: [tools, dex]
 
 # Desktop — Hyprland install + config (component is now self-contained).
 - import: ../../components/hyprland/index.yml

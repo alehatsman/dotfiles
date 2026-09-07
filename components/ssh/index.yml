@@ -2,14 +2,13 @@
 # ssh — the machine's own identity key.
 #
 # Imported from shared/bootstrap.yml, so every machine gets this before
-# anything that talks to GitHub. It matters on a fresh box: the dex
-# component clones git@github.com:alehatsman/dex.git, and moongit remotes
-# are SSH too, so a machine with no key gets a confusing permission-denied
-# deep inside an apply rather than at the point the key was missing.
+# anything that talks to GitHub. It matters on a fresh box: moongit
+# remotes are SSH, so a machine with no key gets a confusing
+# permission-denied deep inside an apply rather than at the point the key
+# was missing.
 #
-# Passphrase-less by default, deliberately: dex-tunnel (systemd/launchd)
-# and the fleet agentd open SSH connections non-interactively, with no
-# agent and no TTY to prompt on. Set ssh_key_passphrase in a machine's
+# Passphrase-less by default, deliberately: the fleet agentd opens SSH
+# connections non-interactively, with no agent and no TTY to prompt on. Set ssh_key_passphrase in a machine's
 # vars.yml if a given host should differ — you then own keeping an agent
 # loaded for it.
 #
@@ -34,7 +33,7 @@
     ssh-keygen -t ed25519 -C "{{ EMAIL }}" -f "$key" -N "{{ ssh_key_passphrase }}"
     echo
     echo "────────────────────────────────────────────────────────────────"
-    echo "A NEW SSH KEY WAS CREATED. Add it to GitHub before the dex or"
+    echo "A NEW SSH KEY WAS CREATED. Add it to GitHub before the"
     echo "moongit steps need it:"
     echo
     echo "    https://github.com/settings/ssh/new"

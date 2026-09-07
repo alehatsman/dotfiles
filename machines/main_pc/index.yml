@@ -89,51 +89,12 @@
 
 # Private self-hosted git host. Builds from ~/projects/moongit and runs
 # moongitd as a user systemd service (API + git + web UI on one port).
-# This box is the main server. Imported BEFORE dex because moongit builds
-# the moongit-ci-dev CI base image that dex-ci derives FROM (dex#27); the
-# two components are otherwise provisioning-independent (dex clones from
-# GitHub, moongit needs dex only at runtime).
+# This box is the main server.
 - name: Use moongit component
+  # No props: every remaining prop has a component default (dex_serve_port
+  # was the only one this machine overrode — dotfiles#91).
   use: ../../components/moongit/index.yml
-  props:
-    dex_serve_port: "{{ dex_serve_port }}"
   tags: [tools, moongit]
-
-# Semantic-search MCP helper. Embedding endpoint runs on the local 5090;
-# see machines/main_pc/vars.yml for dex_role and watch paths.
-- name: Use dex component
-  use: ../../components/dex/index.yml
-  props:
-    dex_role: "{{ dex_role }}"
-    dex_src_url: "{{ dex_src_url }}"
-    dex_local_port: "{{ dex_local_port }}"
-    dex_embed_model: "{{ dex_embed_model }}"
-    dex_embed_batch: "{{ dex_embed_batch }}"
-    dex_chat_model: "{{ dex_chat_model }}"
-    dex_ask_model: "{{ dex_ask_model }}"
-    dex_expand_model: "{{ dex_expand_model }}"
-    dex_expand_mode: "{{ dex_expand_mode }}"
-    dex_rerank_local_port: "{{ dex_rerank_local_port }}"
-    dex_rerank_remote_port: "{{ dex_rerank_remote_port }}"
-    dex_rerank_style: "{{ dex_rerank_style }}"
-    dex_rerank_model: "{{ dex_rerank_model }}"
-    dex_rerank_pool: "{{ dex_rerank_pool }}"
-    dex_rerank_gpu: "{{ dex_rerank_gpu }}"
-    dex_rerank_concurrency: "{{ dex_rerank_concurrency }}"
-    dex_rerank_publish_addr: "{{ dex_rerank_publish_addr }}"
-    dex_rerank_connect_host: "{{ dex_rerank_connect_host }}"
-    dex_remote_host: "{{ dex_remote_host }}"
-    dex_remote_ip: "{{ dex_remote_ip }}"
-    dex_remote_port: "{{ dex_remote_port }}"
-    dex_remote_ssh_port: "{{ dex_remote_ssh_port }}"
-    dex_remote_user: "{{ dex_remote_user }}"
-    dex_feedback_shadow: "{{ dex_feedback_shadow | default:'' }}"
-    dex_feedback_live: "{{ dex_feedback_live | default:'' }}"
-    dex_serve_port: "{{ dex_serve_port }}"
-    dex_watch_paths: "{{ dex_watch_paths }}"
-    dex_ollama_keep_alive: "{{ dex_ollama_keep_alive }}"
-    dex_ollama_num_parallel: "{{ dex_ollama_num_parallel }}"
-  tags: [tools, dex]
 
 # mooncake CI image only (mooncake-ci:latest = moongit-ci-dev + gomarkdoc).
 # Imported after moongit so its base image exists; this box runs mooncake's

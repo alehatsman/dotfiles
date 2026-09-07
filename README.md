@@ -33,8 +33,7 @@ Per-platform notes:
 
 - **macOS** — `-K` is required (Rosetta, `scutil`, `defaults` run as root).
   Homebrew installs itself during the run. First apply is ~30 min plus
-  cask downloads; dex adds ~30 GB of models, so `--skip-tags dex` for a
-  usable shell sooner, then apply `-t dex` separately.
+  cask downloads.
 - **Arch** — `platforms/arch/bootstrap.sh` does the clone + install +
   apply in one shot on first boot.
 - **Windows** — run `platforms/windows/bootstrap.yml` from an Admin
@@ -80,7 +79,7 @@ PowerShell before applying inside WSL.
 
 ## Components
 
-`alacritty · claude · clojure · dex · git · google-cloud · hyprland ·
+`alacritty · claude · clojure · git · google-cloud · hyprland ·
 languages · mooncake · moongit · nvim · palette · ssh · terraform · tmux ·
 usql · zsh`
 

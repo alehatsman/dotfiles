@@ -165,7 +165,7 @@
 # (generateResolvConf=true in wsl.conf) — that's the standing
 # "/etc/resolv.conf overwritten" health warning, and the same churn that
 # produced the newline-in-DISPLAY bug in #71. The fleet addresses peers by
-# IP (dex_remote_ip, peers.toml), so nothing here needs MagicDNS names.
+# IP (peers.toml), so nothing here needs MagicDNS names.
 #
 # Skipped unless the daemon is up AND logged in — a logged-out node has no
 # prefs to change yet. Until the operator runs `tailscale up`, use

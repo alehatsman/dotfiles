@@ -2,8 +2,8 @@
 # Component-local defaults for moongit — a private self-hosted git host.
 # Override at the machine level via machines/<m>/vars.yml.
 #
-# Unlike dex, moongit has no published git remote yet, so the component
-# builds from the existing local working tree rather than cloning. Point
+# moongit has no published git remote yet, so the component builds from
+# the existing local working tree rather than cloning. Point
 # moongit_src_dir at that checkout. The build is sha-gated on the tree's
 # committed HEAD — deploy committed code to the server, not WIP.
 moongit_src_dir: "~/projects/moongit"
@@ -42,8 +42,7 @@ moongit_secret_env_file: "~/.config/moongit/moongit.secret.env"
 moongit_agent_env_file: "~/.config/moongit/agent.env"
 
 # mooncake_src_dir (the checkout baked into the CI images' bundled mooncake)
-# now lives in shared/variables.yml — both the moongit and dex CI-image steps
-# use it, so it belongs at the shared layer.
+# lives in shared/variables.yml, at the shared layer.
 
 # Sidecar recording the combined (moongit HEAD + mooncake HEAD) the CI images
 # were last built from. The ci-images step rebuilds only when either moves, so

@@ -94,37 +94,6 @@
 - import: ../../components/alacritty/index.yml
   tags: [macos, terminal, config]
 
-- name: Use dex component
-  use: ../../components/dex/index.yml
-  props:
-    dex_role: "{{ dex_role }}"
-    dex_src_url: "{{ dex_src_url }}"
-    dex_local_port: "{{ dex_local_port }}"
-    dex_embed_model: "{{ dex_embed_model }}"
-    dex_embed_batch: "{{ dex_embed_batch }}"
-    dex_chat_model: "{{ dex_chat_model }}"
-    dex_ask_model: "{{ dex_ask_model }}"
-    dex_rerank_local_port: "{{ dex_rerank_local_port }}"
-    dex_rerank_remote_port: "{{ dex_rerank_remote_port }}"
-    dex_rerank_style: "{{ dex_rerank_style }}"
-    dex_rerank_model: "{{ dex_rerank_model }}"
-    dex_rerank_pool: "{{ dex_rerank_pool }}"
-    dex_rerank_gpu: "{{ dex_rerank_gpu }}"
-    dex_rerank_concurrency: "{{ dex_rerank_concurrency }}"
-    dex_remote_host: "{{ dex_remote_host }}"
-    dex_remote_ip: "{{ dex_remote_ip }}"
-    dex_remote_port: "{{ dex_remote_port }}"
-    dex_remote_ssh_port: "{{ dex_remote_ssh_port }}"
-    dex_remote_user: "{{ dex_remote_user }}"
-    dex_serve_port: "{{ dex_serve_port }}"
-    dex_watch_paths: "{{ dex_watch_paths }}"
-    dex_ollama_keep_alive: "{{ dex_ollama_keep_alive }}"
-    dex_ollama_num_parallel: "{{ dex_ollama_num_parallel }}"
-    dex_tunnel_enabled: "{{ dex_tunnel_enabled }}"
-    dex_expand_model: "{{ dex_expand_model }}"
-    dex_expand_mode: "{{ dex_expand_mode }}"
-  tags: [macos, dex]
-
 # Inbound fleet access. Gated on fleet_peer_enabled (true in ./vars.yml) —
 # see components/fleet-peer/index.yml and docs/macos-peer-setup.md.
 # Last, deliberately: it asserts on a live sshd + agentd, so it should fail

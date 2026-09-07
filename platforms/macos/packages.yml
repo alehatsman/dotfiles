@@ -87,7 +87,6 @@
       - yarn
       - tmux
       - uv
-      - ollama
       - neovim
       - zsh
       - httpie

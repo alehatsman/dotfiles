@@ -1,7 +1,5 @@
 ---
 props: {}
-  # dex's DEX_* env comes from ~/.config/dex/dex.env (rendered by
-  # components/dex); .zshenv just sources that file.
 
 steps:
   - name: Install zsh
@@ -48,8 +46,8 @@ steps:
 
   - name: Deploy .zshenv
     # Sourced by ALL zsh (incl. non-interactive scripts/cron/agent shells) —
-    # holds env that must apply regardless of shell type (cargo, dex client
-    # vars). See templates/.zshenv.j2 (dotfiles #33).
+    # holds env that must apply regardless of shell type (cargo). See
+    # templates/.zshenv.j2 (dotfiles #33).
     file.template:
       src: ./templates/.zshenv.j2
       dest: ~/.zshenv

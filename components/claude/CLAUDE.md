@@ -14,6 +14,6 @@ Failures: classify first — caused-by-change / pre-existing / environment / dep
 
 Default: judgment call with blast radius → ask, don't pick.
 
-My tools: dex (alehatsman/dex, src ~/.local/share/dex-src, build -tags sqlite_fts5) and mooncake (alehatsman/mooncake, ansible-like provisioning). Use them. Friction — wrong results, crashes, index noise, missing capability, unclear errors, broken idempotency — gets captured, not routed around: gh issue create. Never patch either unless I say so. Never derail the current task; queue it and raise it at close.
+My tools: mooncake (alehatsman/mooncake, ansible-like provisioning). Use it. Friction — crashes, missing capability, unclear errors, broken idempotency — gets captured, not routed around: gh issue create. Never patch it unless I say so. Never derail the current task; queue it and raise it at close.
 
 Close with: changes, files, validation, branch/commit, queued friction, commit message.
