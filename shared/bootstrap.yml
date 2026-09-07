@@ -17,9 +17,8 @@
   unless_command: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
   tags: [core, home]
 
-# User-scope systemd units (dex-tunnel, dex-watch@, and the
-# mooncake agentd itself once it lands in --user mode) need to survive
-# logout — otherwise remote fleet apply against a non-interactive peer
+# User-scope systemd units (moongit, and the mooncake agentd itself once
+# it lands in --user mode) need to survive logout — otherwise remote fleet apply against a non-interactive peer
 # has no user systemd bus to talk to. Idempotent: enable-linger is a
 # no-op when already enabled.
 - name: Enable systemd linger for {{ username }} so user services survive logout
@@ -85,7 +84,7 @@
 # ~/.docker/config.json. That Windows credential helper isn't on PATH in this
 # Linux env, so any image pull dies with exit 127 (`docker-credential-
 # desktop.exe not found`) — which silently breaks server-side CI whenever a
-# runner image must be pulled (dotfiles#8, surfaced via dex#25/#63). Strip the
+# runner image must be pulled (dotfiles#8). Strip the
 # key so docker falls back to its default store. Idempotent: the gate skips the
 # step once the file is absent or no longer names the broken helper.
 - name: Drop the WSL2-broken Docker credsStore (desktop.exe) so image pulls work

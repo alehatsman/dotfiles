@@ -56,10 +56,6 @@ fi
 
 export SSH_KEY_PATH=~/.ssh/id_ed25519
 
-# dex — the DEX_* client exports moved to ~/.zshenv (templates/.zshenv.j2) so
-# non-interactive shells (scripts, cron, agent tool-shells) get them too,
-# matching serve/MCP regardless of shell type (dotfiles #33). Nothing here.
-
 # moongit — agent.env (mooncake-seeded) exports MOONGIT_SERVER +
 # MOONGIT_DATA_DIR (and a baseline MOONGIT_TOKEN for ad-hoc interactive
 # mgit). Per-Claude identity is NOT resolved here — the `ce` launcher below
@@ -316,29 +312,6 @@ _gw_default() {
   done
 }
 
-# dex-watch helpers — enable / disable the per-project auto-reindex
-# user systemd unit. Silent no-op when dex or the unit template
-# isn't present (macOS, unprovisioned hosts, opt-out machines).
-_dex_watch_enable() {
-  command -v dex             >/dev/null 2>&1 || return 0
-  command -v systemd-escape >/dev/null 2>&1 || return 0
-  [[ -f ~/.config/systemd/user/dex-watch@.service ]] || return 0
-  local esc
-  esc=$(systemd-escape "$1") || return 0
-  systemctl --user enable --now "dex-watch@${esc}.service" >/dev/null 2>&1
-}
-_dex_watch_disable() {
-  command -v systemd-escape >/dev/null 2>&1 || return 0
-  local esc
-  esc=$(systemd-escape "$1") || return 0
-  systemctl --user disable --now "dex-watch@${esc}.service" >/dev/null 2>&1
-}
-_dex_index_nuke() {
-  command -v dex >/dev/null 2>&1 || return 0
-  [[ -d "$1" ]] || return 0
-  dex nuke "$1" >/dev/null 2>&1
-}
-
 # moongit — derive <owner>/<repo> from a checkout's origin (github), used to
 # build the `moongit` mirror remote URL.
 _moongit_owner_repo() {
@@ -402,7 +375,6 @@ gwc() { # git worktree create: gwc <name> [base]
       || { _gw_prune_dirs "$wt"; return 1 }
   fi
   cd "$wt"
-  _dex_watch_enable "$wt"
   _moongit_worktree_setup "$wt"
 }
 
@@ -437,8 +409,6 @@ gwd() { # git worktree delete (safe): gwd <name>
   fi
 
   [[ "$PWD/" == "$wt/"* ]] && cd "$root"
-  _dex_watch_disable "$wt"
-  _dex_index_nuke "$wt"
   git worktree remove "$wt" || return 1
   _gw_prune_dirs "$wt"
   git branch -d "$name"
@@ -452,8 +422,6 @@ gwd!() { # git worktree delete force: gwd! <name>
   root=$(_gw_main_root) || { echo "not in a git repo" >&2; return 1 }
   wt=$(_gw_path "$name") || return 1
   [[ "$PWD/" == "$wt/"* ]] && cd "$root"
-  _dex_watch_disable "$wt"
-  _dex_index_nuke "$wt"
   [[ -d "$wt" ]] && git worktree remove --force "$wt"
   _gw_prune_dirs "$wt"
   git branch -D "$name" 2>/dev/null
@@ -746,7 +714,6 @@ fi
 if command -v zoxide &>/dev/null; then
   eval "$(zoxide init zsh --cmd j)"
 fi
-
 
 # vi mode
 bindkey -v

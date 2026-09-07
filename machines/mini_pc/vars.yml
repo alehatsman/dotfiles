@@ -28,22 +28,6 @@ wsl_moongit_port: "8080"
 wsl_agentd_port: "7878"
 windows_agentd_port: "7879"
 
-# ─── dex — semantic-search MCP helper ─────────────────────────────────────
-# Two provisioning profiles — pick the manifest that matches the desired role:
-#   mini_pc.yml        (this file only) — dex_role=client, inherits from
-#                      shared; tunnels to main_pc's 5090 via main_pc-wsl.
-#   mini_pc_server.yml (+ gpu-server profile) — dex_role=server; runs
-#                      ollama + rerank on the local RTX 5080 (16 GB VRAM).
-# See machines/mini_pc/profiles/gpu-server.yml for the 5080 VRAM budget.
-# moongit lives on main_pc (192.168.50.1); override the default localhost URL.
-dex_src_url: "git@github.com:alehatsman/dex.git"
-# Client tunnels to main_pc's 5090 — model names must match what's loaded there.
-dex_embed_model: "qwen3-embedding:0.6b"
-dex_chat_model: "qwen2.5-coder:14b"
-# No local reranker. Clear the port so DEX_RERANK_URL is empty and dex
-# doctor doesn't warn about a missing :8082.
-dex_rerank_local_port: ""
-
 # Server box — never sleep on AC. Disables standby + hibernate so WSL and
-# its daemons (ssh, dex-serve, ollama) stay reachable 24/7.
+# its daemons (ssh, agentd) stay reachable 24/7.
 windows_prevent_sleep: true

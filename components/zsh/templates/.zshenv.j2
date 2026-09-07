@@ -6,16 +6,3 @@
 
 # Rust/cargo — guarded so a box without rustup doesn't error on every shell.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-
-# dex — point ad-hoc CLI invocations at the same endpoints + models the MCP
-# registration and the watch/serve units use. The DEX_* values live in ONE
-# file rendered by components/dex (~/.config/dex/dex.env); we source it here so
-# scripts, cron, agent tool-shells and `zsh -c` all get them too (otherwise a
-# bare `dex` falls back to the binary's compiled defaults and dim-mismatches the
-# index — dotfiles #33). Guarded so a box without dex (no file) is a no-op.
-# `set -a` auto-exports every KEY=VALUE the file assigns.
-if [ -f "$HOME/.config/dex/dex.env" ]; then
-  set -a
-  . "$HOME/.config/dex/dex.env"
-  set +a
-fi

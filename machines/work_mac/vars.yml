@@ -4,20 +4,3 @@ is_wsl: false
 computer_name: work-mac
 
 EMAIL: aatsman@nvidia.com
-
-# ─── dex — local ollama + Infinity reranker (M2 Max, Metal) ─────────
-# No GPU server reachable from the work network. Embedding and reranking
-# both run locally: ollama for embed (Brew), Infinity Python package with
-# the mps engine for rerank (bge-reranker-v2-m3, 568M params, fp16 on M2).
-dex_embed_model: "qwen3-embedding:0.6b"
-dex_chat_model: ""
-# Query expansion intentionally disabled here: index.yml doesn't wire the
-# expand props, and this memory-constrained work machine avoids the extra
-# ollama model + per-ask() call. Re-enable by wiring dex_expand_model/mode
-# through work_mac/index.yml (see mac/index.yml) if that changes.
-
-# Cohere-style cross-encoder via Infinity on MPS.
-# chat-vllm needs vLLM which is Linux/CUDA only.
-dex_rerank_style: "cohere"
-dex_rerank_model: "BAAI/bge-reranker-v2-m3"
-dex_rerank_gpu: ""

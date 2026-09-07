@@ -4,7 +4,7 @@
 # moongit-ci-dev:latest (built by the moongit component) + gomarkdoc, so this
 # component is imported AFTER moongit in the machine index. It's only imported
 # on the CI-server machine (main_pc), so no role gate is needed beyond linux.
-# The dotfiles analog of dex#27 — see mooncake#100.
+# See mooncake#100.
 #
 # mooncake itself isn't provisioned here; this is purely the CI-image refresh.
 

@@ -24,15 +24,3 @@ thermal_igpu_max_mhz: 900
 # HWP max P-state percent (0–100). Caps turbo ceiling without disabling it.
 thermal_cpu_max_perf_ac: 80
 thermal_cpu_max_perf_bat: 60
-
-# ─── dex — semantic-search MCP helper ─────────────────────────────────────
-# Inherits dex_role=client from shared/variables.yml. Prerequisite:
-# a non-interactive `ssh main_pc-wsl true` must succeed (configure the
-# `Host main_pc-wsl` alias in ~/.ssh/config pointing at the WSL :2222),
-# otherwise dex-tunnel.service won't come up.
-# Client tunnels to main_pc's 5090 — model names must match what's loaded there.
-dex_embed_model: "qwen3-embedding:0.6b"
-# Must match what main_pc actually serves (machines/main_pc/vars.yml) —
-# was stale at 32b after main_pc demoted its chat model to 14b (dotfiles#52).
-dex_chat_model: "qwen2.5-coder:14b"
-

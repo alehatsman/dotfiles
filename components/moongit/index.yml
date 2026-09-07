@@ -10,8 +10,7 @@
 # Build/install/restart are sha-gated on the source tree's committed HEAD:
 # all three run together when HEAD moves, skip together otherwise. The .sha
 # sidecar is written last (in the restart step) so the gate variable only
-# flips after the new revision is fully live — same ordering discipline as
-# the dex component.
+# flips after the new revision is fully live.
 #
 # Force a rebuild:
 #   rm {{ moongit_bin_path }}.sha && mooncake apply -c ./main_pc.yml -t moongit
@@ -29,10 +28,6 @@ props:
     type: string
     default: "2"
     description: Run slots reserved for agents so CI backlog can't lock them out.
-  dex_serve_port:
-    type: string
-    default: "7920"
-    description: Local port for dex serve (used in MOONGIT_DEX_URL).
 
 steps:
   - vars.load: ./variables.yml
@@ -85,7 +80,7 @@ steps:
 
   - name: "Build moongitd + moongit client"
     # {{ moongit_src_dir }} is unquoted on purpose so bash expands ~ at run
-    # time — matches the dex component's convention.
+    # time.
     shell: |
       set -euo pipefail
       cd {{ moongit_src_dir }}
@@ -148,7 +143,6 @@ steps:
         MOONGIT_DATA_DIR={{ moongit_data_dir | expanduser }}
         MOONGIT_REPOS_DIR={{ moongit_repos_dir | expanduser }}
         MOONGIT_WEB_DIR={{ moongit_web_dir | expanduser }}
-        MOONGIT_DEX_URL=http://127.0.0.1:{{ props.dex_serve_port }}
         MOONGIT_MAX_CONCURRENCY={{ props.moongit_max_concurrency }}
         MOONGIT_AGENT_RESERVED={{ props.moongit_agent_reserved }}
       mode: '0644'
@@ -205,16 +199,18 @@ steps:
 
   - name: "Restart moongit if the managed env file drifted from the running process"
     # The unit's reload_on_change only fires on UNIT changes, not on
-    # EnvironmentFile content changes. So when MOONGIT_DEX_URL (or any managed
-    # env value) is added/changed, the running process keeps the stale env
-    # until restarted. Compare the live process env to the rendered file and
+    # EnvironmentFile content changes. So when a managed env value is
+    # added/changed, the running process keeps the stale env until
+    # restarted. Compare the live process env to the rendered file and
     # restart only on drift — idempotent, no restart once in sync.
+    # Probes MOONGIT_ADDR as the sentinel (it was MOONGIT_DEX_URL until
+    # dotfiles#91 removed dex).
     shell: |
       set -euo pipefail
       pid=$(systemctl --user show -p MainPID --value moongit.service 2>/dev/null || echo 0)
       live=""
-      [ "$pid" -gt 0 ] && live=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep '^MOONGIT_DEX_URL=' || true)
-      want="MOONGIT_DEX_URL=http://127.0.0.1:{{ props.dex_serve_port }}"
+      [ "$pid" -gt 0 ] && live=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep '^MOONGIT_ADDR=' || true)
+      want="MOONGIT_ADDR={{ props.moongit_addr }}"
       if [ "$live" != "$want" ]; then
         systemctl --user restart moongit.service
       fi
@@ -287,8 +283,7 @@ steps:
   # parse error (moongit#193). Rebuild via the repo's own ci-images task, gated
   # on the combined HEAD of the mooncake source (the bundled binary) and the
   # moongit source (the tasks.yml it must parse), so the image's mooncake always
-  # tracks both. Builds moongit-ci:latest + moongit-ci-dev:latest (dex-ci derives
-  # FROM the latter — rebuild dex-ci after this moves; see the dex component).
+  # tracks both. Builds moongit-ci:latest + moongit-ci-dev:latest.
   #
   # Force a rebuild:
   #   rm {{ moongit_ci_image_sha }} && mooncake apply -c ./main_pc.yml -t ci-images

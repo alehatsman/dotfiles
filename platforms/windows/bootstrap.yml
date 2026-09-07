@@ -71,8 +71,8 @@
         Set-ItemProperty -Path $key -Name HiberbootEnabled -Value 0 -Type DWord
       }
 
-# Disable sleep and hibernate on AC power so WSL daemons (ssh, dex-serve,
-# ollama, agentd) stay reachable 24/7. Only runs when windows_prevent_sleep
+# Disable sleep and hibernate on AC power so WSL daemons (ssh, agentd)
+# stay reachable 24/7. Only runs when windows_prevent_sleep
 # is true (server boxes); laptops keep their own policy.
 - name: Disable sleep and hibernate on AC power
   shell:

@@ -32,7 +32,7 @@ windows_sleep_timeout_ac: 30
 # Source file the claude component deploys as the user-global system prompt.
 # Path is resolved relative to components/claude/. Default is the shared
 # hacker-trooper prompt; machines override per-host in machines/<m>/vars.yml
-# (main_pc points this at its own mgit-coordination + dex-intel variant).
+# (main_pc points this at its own mgit-coordination variant).
 claude_system_prompt_src: "./CLAUDE.md"
 
 # ─── Color palette ──────────────────────────────────────────────────────────
@@ -44,156 +44,11 @@ claude_system_prompt_src: "./CLAUDE.md"
 #   monokai_light  — Sublime Monokai Light companion variant
 palette_variant: monokai_dark
 
-# ─── dex — local semantic-search MCP helper ───────────────────────────
-# Default role is client (install the binary + tunnel + MCP registration).
-# main_pc overrides to `server` to additionally run the embedding service
-# on its 5090. Machines that don't want dex at all simply omit the
-# component import from their machines/<m>/index.yml.
-dex_role: client
-
-# Source URL for the dex git repo. The component clones this into
-# dex_src_dir (components/dex/variables.yml) and builds from it.
-# Default is the moongit host loopback (main_pc: moongitd on :8080).
-# Non-server machines override this in machines/<m>/vars.yml to the
-# moongit host's LAN IP (e.g. mini_pc → 192.168.50.1:8080).
-# Lives here — not in components/dex/variables.yml — so machine overrides
-# win (component vars.load runs after machine vars and would clobber).
-dex_src_url: "git@github.com:alehatsman/dex.git"
-
-# Embedding model. Code-retrieval quality vs VRAM trade-off documented in
-# components/dex/README.md. Ollama-style ref (vs HF-style for vLLM).
-# No default here — every machine sets this in its own vars.yml so that
-# any apply path (agentd, partial tag filter, etc.) renders the right model
-# rather than silently falling through to a stale shared value.
-# dex_embed_model: "nomic-embed-text:latest"   ← set per machine
-
-# Chat-completion model powering dex's `generate_code` MCP tool +
-# `dex generate` CLI. Served by the same ollama instance as the
-# embedding model on the GPU host (so no second port / second tunnel).
-# 32B Q4_K_M is ~20 GB, comfortably fits alongside the 4B embedder on
-# a 5090 (32 GB VRAM); step down to qwen2.5-coder:14b (~9 GB) or :7b
-# on smaller GPUs.
-# No default here — set per machine (same reason as dex_embed_model above).
-# dex_chat_model: "qwen2.5-coder:14b"          ← set per machine
-
-# Optional second chat model used only by ask_codebase. Plumbing is
-# in place but no local model tested so far (qwen2.5-coder:32b,
-# qwen2.5:14b-instruct) consistently follows the citations-first
-# system prompt — the coder pattern-matches paths from CONTEXT but
-# still emits fenced code blocks; the instruct model invents whole
-# project layouts. Leave empty to fall back to dex_chat_model.
-# Revisit when a stronger local model lands (qwen2.5:72b-instruct,
-# DeepSeek-V3, etc.) or wire a hosted Claude/GPT-4 endpoint.
-dex_ask_model: ""
-
-# Port the ollama service listens on inside WSL (always bound to
-# 127.0.0.1; reached by clients through an SSH tunnel — see
-# components/dex/templates/dex-tunnel.service.j2). Ollama
-# serves both /v1/embeddings and /v1/chat/completions on this port,
-# so embed and chat share the same tunnel.
-dex_remote_port: "11434"
-dex_local_port: "11434"
-
-# Cross-encoder rerank endpoint. ollama doesn't expose /v1/rerank, so
-# this is a separate service on the GPU host. Two styles are supported:
-#
-#   cohere: Cohere-compatible /rerank endpoint — TEI or Infinity serving
-#     a cross-encoder (bge-reranker-v2-m3 etc.).
-#
-#   chat-vllm (default): vLLM pointwise scorer via /v1/chat/completions with
-#     empty <think>\n\n</think> prefill — Qwen3-Reranker-4B (~3 GB Q4,
-#     MTEB-Code 81.20 vs 41.38 for bge-v2-m3). server.yml deploys a vLLM
-#     container (vllm/vllm-openai) loading the GGUF via --load-format gguf.
-#
-# The SSH tunnel forwards both this port and the ollama port over the same
-# connection — see dex-tunnel.service.j2.
-dex_rerank_remote_port: "8082"
-dex_rerank_local_port: "8082"
-
-# Host the reranker container publishes on, and the host dex connects to for
-# rerank. Default loopback works for native docker and for clients (which
-# reach the reranker via the SSH tunnel's 127.0.0.1 forward). main_pc overrides
-# these because Docker Desktop under WSL "mirrored" networking does NOT expose
-# published ports on 127.0.0.1 — see machines/main_pc/vars.yml.
-dex_rerank_publish_addr: "127.0.0.1"
-dex_rerank_connect_host: "127.0.0.1"
-
-# Rerank backend style: "cohere" or "chat-vllm" (see comment above).
-dex_rerank_style: "chat-vllm"
-
-# Rerank model name (HuggingFace repo, tokenizer) passed to the backend.
-# Qwen3-Reranker-4B: MTEB-Code 81.20 vs 41.38 for the old bge-reranker-v2-m3.
-dex_rerank_model: "Qwen/Qwen3-Reranker-4B"
-
-# GGUF variant for chat-vllm style. vLLM 0.22+ uses "repo:quant_type" syntax
-# (e.g. Mungert/Qwen3-Reranker-4B-GGUF:Q4_K_M); --gguf-file is gone.
-dex_rerank_gguf_repo: "Mungert/Qwen3-Reranker-4B-GGUF"
-dex_rerank_gguf_quant: "Q4_K_M"
-
-# Pass --gpus all to the rerank container (Infinity or vLLM). Set "" to run
-# CPU-only (acceptable for 10–50 candidates post-retrieval; frees VRAM).
-# Default "1" = GPU on all hosts unless overridden.
-dex_rerank_gpu: "1"
-
-# Candidate-pool cap fed to the reranker per query. Larger = better recall,
-# slower rerank. Binary clamps to [1, 100] and falls back to 40 on parse error.
-dex_rerank_pool: "40"
-
-# Number of concurrent scoring goroutines (chat style only). Each goroutine
-# makes one HTTP call per (query, doc) pair; more concurrency = faster wall
-# time at the cost of more simultaneous vLLM load. 8 is comfortable on a
-# 5090 even with the 32B chat model sharing VRAM.
-dex_rerank_concurrency: "8"
-
-# Embed batch size — chunks per /v1/embeddings call. The dex default
-# is 32; 128 cuts request overhead with no measurable quality cost on
-# Ollama or vLLM/TEI. Larger batches show bigger wins on big repos.
-dex_embed_batch: "128"
-
-# Loopback port for `dex serve` — the HTTP query API consumed by moongit's
-# Intel tab (components/dex deploys dex-serve.service server-side; moongit's
-# MOONGIT_DEX_URL points here). Bound to 127.0.0.1, so no token/firewall
-# rule. Distinct from moongit (:8080), ollama (:11434), rerank (:8082).
-dex_serve_port: "7920"
-
-# OLLAMA_NUM_PARALLEL — max concurrent generation requests ollama will
-# pack into a single model. Deployed as a systemd drop-in on the GPU
-# host (components/dex/templates/ollama-num-parallel.conf.j2). 4 is
-# upstream's default since v0.2.0 but is set explicitly here so a
-# future upstream change can't silently regress the rerank
-# concurrency cap that assumes it.
-dex_ollama_num_parallel: "4"
-
-# OLLAMA_KEEP_ALIVE — how long ollama keeps a model resident after its
-# last request. Upstream default is 5m; kept here so it's explicit and
-# overridable per host. The GPU host pins models warm (-1) in
-# machines/main_pc/vars.yml — see the note there. Deployed as a systemd
-# drop-in (components/dex/templates/ollama-keep-alive.conf.j2).
-dex_ollama_keep_alive: "5m"
-
-# SSH alias for the GPU host — used by both the tunnel template and the
-# ssh-config step managed by the dex client install. The dex
-# component writes a Host block into ~/.ssh/config on client machines
-# so the tunnel can resolve the alias without a manual prerequisite.
-dex_remote_host: "main_pc-wsl"
-dex_remote_ip: "192.168.1.68"
-dex_remote_ssh_port: "2222"
-dex_remote_user: "aleh"
-
-# Space-separated list of absolute project roots to auto-watch via
-# dex-watch@.service. The apply step enables one user systemd
-# instance per path and disables any orphaned instance no longer in the
-# list. Empty = additive mode (leave existing instances alone). Paths
-# must not contain spaces. Ad-hoc worktrees pick up their own watch
-# instance through the zsh gwc/gwd helpers — only long-lived project
-# roots belong here.
-dex_watch_paths: ""
-
-# Source checkout of mooncake, shared by the moongit + dex CI-image build
-# steps: each bakes this mooncake into its CI container image (the runner
-# execs it inside every CI job), so it must stay current enough to parse the
-# repo's tasks.yml syntax. Shared (not component-local) so both components
-# resolve it regardless of apply order. See moongit#193 / dex#27.
+# Source checkout of mooncake, used by the moongit CI-image build step:
+# it bakes this mooncake into the CI container image (the runner execs it
+# inside every CI job), so it must stay current enough to parse the repo's
+# tasks.yml syntax. Shared (not component-local) so the component resolves
+# it regardless of apply order. See moongit#193.
 mooncake_src_dir: "~/projects/mooncake"
 
 # ─── Fleet inbound SSH ──────────────────────────────────────────────────────

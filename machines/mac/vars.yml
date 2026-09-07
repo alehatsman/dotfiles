@@ -3,41 +3,6 @@
 is_wsl: false
 computer_name: mac
 
-# ─── dex — semantic-search MCP helper ─────────────────────────────────
-# Inherits dex_role=client from shared/variables.yml. The dex
-# component automatically writes the Host main_pc-wsl alias into
-# ~/.ssh/config (using dex_remote_ip/port/user from shared/variables.yml)
-# so the tunnel resolves without any manual prerequisite.
-
-dex_embed_model: "qwen3-embedding:0.6b"
-# No chat model here: qwen3:30b-a3b cost 18.6 GB of the ~26 GB dex pulls on
-# this machine and only fed the generate_code / ask_codebase MCP tools, which
-# Claude Code covers already. Empty means index.yml skips the ollama pull
-# (same as work_mac). Search itself needs only the embedder + reranker.
-dex_chat_model: ""
-
-# Cohere-style cross-encoder via Infinity on MPS.
-dex_rerank_style: "cohere"
-dex_rerank_model: "BAAI/bge-reranker-v2-m3"
-dex_rerank_gpu: ""
-
-# mac runs local ollama + reranker on the same ports the tunnel would
-# forward — disable it so launchd stops retrying every 10 s.
-dex_tunnel_enabled: "false"
-
-# Query expansion via a small local model (dex #252): widens BM25/symbol
-# lanes with one extra call per ask(). 2.5 GB, and now the only chat-class
-# model on the box.
-dex_expand_model: "qwen3:4b"
-# Default expansion level when a request omits it (off|on|full). Required
-# because mac/index.yml wires dex_expand_mode as a prop with no component
-# default fallback in machine scope.
-dex_expand_mode: "on"
-
-# More headroom for concurrent agents (M2 Max, 64 GB unified memory).
-dex_ollama_num_parallel: "8"
-dex_ollama_keep_alive: "-1"
-
 # ─── Fleet peer ───────────────────────────────────────────────────────────
 # mac accepts inbound SSH from the fleet and runs the mooncake agentd, so
 # other machines can `fleet apply`/`exec` against it. Before dotfiles#2 this
