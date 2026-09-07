@@ -68,6 +68,7 @@
       - shellcheck
       - shfmt
       - hashicorp/tap/terraform
+      - tailscale
       - tig
       - tldr
       - tree

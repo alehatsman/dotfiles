@@ -108,6 +108,16 @@
   as_user: root
   tags: [arch, system, packages]
 
+# `tailscale up` (login/authkey) stays manual — that's a secret, not
+# something to script into version control.
+- name: Enable tailscaled
+  os.service:
+    name: tailscaled
+    state: started
+    enabled: true
+  as_user: root
+  tags: [arch, tailscale]
+
 - name: Enable firmware update timer
   os.service:
     name: fwupd-refresh.timer

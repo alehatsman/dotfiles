@@ -2,6 +2,18 @@
 - import: ./packages.yml
   tags: [macos, packages]
 
+# CLI formula (not the tailscale-app cask): the cask needs a one-time
+# interactive System Settings → Privacy & Security approval for its
+# system extension, which breaks unattended `mooncake apply`. The
+# formula's tailscaled runs as a root launchd service instead — same
+# `sudo brew services` idiom as the 1Password CLI cask note above.
+# `tailscale up` (login/authkey) stays manual — that's a secret, not
+# something to script into version control.
+- name: Start tailscaled via Homebrew services (mac)
+  shell: sudo brew services start tailscale
+  unless_command: brew services list | grep -q '^tailscale.*started'
+  tags: [macos, tailscale]
+
 - name: Make sure macos configuration is set
   # No as_user: root — every domain touched below (NSGlobalDomain,
   # com.apple.finder, com.apple.screensaver, com.apple.screencapture, the
