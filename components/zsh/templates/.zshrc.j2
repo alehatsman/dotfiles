@@ -35,11 +35,7 @@ export GCPATH={{ GCP_PATH }}
 export JAVA_HOME={{ JAVA_HOME }}
 export CARGO_HOME=~/.cargo
 export ZPLUG_HOME={{ ZPLUG_HOME }}
-if [[ -d ~/.fzf ]]; then
-  export FZF_BASE=~/.fzf
-else
-  export FZF_BASE=/usr/share/fzf
-fi
+export FZF_BASE={{ FZF_BASE }}
 export NVIDIA_GIT_BASE=~/projects/nvidia/git-helpers
 
 export PATH=$HOME/bin:$HOME/.local/bin:$HOME/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:$PATH:$NVIDIA_GIT_BASE/bin:$JAVA_HOME/bin:$GCPATH/bin:$HOME/go/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin:$FZF_BASE/bin
@@ -69,9 +65,14 @@ export SSH_KEY_PATH=~/.ssh/id_ed25519
 
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 
+# Homebrew (mac) ships fzf's shell integration under shell/; Arch's pacman
+# package installs the same two files flat under FZF_BASE itself.
 if [[ -f $FZF_BASE/shell/key-bindings.zsh ]]; then
   source $FZF_BASE/shell/key-bindings.zsh
   source $FZF_BASE/shell/completion.zsh
+elif [[ -f $FZF_BASE/key-bindings.zsh ]]; then
+  source $FZF_BASE/key-bindings.zsh
+  source $FZF_BASE/completion.zsh
 fi
 
 if [[ $(uname) != 'Darwin' ]]; then
