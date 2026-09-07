@@ -1,0 +1,42 @@
+#!/bin/sh
+# Global git hook dispatcher.
+#
+# core.hooksPath (see .gitconfig.j2) points git at ~/.config/git/hooks for
+# EVERY repo on this machine, and it REPLACES .git/hooks wholesale rather
+# than adding to it. Left naive, that silently kills the pre-commit and
+# pre-push hooks in ~/projects/mooncake and ~/projects/dex.
+#
+# So every hook name in that directory is a symlink to this one script, and
+# this script's last act is always to hand off to the repo's own hook. Add
+# global behaviour by name in the case below; everything else is pure
+# pass-through.
+
+set -eu
+
+hook=${0##*/}
+
+case "$hook" in
+  commit-msg)
+    msg=$1
+    tmp=$(mktemp)
+    # Assistant attribution trailers. Anchored at line start, so a commit
+    # that merely discusses one in prose keeps its text.
+    grep -v -E \
+      -e '^Claude-Session: https?://' \
+      -e '^Co-[Aa]uthored-[Bb]y: Claude <[^>]*@anthropic\.com>' \
+      -e '^(🤖 *)?Generated with \[?Claude Code\]?' \
+      "$msg" > "$tmp" || true
+    # Drop the blank lines a removed trailer leaves at the end.
+    awk 'NF {last=NR} {line[NR]=$0} END {for (i = 1; i <= last; i++) print line[i]}' \
+      "$tmp" > "$msg"
+    rm -f "$tmp"
+    ;;
+esac
+
+# --git-common-dir, not --git-path: --git-path honours core.hooksPath and
+# would point straight back here, and plain --git-dir points inside
+# .git/worktrees/<name>/ where no hooks live.
+git_dir=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0
+local_hook="$git_dir/hooks/$hook"
+[ -x "$local_hook" ] || exit 0
+exec "$local_hook" "$@"

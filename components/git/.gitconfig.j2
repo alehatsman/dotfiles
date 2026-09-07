@@ -1,5 +1,10 @@
 [core]
   pager = delta
+  # Every hook name there is a symlink to hook-dispatch, which strips
+  # assistant attribution trailers from commit messages and then hands off
+  # to the repo's own hook. Absolute, because this setting replaces
+  # .git/hooks everywhere and is not worth leaving to ~ expansion.
+  hooksPath = {{ "~/.config/git/hooks" | expanduser }}
 [interactive]
   diffFilter = delta --color-only
 [delta]

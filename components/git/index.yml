@@ -13,10 +13,59 @@
     dest: ~/.gitconfig
   tags: [git, config]
 
+# ─── Global hooks ───────────────────────────────────────────────────────────
+# core.hooksPath in .gitconfig.j2 points every repo on the machine at
+# ~/.config/git/hooks, replacing .git/hooks rather than adding to it. The
+# dispatcher chains back to each repo's own hook so mooncake's and dex's
+# pre-commit/pre-push keep firing; see the script's header.
+
+- name: Create the global git hooks directory
+  file:
+    path: ~/.config/git/hooks
+    state: dir
+    mode: '0755'
+  tags: [git, hooks]
+
+- name: Deploy the global git hook dispatcher
+  file:
+    path: ~/.config/git/hooks/hook-dispatch
+    src: ./hooks/hook-dispatch
+    state: file
+    mode: '0755'
+  tags: [git, hooks]
+
+- name: Point every git hook name at the dispatcher
+  # Relative symlink target, so the directory stays movable. The loop is
+  # its own gate: it links only what is missing and reports changed only
+  # when it linked something, so adding a name to the list below does not
+  # need a matching edit to an `unless`.
+  #
+  # reference-transaction is deliberately absent: it fires on every ref
+  # update, and paying a shell exec for that buys nothing here.
+  shell: |
+    set -eu
+    d="$HOME/.config/git/hooks"
+    for h in applypatch-msg pre-applypatch post-applypatch \
+             pre-commit pre-merge-commit prepare-commit-msg commit-msg \
+             post-commit pre-rebase post-checkout post-merge pre-push \
+             post-rewrite pre-auto-gc push-to-checkout sendemail-validate; do
+      if [ ! -L "$d/$h" ]; then
+        ln -sfn hook-dispatch "$d/$h"
+        echo "linked $h"
+      fi
+    done
+  changed_when: "'linked' in result.stdout"
+  tags: [git, hooks]
+
 - name: Verify git installation
   assert:
     command: which git
   tags: [git, verify]
+
+- name: Verify the commit-msg hook is wired up
+  assert:
+    command: test "$(git config --global core.hooksPath)/commit-msg" -ef "$HOME/.config/git/hooks/hook-dispatch"
+  tags: [git, verify, hooks]
 
 - name: Verify git config
   assert:
