@@ -43,6 +43,24 @@
         wsl --install -d {{ wsl_distro }}
       }
 
+# Installed on the Windows host, not inside WSL: these boxes use
+# networkingMode=mirrored (see .wslconfig template), so WSL sees the
+# host's network directly — Tailscale only needs to run once, at the
+# host level, for the TUN interface to be visible on both sides.
+# `tailscale up` (login/authkey) stays manual — that's a secret, not
+# something to script into version control.
+- name: Install Tailscale
+  shell:
+    interpreter: powershell
+    run_as_admin: true
+    cmd: |
+      if (Get-Command tailscale -ErrorAction SilentlyContinue) {
+        Write-Host "Tailscale already installed"
+      } else {
+        Write-Host "Installing Tailscale via winget..."
+        winget install --id Tailscale.Tailscale --silent --accept-package-agreements --accept-source-agreements
+      }
+
 # Fast Startup ("hybrid shutdown") hibernates the kernel on shutdown
 # instead of doing a clean boot next time. It's a known source of WSL2
 # instability — the virtual switch state survives across "boots" and

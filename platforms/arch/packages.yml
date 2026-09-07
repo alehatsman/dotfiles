@@ -28,6 +28,7 @@
       - mosh
       - nmap
       - impala
+      - tailscale
 
       # Firmware & hardware management
       - fwupd
