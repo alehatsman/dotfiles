@@ -76,6 +76,7 @@
       - yamllint
       - zoxide
       - yq
+      - just
       - clojure
       - leiningen
       - clj-kondo

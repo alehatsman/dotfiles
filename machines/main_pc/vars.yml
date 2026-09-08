@@ -16,6 +16,13 @@ wsl_ssh_port: "2222"
 wsl_agentd_port: "7878"
 windows_agentd_port: "7879"
 
+# Always-on server box: it hosts moongit and builds every CI image, so the
+# host must never sleep or hibernate and the WSL VM must never be torn down
+# with it. Turns on the AC power steps and the WSL-Session-Keepalive task in
+# platforms/windows/bootstrap.yml, and turns off "Restore AC sleep timeout".
+# mini_pc sets this the same way; the shared default is false, for laptops.
+windows_prevent_sleep: true
+
 # components/fleet-peer: render ~/.ssh/authorized_keys from the declared
 # fleet_ssh_keys list and confirm agentd is up (already is, via wsl_agentd_port
 # above, so the component's own bootstrap step is a no-op here). The sshd

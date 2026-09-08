@@ -9,10 +9,10 @@
 # that builds CI images.
 #
 # provision itself is not provisioned here. The binary comes from
-# `just install`, which copies the natively built release to ~/.local/bin —
-# and `just` is installed on no machine in this fleet yet (docs/migration.md
-# §6), so on a machine where the binary is absent this step says so and
-# skips rather than failing.
+# `just install`, which copies the natively built release to ~/.local/bin.
+# `just` is in the platform package lists now, but the binary still has to
+# be built on the machine (D1: native builds), so on a machine where it is
+# absent this step says so and skips rather than failing.
 
 props:
   provision_ci_image_sha:

@@ -93,6 +93,7 @@
       - lua-language-server
 
       # Development
+      - just
       - go
       - nodejs
       - npm

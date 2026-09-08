@@ -54,6 +54,7 @@
       - htop
       - imagemagick
       - jq
+      - just
       - mosh
       - nmap
       - sshfs
@@ -67,7 +68,11 @@
       - neovim
       - ripgrep
       - nodejs
-      - yarn
+      # No `yarn`: on Debian the name is a virtual package cmdtest provides,
+      # so `apt-get install -y yarn` exits 0 having installed nothing and the
+      # step never converges. Real yarn comes from corepack, which ships with
+      # nodejs. It is a genuine pacman and brew package, so the other two
+      # platform lists keep it.
       - npm
       - zsh
       - lua5.1
