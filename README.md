@@ -27,10 +27,8 @@ host for any machine, so a mac can check main_pc's config.
 
 Per-platform notes:
 
-- **macOS** — `--ask-sudo-pass` is required (Rosetta, `scutil`, `defaults`
-  run as root).
-  Homebrew installs itself during the run. First apply is ~30 min plus
-  cask downloads.
+- **macOS** — Homebrew installs itself during the run. First apply is
+  ~30 min plus cask downloads.
 - **Arch** — `platforms/arch/bootstrap.sh` does the clone + install +
   apply in one shot on first boot.
 - **Windows** — run `platforms/windows/bootstrap.yml` from an Admin
@@ -47,9 +45,14 @@ just backup                # snapshot rc files → ~/.dotfiles-backup
 just upgrade               # deliberate full system upgrade (never part of apply)
 ```
 
-Direct: `provision apply ./<machine>.yml` (`plan` to preview). Add
-`--ask-sudo-pass` on x1, mac and work_mac; main_pc and mini_pc have
-NOPASSWD sudo.
+Direct: `provision apply ./<machine>.yml` (`plan` to preview).
+`--ask-sudo-pass` is only for a machine that has never been applied to:
+`shared/bootstrap.yml` installs a NOPASSWD sudoers drop-in on every host,
+so once that has landed there is no password to ask for.
+
+Each `just <machine>` recipe appends a JSON run log to
+`~/.local/state/provision/<machine>.jsonl` while still printing to the
+terminal.
 
 ## Layout
 
@@ -59,7 +62,7 @@ machines/<m>/      per-host: index.yml (component set), vars.yml
 components/<c>/    unit of config: index.yml + templates/*.j2
 platforms/<p>/     OS-specific: arch, macos, windows
 shared/            variables.yml, bootstrap.yml
-scripts/           install_mooncake.sh, test-docker.sh
+scripts/           install_mooncake.sh, test-docker.sh (mooncake stays a tool)
 docs/              nvim, tmux, keybindings, windows-ssh-setup
 justfile           dev surface (`just`); replaces the old tasks.yml
 ```
@@ -68,11 +71,11 @@ justfile           dev surface (`just`); replaces the old tasks.yml
 
 | host    | platform                | notes                          |
 |---------|-------------------------|--------------------------------|
-| x1      | Arch laptop, Hyprland   | `-K` for sudo                  |
+| x1      | Arch laptop, Hyprland   | Hyprland/thermal tuning        |
 | main_pc | Windows 11 + WSL2 Ubuntu| Windows host bootstrap first   |
-| mini_pc | WSL                     | NOPASSWD sudo                  |
-| mac     | macOS                   | `-K` for sudo                  |
-| work_mac| macOS (NVIDIA work box) | `-K` for sudo                  |
+| mini_pc | WSL                     | Windows host bootstrap first   |
+| mac     | macOS                   | Homebrew bootstraps itself     |
+| work_mac| macOS (NVIDIA work box) | Homebrew bootstraps itself     |
 
 main_pc/mini_pc: run `platforms/windows/bootstrap.yml` from an Admin
 PowerShell before applying inside WSL.
@@ -80,8 +83,11 @@ PowerShell before applying inside WSL.
 ## Components
 
 `alacritty · claude · clojure · git · google-cloud · hyprland ·
-languages · mooncake · moongit · nvim · palette · ssh · terraform · tmux ·
-usql · zsh`
+languages · mooncake · moongit · nvim · palette · provision · ssh ·
+terraform · tmux · usql · zsh`
+
+`mooncake` and `provision` are CI-image components on main_pc only — they
+build the containers this repo's CI runs in, not the tools themselves.
 
 Each is self-contained: `index.yml` declares steps, `templates/*.j2` render
 into place. Add a component → reference it from a machine's `index.yml`.
