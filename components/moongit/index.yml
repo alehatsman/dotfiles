@@ -188,6 +188,10 @@ steps:
   - name: "Reload the user systemd manager"
     cmd: [systemctl, --user, daemon-reload]
     when: moongit_unit.changed
+    # See the Tailscale refresh in platforms/windows/index.yml: `when`
+    # decides whether it runs, `changed_when` says what it did. A reload
+    # that only runs after the unit file changed did reload the manager.
+    changed_when: true
     tags: [moongit, service]
 
   - name: "Enable + start moongit"

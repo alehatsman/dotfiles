@@ -73,6 +73,7 @@
     src: ./templates/ssh-restart.conf.j2
     dest: /etc/systemd/system/ssh.service.d/restart.conf
   sudo: true
+  register: ssh_dropin
 
 # First apply on a fresh WSL distro happens BEFORE systemd is up
 # (systemd is opt-in via the /etc/wsl.conf we just deployed). The
@@ -84,14 +85,28 @@
 - name: Reload systemd so the ssh.service drop-in above takes effect
   cmd: [systemctl, daemon-reload]
   sudo: true
+  when: ssh_dropin.changed
+  changed_when: true
   unless: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
 
 - name: Enable and start SSH (requires systemd)
   service:
     name: ssh
-    state: restarted
+    state: started
     enabled: true
   sudo: true
+  unless: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
+
+# Split from the step above: `state: restarted` is not a state, it is an
+# event. Asked for unconditionally it reported `changed` on every apply,
+# and it bounced a live sshd — over which this machine is often being
+# administered — for no reason. The drop-in changing is the reason.
+- name: Restart SSH when its drop-in changed
+  service:
+    name: ssh
+    state: restarted
+  sudo: true
+  when: ssh_dropin.changed
   unless: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
 
 # ─── Tailscale ────────────────────────────────────────────────────────────
@@ -159,6 +174,11 @@
 - name: Refresh apt after the Tailscale source changed
   cmd: [apt-get, update]
   when: tailscale_repo.changed
+  # `when` decides whether it runs; `changed_when` says what it did when it
+  # did. Without the second it reports `unknown` on the one apply in fifty
+  # where the source actually changed — and a refresh that runs only then
+  # has, by construction, changed the package cache.
+  changed_when: true
   sudo: true
   tags: [wsl, tailscale]
 

@@ -67,6 +67,9 @@ steps:
       src: ./templates/
       dest: "{{ config_path }}/"
       mode: '0644'
+    # The plugin set is declared in init.lua, so this step changing is what
+    # tells "Make sure plugins are installed" below that it has work to do.
+    register: nvim_config
     tags: [nvim, config]
 
   - import: ./win32yank.yml
@@ -154,11 +157,22 @@ steps:
       dest: "{{ props.notes_dir }}/.zk/templates/default.md"
     tags: [nvim, zk]
 
+  # `Lazy! sync` is a 30-second network round trip that reported `unknown`
+  # on every apply. The plugin set it installs is declared by init.lua, so
+  # the config tree changing is the honest trigger — on a fresh machine
+  # that step is `changed` too, so first-run installs still happen.
+  #
+  # Known gap, stated rather than papered over: wiping
+  # ~/.local/share/nvim/lazy by hand without touching the config leaves
+  # this skipped. Closing that needs a probe step registering whether
+  # lazy.nvim is on disk; not worth a step until it happens once.
   - name: Make sure plugins are installed
     shell: |
       set -euo pipefail
       export PATH="$HOME/.local/bin:$PATH"
       nvim --headless "+Lazy! sync" +qa
+    when: nvim_config.changed
+    changed_when: true
     timeout: 15m
     retry:
       attempts: 2
@@ -177,6 +191,10 @@ steps:
       echo 'package main' > "$tmp"
       nvim --headless "$tmp" "+GoInstallBinaries" +qa
       rm -f "$tmp"
+    # GOBIN is unset on every machine here, so vim-go installs into
+    # GOPATH/bin, which is ~/go/bin. gopls stands in for the whole set:
+    # :GoInstallBinaries fetches them together or not at all.
+    creates: ~/go/bin/gopls
     timeout: 15m
     tags: [nvim, golang]
 

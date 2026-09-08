@@ -28,6 +28,10 @@
     set -euo pipefail
     add-apt-repository ppa:neovim-ppa/unstable -y
     apt-get update
+  # add-apt-repository is idempotent, but it and the apt-get update after
+  # it cost ~20s every apply and reported `unknown` forever. The source
+  # file it writes is the state worth checking (migration.md §3.3).
+  unless: ls /etc/apt/sources.list.d | grep -q neovim-ppa
   sudo: true
   timeout: 5m
   retry:

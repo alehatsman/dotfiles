@@ -19,6 +19,7 @@
       PLATFORM_PROFILE_ON_BAT={{ thermal_platform_profile }}
     mode: '0644'
   sudo: true
+  register: tlp_profile
   tags: [thermal]
 
 - name: Drop TLP cooling tweaks (capped turbo, deeper EPP, ASPM, runtime PM)
@@ -69,14 +70,27 @@
       NMI_WATCHDOG=0
     mode: '0644'
   sudo: true
+  register: tlp_cool
   tags: [thermal]
 
+- name: Enable TLP
+  service:
+    name: tlp
+    state: started
+    enabled: true
+  sudo: true
+  tags: [thermal]
+
+# Split from the step above: `state: restarted` is not a state, it is an
+# event, so asked for unconditionally it reported `changed` on every single
+# apply and told the operator nothing. The config files are the state; a
+# restart is what those changing should cause (migration.md §3.8).
 - name: Apply TLP config
   service:
     name: tlp
     state: restarted
-    enabled: true
   sudo: true
+  when: tlp_profile.changed or tlp_cool.changed
   tags: [thermal]
 
 - name: Enable Intel HDA audio runtime power-save

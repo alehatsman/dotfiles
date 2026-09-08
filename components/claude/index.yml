@@ -42,19 +42,34 @@
   creates: ~/.local/bin/cry-aye
   tags: [claude]
 
+# These three already carried their own gate, as a `||` short-circuit
+# inside the script. That works, but it hides the answer: the step runs
+# either way, so provision could only report `unknown`. Lifting the same
+# test into `unless` changes nothing about what happens on the machine and
+# lets `plan` say which of them has work to do.
 - name: "Register moongit MCP server"
-  shell: claude mcp list 2>/dev/null | grep -q '^moongit' || claude mcp add --scope user -e MOONGIT_TOKEN="$MOONGIT_TOKEN" -- moongit mgit mcp
+  shell: claude mcp add --scope user -e MOONGIT_TOKEN="$MOONGIT_TOKEN" -- moongit mgit mcp
+  unless: claude mcp list 2>/dev/null | grep -q '^moongit'
   tags: [claude]
 
 - name: "Register mooncake MCP server"
-  shell: claude mcp list 2>/dev/null | grep -q '^mooncake' || claude mcp add --scope user -- mooncake mooncake mcp
+  shell: claude mcp add --scope user -- mooncake mooncake mcp
+  unless: claude mcp list 2>/dev/null | grep -q '^mooncake'
   tags: [claude]
 
-- name: "Add and update claude-plugins-official marketplace"
-  shell: |
-    claude plugin marketplace list 2>/dev/null | grep -q 'claude-plugins-official' \
-      || claude plugin marketplace add anthropics/claude-plugins-official
-    claude plugin marketplace update claude-plugins-official
+- name: "Add the claude-plugins-official marketplace"
+  shell: claude plugin marketplace add anthropics/claude-plugins-official
+  unless: claude plugin marketplace list 2>/dev/null | grep -q 'claude-plugins-official'
+  tags: [claude]
+
+# Split from the add above because the two are different kinds of thing.
+# Adding the marketplace is state: either it is registered or it is not.
+# Updating it refreshes a cache from the network, which is not declared
+# state and has no converged form to compare against — so it runs every
+# time and says plainly that it changed nothing (migration.md §3.9).
+- name: "Update the claude-plugins-official marketplace"
+  shell: claude plugin marketplace update claude-plugins-official
+  changed_when: false
   tags: [claude]
 
 - name: "Install gopls LSP plugin"
