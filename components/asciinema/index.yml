@@ -1,0 +1,61 @@
+---
+# asciinema + agg — terminal session recorder and its GIF converter
+# (dotfiles#93).
+#
+# Goal: let a real `provision apply`/`plan` run be captured and turned
+# into a GIF that can be embedded in a README.
+#   record:  asciinema rec -c "provision apply ./main_pc.yml --tags asciinema" demo.cast
+#   convert: agg demo.cast demo.gif
+#
+# asciinema ships as an apt package on Ubuntu/WSL. agg does not — it's a
+# Rust binary (https://github.com/asciinema/agg) with no crates.io release
+# (crates.io does have an unrelated library also named `agg`, with no
+# binaries — `cargo install agg` grabs that one and fails; must install
+# `--git` instead). rustup/cargo are already provisioned by
+# components/languages, imported earlier on every host that imports this
+# component.
+#
+# Scope: main_pc only for now (dotfiles#93) — not wired into other
+# machines, since none of them were asked for.
+
+- name: Install asciinema (apt)
+  pkg:
+    name: asciinema
+    state: present
+  sudo: true
+  when: apt_available
+  tags: [asciinema, install]
+
+- name: Install asciinema (brew)
+  pkg:
+    name: asciinema
+    state: present
+    manager: brew
+  when: brew_available
+  tags: [asciinema, install]
+
+- name: Install asciinema (pacman)
+  pkg:
+    name: asciinema
+    state: present
+  sudo: true
+  when: pacman_available
+  tags: [asciinema, install]
+
+- name: Install agg (cargo install --git)
+  shell: |
+    set -euo pipefail
+    cargo install --locked --git https://github.com/asciinema/agg agg
+  unless: command -v agg >/dev/null 2>&1
+  timeout: 10m
+  tags: [asciinema, install]
+
+- name: Verify asciinema is installed
+  assert:
+    command: command -v asciinema
+  tags: [asciinema, verify]
+
+- name: Verify agg is installed
+  assert:
+    command: command -v agg || test -x "$HOME/.cargo/bin/agg"
+  tags: [asciinema, verify]

@@ -63,6 +63,11 @@
 - import: ../../components/languages/index.yml
   tags: [dev, languages]
 
+# Recording tools for capturing a real `apply`/`plan` run as a README
+# gif (dotfiles#93). After languages — agg installs via cargo.
+- import: ../../components/asciinema/index.yml
+  tags: [tools, asciinema]
+
 - import: ../../components/usql/index.yml
   tags: [tools, usql]
 
