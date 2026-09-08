@@ -1,7 +1,9 @@
 # work_mac — NVIDIA work macOS workstation.
-# Apply: provision apply ./work_mac.yml --ask-sudo-pass
+# Apply: provision apply ./work_mac.yml
 # Plan: provision plan ./work_mac.yml
-# -K prompts for the sudo password (needed for brew casks, system flags).
+# shared/bootstrap.yml installs a NOPASSWD sudoers drop-in, so a
+# converged machine needs no password flag. Only a machine that has
+# never been applied to needs `--ask-sudo-pass`, once, to land it.
 - vars_file: ./shared/variables.yml
 - vars_file: ./machines/work_mac/vars.yml
 - import: ./machines/work_mac/index.yml

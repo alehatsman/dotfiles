@@ -1,10 +1,12 @@
 ---
 # x1 — Arch laptop, Hyprland.
 #
-# Apply:  provision apply ./x1.yml --ask-sudo-pass
+# Apply:  provision apply ./x1.yml
 # Plan:   provision plan  ./x1.yml
 #
-# -K prompts for the sudo password (needed for pacman, systemd, etc.).
+# shared/bootstrap.yml installs a NOPASSWD sudoers drop-in, so a
+# converged machine needs no password flag. Only a machine that has
+# never been applied to needs `--ask-sudo-pass`, once, to land it.
 
 - vars_file: ./shared/variables.yml
 - vars_file: ./machines/x1/vars.yml

@@ -1,23 +1,34 @@
 # Machine provisioning. Replaces the mooncake `tasks.yml` task runner —
 # task running is a non-goal for provision (docs/migration.md §6).
+#
+# Each apply recipe appends a JSON run log to ~/.local/state/provision/.
+# `--json` puts one object per line on stdout and moves the human output
+# to stderr, so the terminal still shows progress while the shell keeps
+# the record (D9). There is no `--log` flag and there will not be one:
+# redirection is the shell's job.
 
 default:
     @just --list
 
 x1:
-    provision apply x1.yml
+    mkdir -p ~/.local/state/provision
+    provision apply x1.yml --json >> ~/.local/state/provision/x1.jsonl
 
 main_pc:
-    provision apply main_pc.yml
+    mkdir -p ~/.local/state/provision
+    provision apply main_pc.yml --json >> ~/.local/state/provision/main_pc.jsonl
 
 mini_pc:
-    provision apply mini_pc.yml
+    mkdir -p ~/.local/state/provision
+    provision apply mini_pc.yml --json >> ~/.local/state/provision/mini_pc.jsonl
 
 mac:
-    provision apply mac.yml
+    mkdir -p ~/.local/state/provision
+    provision apply mac.yml --json >> ~/.local/state/provision/mac.jsonl
 
 work_mac:
-    provision apply work_mac.yml
+    mkdir -p ~/.local/state/provision
+    provision apply work_mac.yml --json >> ~/.local/state/provision/work_mac.jsonl
 
 # Plan one machine, e.g. `just plan x1`
 plan m:
