@@ -4,9 +4,16 @@
     path: ~/bin
     state: dir
 
-- name: Download win32yank zip
-  shell: curl -fsSL https://github.com/equalsraf/win32yank/releases/download/v0.0.4/win32yank-x64.zip -o /tmp/win32yank.zip
-  creates: /tmp/win32yank.zip
+# `creates: /tmp/win32yank.zip` used to be the whole check, which meant a
+# truncated download stayed truncated and the unzip below failed with a
+# corrupt-archive error nobody would trace back to the fetch. `download`
+# asks whether the file is the declared one, and /tmp is no longer the
+# place to keep it.
+- name: Fetch the win32yank release
+  download:
+    url: https://github.com/equalsraf/win32yank/releases/download/v0.0.4/win32yank-x64.zip
+    dest: ~/.cache/dotfiles/win32yank-v0.0.4-x64.zip
+    sha256: 33a747a92da60fb65e668edbf7661d3d902411a2d545fe9dc08623cecd142a20
 
 # The zip ships a LICENSE alongside win32yank.exe and zip mode bits are
 # unreliable for the executable bit, so we extract just the binary and
@@ -14,6 +21,7 @@
 - name: Install win32yank.exe to ~/bin
   shell: |
     set -euo pipefail
-    unzip -p /tmp/win32yank.zip win32yank.exe > ~/bin/win32yank.exe
+    unzip -p ~/.cache/dotfiles/win32yank-v0.0.4-x64.zip win32yank.exe \
+      > ~/bin/win32yank.exe
     chmod +x ~/bin/win32yank.exe
   creates: ~/bin/win32yank.exe

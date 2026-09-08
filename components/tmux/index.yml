@@ -21,9 +21,21 @@
     delay: 5s
   tags: [tmux, install]
 
-- name: Clone tmux plugin manager (tpm)
-  shell: git clone --depth 1 https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"
-  creates: ~/.config/tmux/plugins/tpm
+# Pinned, not tracking master. The `creates`-gated clone it replaces
+# cloned once and never updated, so every machine sat on whatever master
+# was the day it was built; `git` has no clone-only-if-missing mode, and
+# of the two honest options -- follow the branch or name a version -- a
+# version is the one a plan can state and check offline. Owner's call,
+# 2026-09-08.
+#
+# `--depth 1` is gone with the shell: provision does full clones, because
+# a shallow one cannot compare tags (provision spec §6.8). An existing
+# shallow checkout still converges onto the tag.
+- name: tmux plugin manager (tpm)
+  git:
+    repo: https://github.com/tmux-plugins/tpm
+    dest: ~/.config/tmux/plugins/tpm
+    ref: v3.1.0
   timeout: 5m
   retry:
     attempts: 3

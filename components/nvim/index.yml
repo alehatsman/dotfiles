@@ -80,16 +80,28 @@ steps:
   # on first install. Cargo install pulls in libclang via rquickjs-sys,
   # so use the official prebuilt binary instead — single static file,
   # no toolchain dependencies. Linux: GitHub release; macOS: brew.
+  # The fetch and the unpack are two steps because they answer two
+  # questions. `download` says whether the archive on disk is the one the
+  # plan declared -- the old `curl -o` could not, and its `unless` only
+  # asked whether *some* tree-sitter was on PATH, so a truncated download
+  # would have installed and stayed. The unpack is a `creates`-gated shell
+  # because unarchiving is deferred (provision plan.md).
+  - name: Fetch the tree-sitter release
+    download:
+      url: https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.8/tree-sitter-linux-x64.gz
+      dest: ~/.cache/dotfiles/tree-sitter-v0.26.8-linux-x64.gz
+      sha256: 9754a32800f0b970152782df177b4a47c711e34e651a7aceb384d8bd29fa136e
+    when: os == 'linux'
+    tags: [nvim, treesitter]
+
   - name: Install tree-sitter CLI (linux release binary)
     shell: |
-      set -e
+      set -euo pipefail
       mkdir -p "$HOME/.local/bin"
-      tmp=$(mktemp)
-      curl -fsSL -o "$tmp.gz" https://github.com/tree-sitter/tree-sitter/releases/download/v0.26.8/tree-sitter-linux-x64.gz
-      gunzip -c "$tmp.gz" > "$HOME/.local/bin/tree-sitter"
+      gunzip -c "$HOME/.cache/dotfiles/tree-sitter-v0.26.8-linux-x64.gz" \
+        > "$HOME/.local/bin/tree-sitter"
       chmod +x "$HOME/.local/bin/tree-sitter"
-      rm -f "$tmp" "$tmp.gz"
-    unless: command -v tree-sitter >/dev/null 2>&1 || test -x "$HOME/.local/bin/tree-sitter"
+    creates: ~/.local/bin/tree-sitter
     when: os == 'linux'
     tags: [nvim, treesitter]
 
@@ -103,16 +115,23 @@ steps:
   # zk — Zettelkasten CLI over plain markdown. zk-nvim runs it as the
   # markdown LSP (link/backlink/tag completion, note search). Same pattern
   # as tree-sitter: prebuilt GitHub release on Linux, brew on macOS.
+  - name: Fetch the zk release
+    download:
+      url: https://github.com/zk-org/zk/releases/download/v0.15.4/zk-v0.15.4-linux-amd64.tar.gz
+      dest: ~/.cache/dotfiles/zk-v0.15.4-linux-amd64.tar.gz
+      sha256: e79cf0b3286ab61498c0d4bfa9ca46dcaa6cb8243119bcd924a71dd5fb95481d
+    when: os == 'linux'
+    tags: [nvim, zk]
+
   - name: Install zk (linux release binary)
     shell: |
-      set -e
+      set -euo pipefail
       mkdir -p "$HOME/.local/bin"
       tmp=$(mktemp -d)
-      curl -fsSL -o "$tmp/zk.tar.gz" https://github.com/zk-org/zk/releases/download/v0.15.4/zk-v0.15.4-linux-amd64.tar.gz
-      tar -xzf "$tmp/zk.tar.gz" -C "$tmp"
+      trap 'rm -rf "$tmp"' EXIT
+      tar -xzf "$HOME/.cache/dotfiles/zk-v0.15.4-linux-amd64.tar.gz" -C "$tmp"
       install -m 0755 "$tmp/zk" "$HOME/.local/bin/zk"
-      rm -rf "$tmp"
-    unless: command -v zk >/dev/null 2>&1 || test -x "$HOME/.local/bin/zk"
+    creates: ~/.local/bin/zk
     when: os == 'linux'
     tags: [nvim, zk]
 
