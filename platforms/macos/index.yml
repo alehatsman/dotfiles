@@ -14,120 +14,240 @@
   unless: brew services list | grep -q '^tailscale.*started'
   tags: [macos, tailscale]
 
-- name: Make sure macos configuration is set
-  # No as_user: root — every domain touched below (NSGlobalDomain,
-  # com.apple.finder, com.apple.screensaver, com.apple.screencapture, the
-  # trackpad domains, systemuiserver) is a per-user preference. Running
-  # this as root writes to /var/root/Library/Preferences instead of the
-  # real login session's ~/Library/Preferences, so none of it would take
-  # effect for the actual user (dotfiles#62).
+# The twenty-one scalar preferences below used to be one ungated `defaults
+# write` block. It reported `unknown` on every apply and could not say which
+# key it had changed; gating it honestly took a thirty-line `unless` that read
+# all of them back. Both problems are the `defaults` action's job now
+# (provision spec §6.10): each key is its own step, reads its own current
+# value, and says what it changed.
+#
+# No `sudo` anywhere here, and the action refuses it: every domain touched is
+# a per-user preference, and a root write lands in /var/root/Library rather
+# than in the login session's own (dotfiles#62).
+#
+# `when: os == "darwin"` on every one of them. The action does not skip
+# itself off macOS -- it fails -- so `validate --strict` asks each step where
+# it runs, and a plan that says so is worth the repetition.
+
+# Window animations: the 'new window' scale effect, and the resize time it uses
+- name: "NSGlobalDomain NSAutomaticWindowAnimationsEnabled"
+  defaults:
+    domain: NSGlobalDomain
+    key: "NSAutomaticWindowAnimationsEnabled"
+    type: bool
+    value: false
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "NSGlobalDomain NSWindowResizeTime"
+  defaults:
+    domain: NSGlobalDomain
+    key: "NSWindowResizeTime"
+    type: float
+    value: 0.001
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Icons for hard drives, servers and removable media on the desktop
+- name: "com.apple.finder ShowExternalHardDrivesOnDesktop"
+  defaults:
+    domain: com.apple.finder
+    key: "ShowExternalHardDrivesOnDesktop"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.finder ShowHardDrivesOnDesktop"
+  defaults:
+    domain: com.apple.finder
+    key: "ShowHardDrivesOnDesktop"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.finder ShowMountedServersOnDesktop"
+  defaults:
+    domain: com.apple.finder
+    key: "ShowMountedServersOnDesktop"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.finder ShowRemovableMediaOnDesktop"
+  defaults:
+    domain: com.apple.finder
+    key: "ShowRemovableMediaOnDesktop"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Hidden files, always
+- name: "com.apple.finder AppleShowAllFiles"
+  defaults:
+    domain: com.apple.finder
+    key: "AppleShowAllFiles"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Save to disk, not to iCloud
+- name: "NSGlobalDomain NSDocumentSaveNewDocumentsToCloud"
+  defaults:
+    domain: NSGlobalDomain
+    key: "NSDocumentSaveNewDocumentsToCloud"
+    type: bool
+    value: false
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Quit the printer app once its jobs finish
+- name: "com.apple.print.PrintingPrefs Quit When Finished"
+  defaults:
+    domain: com.apple.print.PrintingPrefs
+    key: "Quit When Finished"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Drop the "are you sure you want to open this application?" dialog
+- name: "com.apple.LaunchServices LSQuarantine"
+  defaults:
+    domain: com.apple.LaunchServices
+    key: "LSQuarantine"
+    type: bool
+    value: false
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Password immediately after sleep or screen saver
+- name: "com.apple.screensaver askForPassword"
+  defaults:
+    domain: com.apple.screensaver
+    key: "askForPassword"
+    type: int
+    value: 1
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.screensaver askForPasswordDelay"
+  defaults:
+    domain: com.apple.screensaver
+    key: "askForPasswordDelay"
+    type: int
+    value: 0
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Screenshots: to the desktop, as PNG
+- name: "com.apple.screencapture location"
+  defaults:
+    domain: com.apple.screencapture
+    key: "location"
+    type: string
+    value: "{{ home }}/Desktop"
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.screencapture type"
+  defaults:
+    domain: com.apple.screencapture
+    key: "type"
+    type: string
+    value: "png"
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Secondary click: bottom-right corner and two fingers, on the bluetooth
+  # trackpad, the per-host global keys and the built-in one
+- name: "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick"
+  defaults:
+    domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
+    key: "TrackpadCornerSecondaryClick"
+    type: int
+    value: 2
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick"
+  defaults:
+    domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
+    key: "TrackpadRightClick"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior"
+  defaults:
+    domain: NSGlobalDomain
+    key: "com.apple.trackpad.trackpadCornerClickBehavior"
+    type: int
+    value: 1
+    current_host: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "NSGlobalDomain com.apple.trackpad.enableSecondaryClick"
+  defaults:
+    domain: NSGlobalDomain
+    key: "com.apple.trackpad.enableSecondaryClick"
+    type: bool
+    value: true
+    current_host: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick"
+  defaults:
+    domain: com.apple.AppleMultitouchTrackpad
+    key: "TrackpadCornerSecondaryClick"
+    type: int
+    value: 2
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.AppleMultitouchTrackpad TrackpadRightClick"
+  defaults:
+    domain: com.apple.AppleMultitouchTrackpad
+    key: "TrackpadRightClick"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Font smoothing off (`-g` is NSGlobalDomain said shorter)
+- name: "NSGlobalDomain AppleFontSmoothing"
+  defaults:
+    domain: NSGlobalDomain
+    key: "AppleFontSmoothing"
+    type: int
+    value: 0
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# The menu bar array stays in shell: `defaults` takes four scalar types and
+# `array` is deferred with its own reopen condition (provision plan.md). Its
+# gate compares the plist `defaults read` prints with quoting and whitespace
+# stripped -- content, not formatting -- which is also why "Menu Extras" is
+# one word on the right-hand side.
+- name: Menu bar extras
   shell: |
     set -euo pipefail
-    # Disable window animations ('new window' scale effect)
-    defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
-    defaults write NSGlobalDomain NSWindowResizeTime -float 0.001
-
-    # Show icons for hard drives, servers, and removable media on the desktop
-    defaults write com.apple.finder ShowExternalHardDrivesOnDesktop -bool true
-    defaults write com.apple.finder ShowHardDrivesOnDesktop -bool true
-    defaults write com.apple.finder ShowMountedServersOnDesktop -bool true
-    defaults write com.apple.finder ShowRemovableMediaOnDesktop -bool true
-
-    # Show hidden files by default
-    defaults write com.apple.finder AppleShowAllFiles -bool true
-
-    # Save to disk (not to iCloud) by default
-    defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
-
-    # Automatically quit printer app once the print jobs complete
-    defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
-
-    # Disable the “Are you sure you want to open this application?” dialog
-    defaults write com.apple.LaunchServices LSQuarantine -bool false
-
-    # Require password immediately after sleep or screen saver begins
-    defaults write com.apple.screensaver askForPassword -int 1
-    defaults write com.apple.screensaver askForPasswordDelay -int 0
-
-    # Save screenshots to the desktop
-    defaults write com.apple.screencapture location -string "$HOME/Desktop"
-
-    # Save screenshots in PNG format
-    defaults write com.apple.screencapture type -string "png"
-
-    # Trackpack secordary click right and two finger
-    defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick -int 2
-    defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick -bool true
-
-    defaults -currentHost write NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior -int 1
-    defaults -currentHost write NSGlobalDomain com.apple.trackpad.enableSecondaryClick -bool true
-
-    defaults write com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick -int 2
-    defaults write com.apple.AppleMultitouchTrackpad TrackpadRightClick -bool true
     defaults write com.apple.systemuiserver menuExtras -array \
       "/System/Library/CoreServices/Menu Extras/AirPort.menu" \
       "/System/Library/CoreServices/Menu Extras/Bluetooth.menu" \
       "/System/Library/CoreServices/Menu Extras/Clock.menu" \
       "/System/Library/CoreServices/Menu Extras/Displays.menu" \
       "/System/Library/CoreServices/Menu Extras/Volume.menu"
-
-    defaults write -g AppleFontSmoothing -int 0
-  # Every `defaults write` above has a matching read here. This is long
-  # because the step is long: the honest question for a step that writes
-  # 23 preferences is "are all 23 already at the wanted value", and there
-  # is no shorter way to ask it.
-  #
-  # It fails open on purpose. A key never written, a value someone
-  # changed by hand, a domain that does not exist yet, `defaults` itself
-  # missing -- each leaves `eq` false and lets the step run, which costs
-  # a second because `defaults write` of a value already in place is a
-  # no-op. Failing closed would silently stop applying the settings.
-  #
-  # `set -eu`, not `-euo pipefail`: the first mismatching `eq` should end
-  # the gate with a non-zero status, which is exactly what errexit does.
   unless: |
     set -eu
-    eq() {  # eq <want> <args to `defaults`...>
-      want=$1
-      shift
-      [ "$(defaults "$@" 2>/dev/null)" = "$want" ]
-    }
-
-    # Booleans read back as 0/1, never as true/false.
-    eq 0 read NSGlobalDomain NSAutomaticWindowAnimationsEnabled
-    eq 0.001 read NSGlobalDomain NSWindowResizeTime
-
-    eq 1 read com.apple.finder ShowExternalHardDrivesOnDesktop
-    eq 1 read com.apple.finder ShowHardDrivesOnDesktop
-    eq 1 read com.apple.finder ShowMountedServersOnDesktop
-    eq 1 read com.apple.finder ShowRemovableMediaOnDesktop
-    eq 1 read com.apple.finder AppleShowAllFiles
-
-    eq 0 read NSGlobalDomain NSDocumentSaveNewDocumentsToCloud
-    eq 1 read com.apple.print.PrintingPrefs "Quit When Finished"
-    eq 0 read com.apple.LaunchServices LSQuarantine
-
-    eq 1 read com.apple.screensaver askForPassword
-    eq 0 read com.apple.screensaver askForPasswordDelay
-
-    eq "$HOME/Desktop" read com.apple.screencapture location
-    eq png read com.apple.screencapture type
-
-    eq 2 read com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick
-    eq 1 read com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick
-
-    # `-currentHost` is part of the address: written per-host, read per-host.
-    eq 1 -currentHost read NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior
-    eq 1 -currentHost read NSGlobalDomain com.apple.trackpad.enableSecondaryClick
-
-    eq 2 read com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick
-    eq 1 read com.apple.AppleMultitouchTrackpad TrackpadRightClick
-
-    eq 0 read -g AppleFontSmoothing
-
-    # The menu bar array is the one value `defaults read` prints as a
-    # plist block instead of a scalar, so it is compared with quoting and
-    # whitespace stripped -- content, not formatting. Stripping spaces is
-    # also why "Menu Extras" is one word on the right-hand side.
     menu=$(defaults read com.apple.systemuiserver menuExtras 2>/dev/null | tr -d ' \n"')
     [ "$menu" = "(/System/Library/CoreServices/MenuExtras/AirPort.menu,/System/Library/CoreServices/MenuExtras/Bluetooth.menu,/System/Library/CoreServices/MenuExtras/Clock.menu,/System/Library/CoreServices/MenuExtras/Displays.menu,/System/Library/CoreServices/MenuExtras/Volume.menu)" ]
+  when: os == "darwin"
+  tags: [macos, defaults]
