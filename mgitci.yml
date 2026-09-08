@@ -6,15 +6,20 @@
 # `mooncake step '<yaml>'` inside it — so the image must carry `mooncake` on PATH.
 #
 # Two-stage gate:
-#   validate — `mooncake validate -c <machine>.yml` on all five machine configs.
-#              Pure YAML/schema check; no system state needed.
-#   plan     — `mooncake plan --no-inspect -c <machine>.yml` on all five configs.
+#   validate — `provision validate ./<machine>.yml` on all five machine
+#              configs. Pure YAML/schema check; no system state needed.
+#   plan     — `provision plan --plan-no-probe ./<machine>.yml` on all five.
 #              Static template expansion: catches undefined vars, bad imports,
-#              template render errors. --no-inspect skips unless:/when: checks
-#              that require the real target machine.
+#              template render errors. --plan-no-probe skips the unless:/when:
+#              checks that need the real target machine (it is mooncake's
+#              --no-inspect under a name that says what it does).
 #
-# Image: mooncake-ci:latest carries the mooncake binary and nothing else heavy.
-# No Go toolchain, no lint suite — dotfiles CI only needs mooncake itself.
+# Image: provision-ci:latest is mooncake-ci:latest plus the provision binary.
+# It still carries mooncake because moongitd execs every step as
+# `mooncake step '<yaml>'` inside the container — that is the runner's
+# contract, not this repo's choice. Built by components/provision on
+# main_pc; CI cannot pull (dotfiles#8), so the image must exist there
+# before this file takes effect.
 version: "1"
 on:
   push:
@@ -33,20 +38,20 @@ on:
       ]
 jobs:
   validate:
-    image: mooncake-ci:latest
+    image: provision-ci:latest
     steps:
-      - run: mooncake validate -c ./main_pc.yml
-      - run: mooncake validate -c ./mini_pc.yml
-      - run: mooncake validate -c ./x1.yml
-      - run: mooncake validate -c ./mac.yml
-      - run: mooncake validate -c ./work_mac.yml
+      - run: provision validate ./main_pc.yml
+      - run: provision validate ./mini_pc.yml
+      - run: provision validate ./x1.yml
+      - run: provision validate ./mac.yml
+      - run: provision validate ./work_mac.yml
 
   plan:
-    image: mooncake-ci:latest
+    image: provision-ci:latest
     needs: [validate]
     steps:
-      - run: mooncake plan --no-inspect -c ./main_pc.yml
-      - run: mooncake plan --no-inspect -c ./mini_pc.yml
-      - run: mooncake plan --no-inspect -c ./x1.yml
-      - run: mooncake plan --no-inspect -c ./mac.yml
-      - run: mooncake plan --no-inspect -c ./work_mac.yml
+      - run: provision plan --plan-no-probe ./main_pc.yml
+      - run: provision plan --plan-no-probe ./mini_pc.yml
+      - run: provision plan --plan-no-probe ./x1.yml
+      - run: provision plan --plan-no-probe ./mac.yml
+      - run: provision plan --plan-no-probe ./work_mac.yml
