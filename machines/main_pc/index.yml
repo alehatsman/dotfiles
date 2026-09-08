@@ -99,6 +99,14 @@
   use: ../../components/mooncake/index.yml
   tags: [tools, mooncake]
 
+# provision CI image (provision-ci:latest = mooncake-ci + the provision
+# binary). After mooncake, because it builds FROM that image: moongitd
+# execs every CI step as `mooncake step`, so the base has to carry mooncake
+# regardless. This box is the CI server.
+- name: Use provision component
+  use: ../../components/provision/index.yml
+  tags: [tools, provision]
+
 # Inbound fleet access. Gated on fleet_peer_enabled (false in ./vars.yml
 # until dotfiles#2's authorized_keys reconciliation is done) — see
 # components/fleet-peer/index.yml. Last, deliberately: it asserts on a

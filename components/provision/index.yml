@@ -1,0 +1,74 @@
+---
+# provision — CI image only. provision-ci:latest is the container moongit
+# runs this repo's own CI in (mgitci.yml). It derives FROM mooncake-ci:latest
+# because moongitd execs every CI step as `mooncake step '<yaml>'` inside the
+# image — so the image must carry mooncake whatever else it carries, and the
+# cheapest correct base is the one that already does.
+#
+# Imported AFTER the mooncake component on main_pc, which is the only machine
+# that builds CI images.
+#
+# provision itself is not provisioned here. The binary comes from
+# `just install`, which copies the natively built release to ~/.local/bin —
+# and `just` is installed on no machine in this fleet yet (docs/migration.md
+# §6), so on a machine where the binary is absent this step says so and
+# skips rather than failing.
+
+props:
+  provision_ci_image_sha:
+    type: string
+    default: "~/.local/share/provision-ci-image.sha"
+    description: >
+      Sidecar file recording the (provision binary hash + mooncake-ci base
+      image id) that provision-ci:latest was last built from. Rebuild is
+      skipped when the sidecar matches both, so the image tracks the binary
+      and its base without silent rot.
+  provision_bin:
+    type: string
+    default: "~/.local/bin/provision"
+    description: The natively built binary to bake into the CI image.
+
+steps:
+  # ───────────────── CI CONTAINER IMAGE (sha-gated) ───────────────────────────
+  # Same shape and the same reasoning as components/mooncake: gated on
+  # (what goes in + what it sits on) so the image refreshes when either
+  # moves, and built locally so the runner never pulls — pulls fail on this
+  # host (dotfiles#8).
+  #
+  # The binary's hash rather than a git HEAD: provision lives outside this
+  # repo, and what actually ends up in the image is the compiled artifact,
+  # not the commit it was built from. A rebuild of the same source produces
+  # the same hash only if the build was reproducible, which is the honest
+  # thing to gate on — if the binary is byte-identical there is nothing to
+  # rebuild for.
+  #
+  # Force a rebuild:
+  #   rm {{ props.provision_ci_image_sha }} && provision apply ./main_pc.yml --tags ci-images
+  - name: "Build the provision CI container image (refresh when the binary or its base moves)"
+    shell: |
+      set -euo pipefail
+      command -v docker >/dev/null 2>&1 || { echo "docker not found — skipping provision CI image build"; exit 0; }
+      bin={{ props.provision_bin | expanduser }}
+      if [ ! -x "$bin" ]; then
+        echo "$bin not found — run \`just install\` in the provision repo first; skipping"
+        exit 0
+      fi
+      tmp=$(mktemp -d)
+      trap 'rm -rf "$tmp"' EXIT
+      # The build context is the temp dir and holds exactly two files, so
+      # docker never tars up a repo to copy one binary.
+      cp "$bin" "$tmp/provision"
+      cat > "$tmp/Dockerfile" <<'DOCKERFILE'
+      FROM mooncake-ci:latest
+      COPY provision /usr/local/bin/provision
+      DOCKERFILE
+      docker build -t provision-ci:latest "$tmp"
+      sidecar={{ props.provision_ci_image_sha | expanduser }}
+      mkdir -p "$(dirname "$sidecar")"
+      { sha256sum "$bin" | cut -d' ' -f1; docker images --no-trunc -q mooncake-ci:latest; } > "$sidecar"
+    unless: |
+      docker image inspect provision-ci:latest >/dev/null 2>&1 && \
+      [ "$(cat {{ props.provision_ci_image_sha | expanduser }} 2>/dev/null)" = "$({ sha256sum {{ props.provision_bin | expanduser }} | cut -d' ' -f1; docker images --no-trunc -q mooncake-ci:latest; })" ]
+    when: os == "linux"
+    timeout: 15m
+    tags: [provision, ci-images]
