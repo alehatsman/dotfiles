@@ -316,8 +316,9 @@
 # fires even when the user isn't logged in.
 - name: Register Task Scheduler entry to keep WSL SSH alive
   # exit 3 = task already registered (migration §3.4). {{ username }} on
-  # Windows resolves to DOMAIN\USER, matching the COMPUTERNAME\USERNAME
-  # form the old PowerShell version used.
+  # Windows is the bare account name, no COMPUTERNAME\ prefix — verified on
+  # main_pc's host, where the tasks mooncake registered carry UserId `aleh`.
+  # New-ScheduledTaskPrincipal takes either form for a local account.
   shell:
     interpreter: powershell
     script: |
