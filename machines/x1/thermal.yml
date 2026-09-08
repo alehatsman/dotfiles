@@ -109,6 +109,14 @@
     set -euo pipefail
     echo 1 > /sys/module/snd_hda_intel/parameters/power_save 2>/dev/null || true
     echo Y > /sys/module/snd_hda_intel/parameters/power_save_controller 2>/dev/null || true
+  # The two files the step writes are the two files the gate reads. When
+  # snd_hda_intel is not loaded they do not exist, the gate is false and
+  # the step runs -- and the step is a no-op in that case, which is what
+  # its own `|| true` is for.
+  unless: |
+    set -eu
+    [ "$(cat /sys/module/snd_hda_intel/parameters/power_save 2>/dev/null)" = "1" ] &&
+    [ "$(cat /sys/module/snd_hda_intel/parameters/power_save_controller 2>/dev/null)" = "Y" ]
   sudo: true
   tags: [thermal]
 
@@ -181,6 +189,13 @@
 - name: Reload systemd for the RAPL units
   cmd: [systemctl, daemon-reload]
   when: rapl_unit.changed or rapl_resume_unit.changed
+  # Same shape as the user-manager reload in components/moongit: `when`
+  # decides whether it runs, `changed_when` says what it did. It is not
+  # `false` -- a reload that only fires after a unit file changed did
+  # change the manager's view of that unit, and the exit code is not the
+  # whole story. There is no state to ask about instead: systemd reports
+  # no "units reloaded since" fact for an `unless` to read.
+  changed_when: true
   sudo: true
   tags: [thermal, rapl]
 
@@ -246,6 +261,13 @@
 - name: Reload systemd for the iGPU units
   cmd: [systemctl, daemon-reload]
   when: gt_unit.changed or gt_resume_unit.changed
+  # Same shape as the user-manager reload in components/moongit: `when`
+  # decides whether it runs, `changed_when` says what it did. It is not
+  # `false` -- a reload that only fires after a unit file changed did
+  # change the manager's view of that unit, and the exit code is not the
+  # whole story. There is no state to ask about instead: systemd reports
+  # no "units reloaded since" fact for an `unless` to read.
+  changed_when: true
   sudo: true
   tags: [thermal, igpu]
 

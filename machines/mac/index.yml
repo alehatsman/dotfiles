@@ -45,6 +45,16 @@
     scutil --set ComputerName "{{ computer_name }}"
     scutil --set LocalHostName "{{ computer_name }}"
     scutil --set HostName "{{ computer_name }}"
+  # All three names, because the step sets all three and any one of them
+  # can be right while another is not -- a machine renamed in System
+  # Settings moves ComputerName and leaves HostName behind. A name that
+  # was never set makes `scutil --get` exit 1 with "not set" on stderr,
+  # which the comparison reads as "does not match" and runs the step.
+  unless: |
+    set -eu
+    [ "$(scutil --get ComputerName 2>/dev/null)" = "{{ computer_name }}" ] &&
+    [ "$(scutil --get LocalHostName 2>/dev/null)" = "{{ computer_name }}" ] &&
+    [ "$(scutil --get HostName 2>/dev/null)" = "{{ computer_name }}" ]
   sudo: true
   tags: [macos]
 

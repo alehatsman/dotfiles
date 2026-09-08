@@ -213,4 +213,11 @@
     set -euo pipefail
     gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
     gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+  # `gsettings get` prints a GVariant, so a string comes back inside
+  # single quotes and the wanted value is quoted here to match. No sudo
+  # on the step, so the gate reads the same user's dconf the step writes.
+  unless: |
+    set -eu
+    [ "$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null)" = "'prefer-dark'" ] &&
+    [ "$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null)" = "'Adwaita-dark'" ]
   tags: [hyprland, theme]

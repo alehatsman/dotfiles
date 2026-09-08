@@ -72,3 +72,62 @@
       "/System/Library/CoreServices/Menu Extras/Volume.menu"
 
     defaults write -g AppleFontSmoothing -int 0
+  # Every `defaults write` above has a matching read here. This is long
+  # because the step is long: the honest question for a step that writes
+  # 23 preferences is "are all 23 already at the wanted value", and there
+  # is no shorter way to ask it.
+  #
+  # It fails open on purpose. A key never written, a value someone
+  # changed by hand, a domain that does not exist yet, `defaults` itself
+  # missing -- each leaves `eq` false and lets the step run, which costs
+  # a second because `defaults write` of a value already in place is a
+  # no-op. Failing closed would silently stop applying the settings.
+  #
+  # `set -eu`, not `-euo pipefail`: the first mismatching `eq` should end
+  # the gate with a non-zero status, which is exactly what errexit does.
+  unless: |
+    set -eu
+    eq() {  # eq <want> <args to `defaults`...>
+      want=$1
+      shift
+      [ "$(defaults "$@" 2>/dev/null)" = "$want" ]
+    }
+
+    # Booleans read back as 0/1, never as true/false.
+    eq 0 read NSGlobalDomain NSAutomaticWindowAnimationsEnabled
+    eq 0.001 read NSGlobalDomain NSWindowResizeTime
+
+    eq 1 read com.apple.finder ShowExternalHardDrivesOnDesktop
+    eq 1 read com.apple.finder ShowHardDrivesOnDesktop
+    eq 1 read com.apple.finder ShowMountedServersOnDesktop
+    eq 1 read com.apple.finder ShowRemovableMediaOnDesktop
+    eq 1 read com.apple.finder AppleShowAllFiles
+
+    eq 0 read NSGlobalDomain NSDocumentSaveNewDocumentsToCloud
+    eq 1 read com.apple.print.PrintingPrefs "Quit When Finished"
+    eq 0 read com.apple.LaunchServices LSQuarantine
+
+    eq 1 read com.apple.screensaver askForPassword
+    eq 0 read com.apple.screensaver askForPasswordDelay
+
+    eq "$HOME/Desktop" read com.apple.screencapture location
+    eq png read com.apple.screencapture type
+
+    eq 2 read com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick
+    eq 1 read com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick
+
+    # `-currentHost` is part of the address: written per-host, read per-host.
+    eq 1 -currentHost read NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior
+    eq 1 -currentHost read NSGlobalDomain com.apple.trackpad.enableSecondaryClick
+
+    eq 2 read com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick
+    eq 1 read com.apple.AppleMultitouchTrackpad TrackpadRightClick
+
+    eq 0 read -g AppleFontSmoothing
+
+    # The menu bar array is the one value `defaults read` prints as a
+    # plist block instead of a scalar, so it is compared with quoting and
+    # whitespace stripped -- content, not formatting. Stripping spaces is
+    # also why "Menu Extras" is one word on the right-hand side.
+    menu=$(defaults read com.apple.systemuiserver menuExtras 2>/dev/null | tr -d ' \n"')
+    [ "$menu" = "(/System/Library/CoreServices/MenuExtras/AirPort.menu,/System/Library/CoreServices/MenuExtras/Bluetooth.menu,/System/Library/CoreServices/MenuExtras/Clock.menu,/System/Library/CoreServices/MenuExtras/Displays.menu,/System/Library/CoreServices/MenuExtras/Volume.menu)" ]

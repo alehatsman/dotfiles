@@ -30,6 +30,10 @@
 
 - name: Set computer name
   shell: hostnamectl set-hostname "{{ computer_name }}"
+  # `set-hostname` with no qualifier writes the static hostname, so the
+  # static hostname is what to read back. An unset one prints the empty
+  # string and runs the step.
+  unless: '[ "$(hostnamectl --static 2>/dev/null)" = "{{ computer_name }}" ]'
   sudo: true
   tags: [system]
 

@@ -137,6 +137,20 @@
     for f in /sys/class/powercap/intel-rapl:*/energy_uj; do
       [ -e "$f" ] && chmod 0444 "$f" || true
     done
+  # The step has two effects, so the gate asks about both: the rule is on
+  # disk, and every RAPL domain currently present is already 0444. A
+  # `creates:` on the rule file alone would skip the chmod forever after
+  # the first run, which is wrong the moment a domain appears -- or a
+  # permission is reset -- without a reboot to fire the udev rule.
+  unless: |
+    set -eu
+    grep -qF 'KERNEL=="intel-rapl:*"' /etc/udev/rules.d/99-rapl-readable.rules 2>/dev/null || exit 1
+    # No domains present is not "not done": the rule is deployed and
+    # there is nothing left to chmod, so the loop falls through to 0.
+    for f in /sys/class/powercap/intel-rapl:*/energy_uj; do
+      [ -e "$f" ] || continue
+      [ "$(stat -c %a "$f")" = "444" ] || exit 1
+    done
   sudo: true
   tags: [arch, system, packages, rapl]
 
@@ -191,13 +205,26 @@
   tags: [arch, system, packages]
 
 - name: Apply CapsLock remap to running session (best-effort)
-  # localectl + loadkeys + the sysfs poke are one-shot apply-now
-  # commands; nothing to check declaratively. They're idempotent in
-  # spirit — each just re-affirms what the config files above persist.
+  # Not three one-shot commands, as this comment used to say. The first
+  # of them is a write: `localectl set-x11-keymap` puts the layout in
+  # /etc/X11/xorg.conf.d/00-keyboard.conf, where it survives a reboot and
+  # where `localectl status` reads it back. That is the step's one
+  # durable effect, so it is what the gate asks about.
   shell: |
     set -euo pipefail
     localectl set-x11-keymap us "" "" ctrl:nocaps
     loadkeys /usr/local/share/kbd/keymaps/us-caps-ctrl.map
     echo 0 > /sys/class/leds/input3::capslock/brightness 2>/dev/null || true
+  # `loadkeys` and the LED write are the genuinely runtime-only pair, and
+  # neither needs re-running once the files above are in place:
+  # systemd-vconsole-setup loads KEYMAP= from /etc/vconsole.conf at boot,
+  # and the udev rule deployed above turns the LED off on `add`. They
+  # matter in the session that first writes those files -- the session in
+  # which this gate is false anyway, because localectl has not run yet.
+  unless: |
+    set -eu
+    st=$(localectl status 2>/dev/null || true)
+    printf '%s\n' "$st" | grep -qE 'X11 Layout:[[:space:]]*us[[:space:]]*$' &&
+    printf '%s\n' "$st" | grep -qE 'X11 Options:.*ctrl:nocaps'
   sudo: true
   tags: [arch, system, packages]
