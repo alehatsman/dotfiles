@@ -4,14 +4,12 @@ Personal machine config. Declarative. Reproducible. One source of truth.
 **Deploy only via [provision](https://github.com/alehatsman/provision).** Never
 `cp`/`ln`/hand-edit managed destinations.
 
-![provision apply --tags asciinema on main_pc](docs/demo.gif)
+![provision apply ./main_pc.yml on main_pc](docs/demo.gif)
 
-Recorded live on main_pc: `provision apply ./main_pc.yml --tags asciinema`
-(scoped to the [asciinema](components/asciinema) component so the demo's
-own blast radius stays small). Recorded with
-[asciinema](https://asciinema.org), converted to gif with
-[agg](https://github.com/asciinema/agg) — both installed by that same
-component.
+Recorded live on main_pc: a full `provision apply ./main_pc.yml` run,
+every component. Recorded with [asciinema](https://asciinema.org),
+converted to gif with [agg](https://github.com/asciinema/agg) — both
+installed by the [asciinema](components/asciinema) component.
 
 ## Bootstrap a fresh machine
 
