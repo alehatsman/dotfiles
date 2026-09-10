@@ -64,7 +64,6 @@
       - hashicorp/tap/packer
       - python
       - ripgrep
-      - rustup
       - shellcheck
       - shfmt
       - hashicorp/tap/terraform
