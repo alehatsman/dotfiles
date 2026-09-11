@@ -4,7 +4,7 @@
 #
 #   provision apply <machine>.yml --ask-sudo-pass
 #
-# The current OS username is exposed by mooncake as {{ username }} — no
+# The current OS username is exposed by provision as {{ username }} — no
 # need to set it here.
 FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
@@ -44,13 +44,6 @@ claude_system_prompt_src: "./CLAUDE.md"
 #   monokai_light  — Sublime Monokai Light companion variant
 palette_variant: monokai_dark
 
-# Source checkout of mooncake, used by the moongit CI-image build step:
-# it bakes this mooncake into the CI container image (the runner execs it
-# inside every CI job), so it must stay current enough to parse the repo's
-# tasks.yml syntax. Shared (not component-local) so the component resolves
-# it regardless of apply order. See moongit#193.
-mooncake_src_dir: "~/projects/mooncake"
-
 # ─── Fleet inbound SSH ──────────────────────────────────────────────────────
 # The fleet's SSH *public* keys — the declared source of truth for which
 # machines may open an inbound connection to a box that runs the fleet-peer
@@ -76,11 +69,8 @@ fleet_ssh_keys:
 # work_mac was never queried. Append their id_ed25519.pub and re-apply on
 # every peer — until then neither can reach a fleet-peer machine.
 
-# Whether this machine accepts inbound fleet SSH + runs the mooncake agentd.
-# Default false: opening a workstation to inbound SSH is opt-in, never a
-# side effect of importing a platform. Machines that should be reachable set
-# this true in machines/<m>/vars.yml.
+# Whether this machine accepts inbound fleet SSH. Default false: opening a
+# workstation to inbound SSH is opt-in, never a side effect of importing a
+# platform. Machines that should be reachable set this true in
+# machines/<m>/vars.yml.
 fleet_peer_enabled: "false"
-# TCP port the agentd binds. Matches mooncake's own default; main_pc/mini_pc
-# already use 7878 for their WSL daemons (see machines/*/vars.yml).
-fleet_peer_agentd_port: "7878"

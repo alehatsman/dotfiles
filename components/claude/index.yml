@@ -52,11 +52,6 @@
   unless: claude mcp list 2>/dev/null | grep -q '^moongit'
   tags: [claude]
 
-- name: "Register mooncake MCP server"
-  shell: claude mcp add --scope user -- mooncake mooncake mcp
-  unless: claude mcp list 2>/dev/null | grep -q '^mooncake'
-  tags: [claude]
-
 - name: "Add the claude-plugins-official marketplace"
   shell: claude plugin marketplace add anthropics/claude-plugins-official
   unless: claude plugin marketplace list 2>/dev/null | grep -q 'claude-plugins-official'

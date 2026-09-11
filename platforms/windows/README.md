@@ -28,32 +28,7 @@ operator documentation, not machine state, so it lives here instead
 
 4. Add your SSH public key to `~/.ssh/authorized_keys` (WSL side).
 5. `wsl --shutdown`, then verify: `ssh <this-pc-ip> -p <wsl_ssh_port>`.
-6. From your controller machine (e.g. x1), bootstrap **both** agentd
-   daemons — one inside the WSL distro, one on the Windows host. Each
-   command SCPs the right mooncake binary, installs the OS-native
-   autostart (systemd unit on Linux, Task Scheduler entry on Windows),
-   opens the firewall, and writes the peer entry to `peers.toml`.
 
-   ```sh
-   # WSL (Linux) peer — through WSL's OpenSSH on :<wsl_ssh_port>
-   mooncake fleet bootstrap <user>@<this-pc-ip> \
-       --port <wsl_ssh_port> --agentd-port <wsl_agentd_port> \
-       --name <machine> --tag <machine> --upgrade
-
-   # Windows-host peer — through Windows OpenSSH on :22
-   mooncake fleet bootstrap <user>@<this-pc-ip> \
-       --port 22 --agentd-port <windows_agentd_port> \
-       --name <machine>-win --tag windows --upgrade
-   ```
-
-7. Confirm both peers green:
-
-   ```sh
-   mooncake fleet status
-   ```
-
-   Expect `2/2 accessible`: `<machine>` (linux) + `<machine>-win` (windows).
-
-The fleet is mooncake's, and stays mooncake's — provision has no fleet
-feature and is not getting one. The port values come from the machine's
-`machines/<m>/vars.yml`.
+Fleet peer bootstrap (agentd daemons, `fleet status`) was mooncake's and was
+removed along with it — provision has no fleet feature. This box is reachable
+over plain SSH only; see `components/fleet-peer`.

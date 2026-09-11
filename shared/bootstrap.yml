@@ -1,9 +1,7 @@
 ---
-# One-time setup that every machine wants up-front. The mooncake-preset
-# library bootstrap that used to live here was retired alongside the
-# in-tree presets/ directory in the mooncake repo. Components install
-# their packages directly until the Git-native module system (mooncake
-# spec-65) lands and these can become `use: github.com/...` refs.
+# One-time setup that every machine wants up-front. Components install
+# their packages directly until a Git-native module system lands and
+# these can become `use: github.com/...` refs.
 
 # The machine's SSH identity, before anything that clones over SSH.
 # Idempotent: an existing key is left strictly alone.
@@ -16,30 +14,26 @@
   unless: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
   tags: [core, home]
 
-# User-scope systemd units (moongit, and the mooncake agentd itself once
-# it lands in --user mode) need to survive logout — otherwise remote fleet apply against a non-interactive peer
-# has no user systemd bus to talk to. Idempotent: enable-linger is a
-# no-op when already enabled.
+# User-scope systemd units (moongit) need to survive logout — otherwise a
+# non-interactive session has no user systemd bus to talk to. Idempotent:
+# enable-linger is a no-op when already enabled.
 - name: Enable systemd linger for {{ username }} so user services survive logout
   shell: loginctl enable-linger {{ username }}
-  # agentd runs without DBUS_SESSION_BUS_ADDRESS so loginctl cannot talk to
-  # the bus; check the linger sentinel file directly instead (mooncake#21).
+  # loginctl can't always talk to the bus in a non-interactive session;
+  # check the linger sentinel file directly instead.
   unless: test -f /var/lib/systemd/linger/{{ username }}
   sudo: true
   when: os == "linux"
   tags: [core, systemd]
 
-# Passwordless sudo for the provisioning user. Required after the
-# user-mode agentd switch: previously the agentd ran as root and any
-# `as_user: root` step was a no-op-on-uid, but a user-mode agentd has
-# to escalate via sudo for those steps. The first apply needs
+# Passwordless sudo for the provisioning user. The first apply needs
 # `--ask-become-pass` to land this sudoers entry; subsequent applies
 # are passwordless. Content is a single fixed line with only
 # {{ username }} interpolated, so there's no template path that
 # produces invalid sudoers syntax — but a typo here lands without
 # visudo validation, so review changes carefully.
 #
-# owner/group are required, not decorative: mooncake's file.write
+# owner/group are required, not decorative: provision's file.write
 # Become path stages content in a temp file (owned by the calling
 # user) and `mv`s it into place via sudo — on a same-filesystem move
 # that's a rename(2), which preserves the pre-sudo owner instead of

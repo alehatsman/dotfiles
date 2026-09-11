@@ -47,7 +47,7 @@ export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 export VISUAL="nvim"
 export EDITOR="nvim"
 
-# GUI sudo prompt for non-TTY contexts (editor terminals, mooncake -K, sudo -A).
+# GUI sudo prompt for non-TTY contexts (editor terminals, sudo -A).
 # Only set when the helper actually exists — it's deployed by the hyprland entry
 # (needs wofi), so non-Hyprland Linux boxes (WSL, headless) skip it.
 if [[ -x "$HOME/.local/bin/gui-askpass" ]]; then
@@ -56,7 +56,7 @@ fi
 
 export SSH_KEY_PATH=~/.ssh/id_ed25519
 
-# moongit — agent.env (mooncake-seeded) exports MOONGIT_SERVER +
+# moongit — agent.env exports MOONGIT_SERVER +
 # MOONGIT_DATA_DIR (and a baseline MOONGIT_TOKEN for ad-hoc interactive
 # mgit). Per-Claude identity is NOT resolved here — the `ce` launcher below
 # mints/exports a session token so each spawned agent inherits its own.
@@ -177,9 +177,6 @@ alias md="mkdir -p"
 
 # Docker
 alias docker_clean="docker system prune --all --volumes"
-
-# Mooncake Task
-alias task="mooncake task"
 
 # Git
 g() {
@@ -659,7 +656,7 @@ apply_theme() {
     molokai)
       # Prompt: green when last cmd OK, red when failed; path; reset
       PROMPT='%(?.%F{green}.%F{red})'"${RUNO_ARROW_ICON}"'%F{red}%B%~%b%f '
-      # fzf — colors come from the palette mooncake component
+      # fzf — colors come from the palette component
       # (components/palette/vars/{{ palette_variant }}.yml). The
       # previous literal block had three typos vs canonical Monokai:
       #   green  #A6E22D → #A6E22E   border #3f4145 → palette.panel

@@ -3,8 +3,8 @@
 #
 # core.hooksPath (see .gitconfig.j2) points git at ~/.config/git/hooks for
 # EVERY repo on this machine, and it REPLACES .git/hooks wholesale rather
-# than adding to it. Left naive, that silently kills the pre-commit and
-# pre-push hooks in ~/projects/mooncake and ~/projects/dex.
+# than adding to it. Left naive, that silently kills any repo's own
+# pre-commit and pre-push hooks.
 #
 # So every hook name in that directory is a symlink to this one script, and
 # this script's last act is always to hand off to the repo's own hook. Add

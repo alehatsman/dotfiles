@@ -7,8 +7,9 @@
 # to put palette.* / editor.* into the CALLER's scope so every later
 # component's templates can read them. `use` builds a child scope that does
 # not leak back (spec §5), which is correct for a component and exactly
-# wrong for this file. Under mooncake it was a `use` that worked only
-# because vars.load mutated the global table — the old comment here said so.
+# wrong for this file. Under the previous applier it was a `use` that
+# worked only because vars.load mutated the global table — the old comment
+# here said so.
 #
 # Variant comes from the `palette_variant` global, set per machine in
 # machines/<m>/vars.yml. A variant with no matching vars/<variant>.yml is a

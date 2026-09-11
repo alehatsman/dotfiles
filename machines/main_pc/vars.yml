@@ -4,17 +4,6 @@ is_wsl: true
 computer_name: mainpc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
-# Mooncake agentd TCP ports.
-#   wsl_agentd_port (7878)    — Linux daemon inside the Ubuntu VM.
-#                               Mirrored networking exposes it on the
-#                               Windows host's LAN IP. Needs BOTH a
-#                               Windows Firewall rule AND a Hyper-V
-#                               Firewall rule (see bootstrap.yml).
-#   windows_agentd_port (7879) — Windows daemon on the host itself.
-#                                Only needs the regular WinFW rule.
-# Both daemons appear as separate peers in peers.toml for fleet apply.
-wsl_agentd_port: "7878"
-windows_agentd_port: "7879"
 
 # Always-on server box: it hosts moongit and builds every CI image, so the
 # host must never sleep or hibernate and the WSL VM must never be torn down
@@ -24,24 +13,22 @@ windows_agentd_port: "7879"
 windows_prevent_sleep: true
 
 # components/fleet-peer: render ~/.ssh/authorized_keys from the declared
-# fleet_ssh_keys list and confirm agentd is up (already is, via wsl_agentd_port
-# above, so the component's own bootstrap step is a no-op here). The sshd
-# half is darwin-gated in the component — Linux sshd on this box is already
-# handled by platforms/windows/index.yml — so only authorized_keys +
-# agentd-verify fire on main_pc.
+# fleet_ssh_keys list. The sshd half is darwin-gated in the component —
+# Linux sshd on this box is already handled by platforms/windows/index.yml —
+# so only authorized_keys fires on main_pc.
 #
 # Enabled — dotfiles#2's two blockers are both resolved: the component's
 # nc -G/-w portability bug is fixed (components/fleet-peer/index.yml), and
 # the user confirmed the 3 keys in main_pc's live authorized_keys that
-# weren't in fleet_ssh_keys (an old main_pc-win key, a minipc-dex-tunnel
-# key, one unidentified key) are all stale — safe to drop on the render.
+# weren't in fleet_ssh_keys (an old main_pc-win key, a stale tunnel key,
+# one unidentified key) are all stale — safe to drop on the render.
 fleet_peer_enabled: "true"
 
 # moongit server (components/moongit, MOONGIT_ADDR=:8080). moongitd binds
 # *:8080, so mirrored networking puts it on the Windows host's LAN IP —
 # but the Hyper-V VM defaults to DefaultInboundAction=Block, so reaching
 # it from another box needs BOTH a Windows Firewall rule AND a Hyper-V
-# Firewall rule (see bootstrap.yml), same as wsl_ssh_port/wsl_agentd_port.
+# Firewall rule (see bootstrap.yml), same as wsl_ssh_port.
 # Direct LAN access avoids the SSE-coalescing an `ssh -L 8080` tunnel adds.
 wsl_moongit_port: "8080"
 

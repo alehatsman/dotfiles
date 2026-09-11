@@ -112,15 +112,14 @@
 # ─── Tailscale ────────────────────────────────────────────────────────────
 # The WSL guest owns the tailnet node on these boxes, NOT the Windows host
 # (dotfiles#90). Everything a tailnet peer wants here — sshd :{{ wsl_ssh_port }},
-# the mooncake agentd, moongitd — is bound inside this VM, so running
-# tailscaled here puts those ports on tailscale0 directly: no Windows
-# Firewall rule, no Hyper-V firewall rule, no dependency on mirrored
-# networking carrying inbound traffic across the VM boundary.
+# moongitd — is bound inside this VM, so running tailscaled here puts those
+# ports on tailscale0 directly: no Windows Firewall rule, no Hyper-V
+# firewall rule, no dependency on mirrored networking carrying inbound
+# traffic across the VM boundary.
 #
-# The trade accepted with that: the Windows host itself (its own agentd on
-# windows_agentd_port, RDP) stays off the tailnet, and a downed WSL VM has no
-# remote recovery path. vmIdleTimeout=-1 plus the keepalive task cover the
-# routine cases; the LAN covers the rest.
+# The trade accepted with that: the Windows host itself (RDP) stays off the
+# tailnet, and a downed WSL VM has no remote recovery path. vmIdleTimeout=-1
+# plus the keepalive task cover the routine cases; the LAN covers the rest.
 #
 # Not in packages.yml — tailscale needs its own apt repo, so the repo +
 # package + service belong together as one block.
@@ -240,9 +239,9 @@
   timeout: 10m
 
 # WSL injects /usr/lib/wsl/lib (nvidia-smi, libcuda.so) only for interactive
-# login shells. Non-interactive SSH sessions, systemd units, and mooncake
-# agentd all skip that injection — bare `nvidia-smi` returns 127, causing
-# agents to incorrectly report no GPU driver. Adding the path to
+# login shells. Non-interactive SSH sessions and systemd units skip that
+# injection — bare `nvidia-smi` returns 127, causing agents to incorrectly
+# report no GPU driver. Adding the path to
 # /etc/environment makes it visible to all processes unconditionally.
 - name: Add /usr/lib/wsl/lib to PATH in /etc/environment (NVIDIA GPU)
   shell: |

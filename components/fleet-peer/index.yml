@@ -1,16 +1,18 @@
 ---
-# fleet-peer — make this machine reachable BY the rest of the fleet.
+# fleet-peer — make this machine reachable BY the rest of the fleet over SSH.
 #
 # components/ssh/index.yml is the mirror image of this file: it provisions the
 # machine's *outbound* identity key so this box can reach GitHub, moongit and
 # main_pc-wsl. Nothing there — or anywhere else in the repo before dotfiles#2 —
 # ever opened the inbound direction, which is why `mac` sat as a leaf: able to
-# reach main_pc, unreachable from it, and impossible to target with
-# `mooncake fleet bootstrap` or `fleet apply`.
+# reach main_pc but unreachable from it.
 #
 # Two halves, both required. sshd without authorized_keys is a closed door with
-# no lock fitted; authorized_keys without sshd is a lock with no door. The
-# agentd on top is what turns a merely-SSH-able box into a fleet *peer*.
+# no lock fitted; authorized_keys without sshd is a lock with no door.
+#
+# mooncake's agentd (the piece that used to turn this into a full fleet peer,
+# not just an SSH-reachable box) was removed with mooncake — see CLAUDE.md.
+# This component now only opens inbound SSH.
 #
 # Gated on fleet_peer_enabled (default false in shared/variables.yml).
 # Importing this component is not consent — a machine opts in explicitly in its
@@ -45,7 +47,7 @@
 # toggle that `systemsetup` drives. It needs root, and on modern macOS the
 # calling terminal also needs Full Disk Access — without it systemsetup fails
 # with a bare "Remote Login: Off" and no error, so the assert below is what
-# actually catches a silent no-op. See docs/macos-peer-setup.md.
+# actually catches a silent no-op.
 - name: Enable Remote Login (inbound sshd)
   shell: |
     set -euo pipefail
@@ -59,42 +61,10 @@
 
 # -w, not -G. Both set a connect timeout on macOS, but -G is BSD-only and
 # GNU/OpenBSD netcat rejects it outright ("invalid option -- 'G'"), which
-# makes every port check here fail on a Linux peer regardless of whether the
-# port is open. That is worst on the unless_command gate below: a gate that
-# can never hold means `agentd bootstrap` re-runs on every apply. -w is
-# accepted by both flavours. See dotfiles#2.
+# makes this check fail on a Linux peer regardless of whether the port is
+# open. -w is accepted by both flavours. See dotfiles#2.
 - name: Verify sshd is accepting connections
   assert:
     command: nc -z -w 5 127.0.0.1 22
   when: os == 'darwin' and fleet_peer_enabled == 'true'
-  tags: [fleet-peer, verify]
-
-# ─────────────────────────── mooncake agentd ────────────────────────────────
-# `agentd bootstrap` installs the launchd plist (macOS) or systemd unit
-# (Linux) for the *running* binary, enables + starts it, and prints the bearer
-# token plus a `fleet pair` one-liner for the controller.
-#
-# Deliberately the local form, not `fleet bootstrap user@host`: the remote form
-# SFTPs the controller's own binary onto the target and errors on version
-# mismatch, so bootstrapping from a controller that is behind silently
-# downgrades this machine's mooncake. Installing from the binary already on
-# this box keeps the version whatever `mooncake task install` last put here.
-#
-# Idempotent: same version + active service is a no-op. A version drift needs
-# --upgrade, which is intentionally NOT passed — a surprise daemon swap during
-# an unrelated apply is worse than a loud failure telling you to re-run
-# `mooncake task install` first.
-- name: Install and start the mooncake agentd
-  shell: |
-    set -euo pipefail
-    mooncake agentd bootstrap --port "{{ fleet_peer_agentd_port }}"
-  sudo: true
-  when: fleet_peer_enabled == 'true'
-  unless: nc -z -w 5 127.0.0.1 "{{ fleet_peer_agentd_port }}"
-  tags: [fleet-peer, agentd]
-
-- name: Verify the agentd is listening
-  assert:
-    command: nc -z -w 5 127.0.0.1 "{{ fleet_peer_agentd_port }}"
-  when: fleet_peer_enabled == 'true'
   tags: [fleet-peer, verify]

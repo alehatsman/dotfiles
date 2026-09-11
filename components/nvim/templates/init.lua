@@ -17,7 +17,7 @@ vim.opt.rtp:prepend(lazypath)
 -- Colorscheme
 ---------------------------------------------
 -- Monokai is vendored locally at ~/.config/nvim/colors/monokai.vim and
--- generated from the palette mooncake component (see components/palette/).
+-- generated from the palette component (see components/palette/).
 -- Loaded before plugins so syntax highlighting is correct from frame one.
 vim.cmd.colorscheme('monokai')
 
@@ -182,7 +182,7 @@ require('lazy').setup({
   },
 
   -- zk — Zettelkasten over plain markdown. The `zk` binary (installed by
-  -- the nvim mooncake component) runs as the markdown LSP, giving link /
+  -- the nvim component) runs as the markdown LSP, giving link /
   -- backlink / tag completion. Picker reuses fzf-lua, already installed.
   {
     'zk-org/zk-nvim',
