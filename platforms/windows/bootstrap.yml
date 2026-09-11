@@ -13,11 +13,9 @@
 #
 # Idempotency: each step's inner PowerShell does its own "if not present"
 # check and exits 3 when there is nothing to do, so `changed` is honest.
-# mooncake's shell action reported changed=true unconditionally.
 
 # The repo's shared defaults — windows_prevent_sleep, wsl_networking_mode,
-# windows_sleep_timeout_ac and friends. mooncake got these from a second
-# `-v` flag the operator had to remember; loading them here makes the plan
+# windows_sleep_timeout_ac and friends. Loading them here makes the plan
 # self-contained, so the only file to pass is the machine's own vars.
 - vars_file: ../../shared/variables.yml
 
@@ -76,8 +74,8 @@
         Set-ItemProperty -Path $key -Name HiberbootEnabled -Value 0 -Type DWord
       }
 
-# Disable sleep and hibernate on AC power so WSL daemons (ssh, agentd)
-# stay reachable 24/7. Only runs when windows_prevent_sleep
+# Disable sleep and hibernate on AC power so WSL daemons (ssh) stay
+# reachable 24/7. Only runs when windows_prevent_sleep
 # is true (server boxes); laptops keep their own policy.
 - name: Disable sleep and hibernate on AC power
   shell:
@@ -136,8 +134,8 @@
 # Default OpenSSH server shell on Windows is cmd.exe, which makes any
 # remote PowerShell call go through a layer of cmd quoting hell. Set it
 # to powershell.exe so SSH lands directly in PowerShell — friendlier for
-# both interactive recovery and automation (e.g. driving mooncake over
-# the :22 channel when WSL is down).
+# both interactive recovery and automation over the :22 channel when
+# WSL is down.
 - name: Set Windows OpenSSH default shell to PowerShell
   shell:
     interpreter: powershell
@@ -187,7 +185,7 @@
   # stays a comment: WSL guest SSH (Hyper-V VM boundary; mirrored networking)
   # vm_creator_id: auto — discover WSL's subscriber GUID at apply time,
   # falling back to the well-known constant on a box that has never
-  # booted a WSL VM. Both halves are mooncake's, verbatim.
+  # booted a WSL VM.
   shell:
     interpreter: powershell
     script: |
@@ -203,48 +201,12 @@
   failed_when: result.rc not in [0, 3]
   changed_when: result.rc == 0
 
-- name: Add firewall rule for Mooncake Agentd
-  # exit 3 = already present. `changed` is therefore honest here, which it
-  # never was under the typed action (migration §3.4).
-  shell:
-    interpreter: powershell
-    script: |
-      $name = "WSL2 Mooncake Agentd"
-      if (Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue) { exit 3 }
-      New-NetFirewallRule -DisplayName $name `
-        -Description "WSL Linux agentd (port exposed via mirrored networking)" `
-        -Direction Inbound -Protocol TCP -LocalPort {{ wsl_agentd_port }} `
-        -Action Allow -Profile Domain,Private | Out-Null
-  failed_when: result.rc not in [0, 3]
-  changed_when: result.rc == 0
-
-- name: Add Hyper-V firewall rule for Mooncake Agentd
-  # New-NetFirewallHyperVRule takes no -Description, so the description
-  # stays a comment: WSL Linux agentd (Hyper-V VM boundary)
-  # vm_creator_id: auto — discover WSL's subscriber GUID at apply time,
-  # falling back to the well-known constant on a box that has never
-  # booted a WSL VM. Both halves are mooncake's, verbatim.
-  shell:
-    interpreter: powershell
-    script: |
-      $name = "WSL2 Mooncake Agentd"
-      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match 'WSL' } |
-        Select-Object -First 1 -ExpandProperty VMCreatorID)
-      if (-not $wslId) { $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' }
-      if (Get-NetFirewallHyperVRule -VMCreatorID $wslId -ErrorAction SilentlyContinue |
-            Where-Object { $_.DisplayName -eq $name }) { exit 3 }
-      New-NetFirewallHyperVRule -DisplayName $name -VMCreatorID $wslId `
-        -Direction Inbound -Protocol TCP -LocalPorts {{ wsl_agentd_port }} -Action Allow | Out-Null
-  failed_when: result.rc not in [0, 3]
-  changed_when: result.rc == 0
-
 # moongit server: moongitd binds *:8080 inside WSL; mirrored networking
 # exposes it on the host NIC, so other boxes on the LAN can hit
 # http://<this-pc-ip>:8080 directly — no `ssh -L` tunnel (which coalesces
-# the SSE transcript stream). Same two-rule shape as SSH/agentd above:
-# the WinFW rule opens the host's NICs, the Hyper-V rule opens the VM
-# boundary. Both required under networkingMode=mirrored + firewall=true.
+# the SSE transcript stream). Same two-rule shape as SSH above: the WinFW
+# rule opens the host's NICs, the Hyper-V rule opens the VM boundary.
+# Both required under networkingMode=mirrored + firewall=true.
 - name: Add firewall rule for moongit
   # exit 3 = already present. `changed` is therefore honest here, which it
   # never was under the typed action (migration §3.4).
@@ -268,7 +230,7 @@
   # stays a comment: WSL moongit server (Hyper-V VM boundary; mirrored networking)
   # vm_creator_id: auto — discover WSL's subscriber GUID at apply time,
   # falling back to the well-known constant on a box that has never
-  # booted a WSL VM. Both halves are mooncake's, verbatim.
+  # booted a WSL VM.
   shell:
     interpreter: powershell
     script: |
@@ -285,29 +247,6 @@
   changed_when: result.rc == 0
   tags: [moongit, firewall]
 
-# ---- Mooncake agentd on the Windows host: HANDLED BY THE CONTROLLER ------
-#
-# Earlier versions of this file deployed mooncake.exe to
-# %LOCALAPPDATA%\Mooncake\bin, opened the agentd port in the Windows
-# Firewall, registered a Mooncake-Agentd-Autostart scheduled task, and
-# kick-started agentd. All of that is now done by:
-#
-#   mooncake fleet bootstrap aleh@<this-pc-ip> --port 22 \
-#       --agentd-port {{ windows_agentd_port }} --name <machine>-win --tag windows
-#
-# Run from any controller (x1 / mac / mini_pc) that has mooncake
-# installed. spec-56 added the Windows branch to fleet bootstrap; the
-# rendered scheduled task uses the same `Mooncake-Agentd-Autostart`
-# name + S4U principal as the old dotfiles step, so a peer
-# bootstrapped pre-spec-56 looks identical to one bootstrapped after.
-# The peer's token + addr land in ~/.config/mooncake/peers.toml
-# directly on the controller — no copy-paste hint here.
-#
-# Why move it out: keeping the install path in one place across
-# linux/darwin/windows targets means a single bug-fix (e.g. token
-# rotation, idempotent re-register) touches mooncake, not every
-# consumer's dotfiles. See spec-56 §"Motivation" for the full case.
-
 # Belt-and-suspenders to vmIdleTimeout=-1 in .wslconfig: a repeating
 # scheduled task that re-runs `systemctl start ssh` every 5 minutes. It's
 # a fast no-op when sshd is already running, and the wsl.exe invocation
@@ -317,7 +256,7 @@
 - name: Register Task Scheduler entry to keep WSL SSH alive
   # exit 3 = task already registered (migration §3.4). {{ username }} on
   # Windows is the bare account name, no COMPUTERNAME\ prefix — verified on
-  # main_pc's host, where the tasks mooncake registered carry UserId `aleh`.
+  # main_pc's host, where these tasks carry UserId `aleh`.
   # New-ScheduledTaskPrincipal takes either form for a local account.
   shell:
     interpreter: powershell
@@ -340,10 +279,9 @@
   changed_when: result.rc == 0
 
 # Windows re-marks the LAN as Public (Unidentified) on most boots, and the
-# fleet firewall rules above are scoped Domain,Private only (opening a
-# control-plane daemon on Public is unsafe — mooncake #118). The net effect
-# without this: every fleet port (:2222/:7878/:7879/:8080) is filtered after
-# a reboot until someone sets the profile Private by hand. This boot task
+# firewall rules above are scoped Domain,Private only. The net effect
+# without this: every WSL-exposed port (:2222/:8080) is filtered after a
+# reboot until someone sets the profile Private by hand. This boot task
 # flips any Public profile back to Private so the rules apply. Interface
 # index changes across boots, so match by category, not index.
 - name: Register Task Scheduler entry to pin LAN profile Private at boot

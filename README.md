@@ -36,8 +36,8 @@ Per-platform notes:
 
 - **macOS** — Homebrew installs itself during the run. First apply is
   ~30 min plus cask downloads.
-- **Arch** — `platforms/arch/bootstrap.sh` does the clone + install +
-  apply in one shot on first boot.
+- **Arch** — `platforms/arch/bootstrap.sh` does the clone + apply in one
+  shot on first boot (`provision` itself must already be on PATH).
 - **Windows** — run `platforms/windows/bootstrap.yml` from an Admin
   PowerShell first, then the sequence above *inside* WSL.
 
@@ -69,9 +69,9 @@ machines/<m>/      per-host: index.yml (component set), vars.yml
 components/<c>/    unit of config: index.yml + templates/*.j2
 platforms/<p>/     OS-specific: arch, macos, windows
 shared/            variables.yml, bootstrap.yml
-scripts/           install_mooncake.sh, test-docker.sh (mooncake stays a tool)
+scripts/           test-docker.sh
 docs/              nvim, tmux, keybindings, windows-ssh-setup
-justfile           dev surface (`just`); replaces the old tasks.yml
+justfile           dev surface (`just`)
 ```
 
 ## Machines
@@ -90,11 +90,7 @@ PowerShell before applying inside WSL.
 ## Components
 
 `alacritty · asciinema · claude · clojure · git · google-cloud · hyprland ·
-languages · mooncake · moongit · nvim · palette · provision · ssh ·
-terraform · tmux · usql · zsh`
-
-`mooncake` and `provision` are CI-image components on main_pc only — they
-build the containers this repo's CI runs in, not the tools themselves.
+languages · moongit · nvim · palette · ssh · terraform · tmux · usql · zsh`
 
 Each is self-contained: `index.yml` declares steps, `templates/*.j2` render
 into place. Add a component → reference it from a machine's `index.yml`.

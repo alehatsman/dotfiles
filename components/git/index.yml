@@ -16,8 +16,8 @@
 # ─── Global hooks ───────────────────────────────────────────────────────────
 # core.hooksPath in .gitconfig.j2 points every repo on the machine at
 # ~/.config/git/hooks, replacing .git/hooks rather than adding to it. The
-# dispatcher chains back to each repo's own hook so mooncake's and dex's
-# pre-commit/pre-push keep firing; see the script's header.
+# dispatcher chains back to each repo's own hook so its
+# pre-commit/pre-push hooks keep firing; see the script's header.
 
 - name: Create the global git hooks directory
   file:

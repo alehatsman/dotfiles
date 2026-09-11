@@ -2,8 +2,7 @@
 #
 # Schema (moongit internal/ci/ci.go): version "1"; `on.push.branches` gates
 # which refs trigger a run; `jobs` is a DAG wired by `needs`. Each job runs in a
-# throwaway container off `image:`, and moongitd execs every step as
-# `mooncake step '<yaml>'` inside it — so the image must carry `mooncake` on PATH.
+# throwaway container off `image:`.
 #
 # Two-stage gate:
 #   validate — `provision validate ./<machine>.yml` on all five machine
@@ -11,15 +10,14 @@
 #   plan     — `provision plan --plan-no-probe ./<machine>.yml` on all five.
 #              Static template expansion: catches undefined vars, bad imports,
 #              template render errors. --plan-no-probe skips the unless:/when:
-#              checks that need the real target machine (it is mooncake's
-#              --no-inspect under a name that says what it does).
+#              checks that need the real target machine.
 #
-# Image: provision-ci:latest is mooncake-ci:latest plus the provision binary.
-# It still carries mooncake because moongitd execs every step as
-# `mooncake step '<yaml>'` inside the container — that is the runner's
-# contract, not this repo's choice. Built by components/provision on
-# main_pc; CI cannot pull (dotfiles#8), so the image must exist there
-# before this file takes effect.
+# NOTE: image: provision-ci:latest is currently unbuildable — it and its
+# mooncake-ci:latest base were removed along with mooncake
+# (components/mooncake, components/provision). moongitd's runner still execs
+# every CI step as `mooncake step '<yaml>'` inside the container, a contract
+# in moongit's own source (separate repo), not this file. This CI job will
+# not run until that runner stops requiring mooncake.
 version: "1"
 on:
   push:

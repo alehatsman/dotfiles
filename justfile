@@ -1,4 +1,4 @@
-# Machine provisioning. Replaces the mooncake `tasks.yml` task runner —
+# Machine provisioning. Replaces the old `tasks.yml` task runner —
 # task running is a non-goal for provision (docs/migration.md §6).
 #
 # Each apply recipe appends a JSON run log to ~/.local/state/provision/.

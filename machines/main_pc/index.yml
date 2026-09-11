@@ -7,13 +7,8 @@
 #                           -v shared/variables.yml -v machines/main_pc/vars.yml
 #   2. Inside WSL Ubuntu, via the root entry (NOPASSWD sudo, no -K):
 #        provision apply ./main_pc.yml
-#      or via the daemon:
-#        curl --unix-socket /run/user/$UID/mooncake/agentd.sock \
-#             -d '{"plan_path":"<abs>/main_pc.yml",
-#                  "base_dir":"<abs>"}' http://localhost/v1/runs
 #
-# vars.load chain mirrors main_pc.yml so the agentd path (which invokes
-# this file directly) sees the same var context as a CLI apply. Order:
+# vars.load chain mirrors main_pc.yml. Order:
 # shared defaults first, machine overrides second, inline identity block
 # last so is_wsl/wsl_distro/wsl_ssh_port always win regardless of source.
 # Refuse to run if the live hostname belongs to a different known machine
@@ -92,25 +87,14 @@
 # moongitd as a user systemd service (API + git + web UI on one port).
 # This box is the main server.
 - name: Use moongit component
-  # No props: every remaining prop has a component default (dex_serve_port
-  # was the only one this machine overrode — dotfiles#91).
+  # No props: every remaining prop has a component default.
   use: ../../components/moongit/index.yml
   tags: [tools, moongit]
 
-# mooncake CI image only (mooncake-ci:latest = moongit-ci-dev + gomarkdoc).
-# Imported after moongit so its base image exists; this box runs mooncake's
-# server-side CI. mooncake itself isn't provisioned here. See mooncake#100.
-- name: Use mooncake component
-  use: ../../components/mooncake/index.yml
-  tags: [tools, mooncake]
-
-# provision CI image (provision-ci:latest = mooncake-ci + the provision
-# binary). After mooncake, because it builds FROM that image: moongitd
-# execs every CI step as `mooncake step`, so the base has to carry mooncake
-# regardless. This box is the CI server.
-- name: Use provision component
-  use: ../../components/provision/index.yml
-  tags: [tools, provision]
+# mooncake + the provision CI-image build were removed with mooncake. This
+# box's moongit-ci / moongit-ci-dev / provision-ci images are no longer
+# built — moongit's own CI runner execs `mooncake step` inside them, which
+# needs a fix in the moongit repo (out of scope here). See CLAUDE.md.
 
 # Inbound fleet access. Gated on fleet_peer_enabled (false in ./vars.yml
 # until dotfiles#2's authorized_keys reconciliation is done) — see

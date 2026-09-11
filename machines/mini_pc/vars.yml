@@ -13,21 +13,7 @@ wsl_networking_mode: "mirrored"
 # every Windows box, so the var must be defined or the firewall step fails
 # rendering "{{ wsl_moongit_port }}". moongitd binds *:8080 inside WSL.
 wsl_moongit_port: "8080"
-# Mooncake agentd TCP ports.
-#   wsl_agentd_port (7878)     — Linux daemon inside the Ubuntu VM.
-#                                Mirrored networking exposes it on the
-#                                Windows host's LAN IP. Needs BOTH a
-#                                Windows Firewall rule AND a Hyper-V
-#                                Firewall rule (see bootstrap.yml).
-#   windows_agentd_port (7879) — Windows-host daemon. Bootstrapped from
-#                                the controller via `mooncake fleet
-#                                bootstrap`; the port number lives here
-#                                because the diagnostic / fleet-pair
-#                                hint in `Print next steps` references it.
-# Both daemons appear as separate peers in peers.toml for fleet apply.
-wsl_agentd_port: "7878"
-windows_agentd_port: "7879"
 
 # Server box — never sleep on AC. Disables standby + hibernate so WSL and
-# its daemons (ssh, agentd) stay reachable 24/7.
+# its ssh daemon stay reachable 24/7.
 windows_prevent_sleep: true
