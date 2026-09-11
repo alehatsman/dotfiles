@@ -163,6 +163,55 @@
   when: os == "darwin"
   tags: [macos, defaults]
 
+# No drop-shadow border around window screenshots
+- name: "com.apple.screencapture disable-shadow"
+  defaults:
+    domain: com.apple.screencapture
+    key: "disable-shadow"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Key repeat: hold-to-repeat instead of the accent-picker popup, fast rate
+- name: "NSGlobalDomain ApplePressAndHoldEnabled"
+  defaults:
+    domain: NSGlobalDomain
+    key: "ApplePressAndHoldEnabled"
+    type: bool
+    value: false
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "NSGlobalDomain KeyRepeat"
+  defaults:
+    domain: NSGlobalDomain
+    key: "KeyRepeat"
+    type: int
+    value: 2
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "NSGlobalDomain InitialKeyRepeat"
+  defaults:
+    domain: NSGlobalDomain
+    key: "InitialKeyRepeat"
+    type: int
+    value: 15
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# Natural (content-follows-finger) scroll direction, explicit rather than
+# relying on whatever the OS default happens to be on a given machine
+- name: "NSGlobalDomain com.apple.swipescrolldirection"
+  defaults:
+    domain: NSGlobalDomain
+    key: "com.apple.swipescrolldirection"
+    type: bool
+    value: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
 # Secondary click: two fingers, on the bluetooth trackpad, the per-host
   # global keys and the built-in one
 - name: "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick"
@@ -193,49 +242,40 @@
   when: os == "darwin"
   tags: [macos, defaults]
 
-# Corner-click secondary click, explicitly off. It physically actuates
-# before macOS resolves the click location, so the bottom-right corner
-# fires a real click on whatever's under the cursor before the menu
-# opens -- felt as "it clicked the link, then opened a context menu".
-# Two-finger secondary click above does the same job without that fault.
-# These write 0/off rather than removing the steps, because a machine
-# that already had corner-click on (value 2) needs an explicit reset --
-# an absent step leaves whatever was on disk untouched.
-- name: "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick off"
+# Corner-click secondary click, explicitly on (bottom-right). It physically
+# actuates before macOS resolves the click location, so the corner can fire
+# a real click on whatever's under the cursor before the menu opens -- felt
+# as "it clicked the link, then opened a context menu" (that's why an
+# earlier revision of this repo turned it off, see dotfiles history:
+# 2ec4d59, 9908e8e). Re-enabled per explicit survey answer during the
+# 2026-09-11 defaults rebuild -- two-finger tap above still covers the
+# same gesture without the fault, this is kept alongside it as a known
+# tradeoff, not an oversight.
+- name: "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick bottom-right"
   defaults:
     domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
     key: "TrackpadCornerSecondaryClick"
     type: int
-    value: 0
+    value: 2
   when: os == "darwin"
   tags: [macos, defaults]
 
-- name: "NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior off"
+- name: "NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior bottom-right"
   defaults:
     domain: NSGlobalDomain
     key: "com.apple.trackpad.trackpadCornerClickBehavior"
     type: int
-    value: 0
+    value: 2
     current_host: true
   when: os == "darwin"
   tags: [macos, defaults]
 
-- name: "com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick off"
+- name: "com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick bottom-right"
   defaults:
     domain: com.apple.AppleMultitouchTrackpad
     key: "TrackpadCornerSecondaryClick"
     type: int
-    value: 0
-  when: os == "darwin"
-  tags: [macos, defaults]
-
-# Font smoothing off (`-g` is NSGlobalDomain said shorter)
-- name: "NSGlobalDomain AppleFontSmoothing"
-  defaults:
-    domain: NSGlobalDomain
-    key: "AppleFontSmoothing"
-    type: int
-    value: 0
+    value: 2
   when: os == "darwin"
   tags: [macos, defaults]
 
@@ -257,6 +297,19 @@
     set -eu
     menu=$(defaults read com.apple.systemuiserver menuExtras 2>/dev/null | tr -d ' \n"')
     [ "$menu" = "(/System/Library/CoreServices/MenuExtras/AirPort.menu,/System/Library/CoreServices/MenuExtras/Bluetooth.menu,/System/Library/CoreServices/MenuExtras/Clock.menu,/System/Library/CoreServices/MenuExtras/Displays.menu,/System/Library/CoreServices/MenuExtras/Volume.menu)" ]
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+# `defaults write` only updates the plist; the owning process reads its
+# preferences once at launch and won't notice the change until it restarts.
+# Finder and SystemUIServer own most of the domains above (desktop icons,
+# hidden files, menu bar extras); cfprefsd holds the shared preferences
+# cache every domain goes through. Always runs -- killall is a no-op to
+# gate on and cheap to repeat -- so changes are visible without a logout.
+- name: Restart Finder, SystemUIServer, cfprefsd to pick up defaults writes
+  shell: |
+    set -euo pipefail
+    killall cfprefsd Finder SystemUIServer 2>/dev/null || true
   when: os == "darwin"
   tags: [macos, defaults]
 
