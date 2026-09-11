@@ -1,7 +1,7 @@
 ---
 # Google Cloud SDK install.
 #
-# Linux: keyring + DEB822 source + apt-get update, spelled out — mooncake's
+# Linux: keyring + DEB822 source + apt-get update, spelled out — the old
 # pkg.repo apt driver did the three in one step (migration §3.11). The key
 # was never fingerprint-pinned; that posture is unchanged.
 #

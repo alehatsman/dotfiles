@@ -1,5 +1,5 @@
 ---
-# HashiCorp APT repo + terraform install. mooncake's pkg.repo apt driver
+# HashiCorp APT repo + terraform install. The old pkg.repo apt driver
 # did keyring fetch, DEB822 source and apt-get update in one step;
 # provision spells the three out (migration §3.11).
 #

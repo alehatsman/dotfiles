@@ -19,8 +19,8 @@
     attempts: 3
     delay: 10s
 
-# Neovim PPA — kept as shell because mooncake's pkg.repo apt driver
-# doesn't yet have a `ppa:` shorthand (proposal-22 in mooncake repo).
+# Neovim PPA — kept as shell because the pkg.repo apt driver
+# doesn't yet have a `ppa:` shorthand.
 # Spelling out the launchpad URI + keyserver fetch via pkg.repo is
 # possible but uglier than this one-liner.
 - name: Add neovim PPA

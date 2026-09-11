@@ -29,6 +29,6 @@ operator documentation, not machine state, so it lives here instead
 4. Add your SSH public key to `~/.ssh/authorized_keys` (WSL side).
 5. `wsl --shutdown`, then verify: `ssh <this-pc-ip> -p <wsl_ssh_port>`.
 
-Fleet peer bootstrap (agentd daemons, `fleet status`) was mooncake's and was
-removed along with it — provision has no fleet feature. This box is reachable
-over plain SSH only; see `components/fleet-peer`.
+Fleet peer bootstrap (agentd daemons, `fleet status`) was a feature of the
+old provisioning tool and was removed along with it — provision has no fleet
+feature. This box is reachable over plain SSH only; see `components/fleet-peer`.

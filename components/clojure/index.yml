@@ -33,7 +33,7 @@
 
 # The password comes from the environment, never the repo. Gated so the
 # file is written only when the secret is actually present — under
-# mooncake the var was undefined everywhere and rendered empty, so this
+# the old tool the var was undefined everywhere and rendered empty, so this
 # step had been writing an unauthenticatable settings.xml on every apply
 # since it was added. provision's strict undefined is what surfaced it.
 #

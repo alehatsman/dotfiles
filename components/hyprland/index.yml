@@ -1,5 +1,5 @@
 ---
-# Package install — inlined when the mooncake in-tree presets/ library
+# Package install — inlined when the in-tree presets/ library
 # was retired. The Hyprland ecosystem comes from Arch's pacman repos;
 # this step replaces what `use: { name: hyprland }` used to do.
 - name: Install Hyprland ecosystem packages

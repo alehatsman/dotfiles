@@ -43,7 +43,7 @@
   # Build under ~/.cache (stable across tmpfiles cleanup) so the install
   # step below finds the package at a deterministic path — no /tmp
   # sentinel file passing state between steps. unless_command makes
-  # both steps idempotent at the mooncake level.
+  # both steps idempotent at the provisioning level.
   shell: |
     set -euo pipefail
     builddir="$HOME/.cache/yay-build"

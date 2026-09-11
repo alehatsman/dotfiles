@@ -33,7 +33,7 @@
 - name: Define brew taps, formulae, and casks
   vars:
     # Plain strings now: the `name:` field existed only to feed
-    # mooncake's pkg.repo, whose `name:` was a filesystem label and so
+    # the old pkg.repo driver, whose `name:` was a filesystem label and so
     # could not hold a slash. HashiCorp relicensed to BSL and pulled
     # packer/terraform from homebrew-core; their tap is the only brew
     # source for them.
@@ -132,7 +132,7 @@
 # (migration §3.6). provision has no loop construct — deliberately — and
 # a literal `for` reads better than either pass did.
 #
-# `brew tap | grep -qx` is the drift check mooncake's pkg.repo brew driver
+# `brew tap | grep -qx` is the drift check the old pkg.repo brew driver
 # did internally, and it is what keeps brew's rc=1 on "already tapped"
 # from failing the step. Homebrew 6.0 refuses to load formulae from a
 # third-party tap unless it is explicitly trusted — `brew tap` no longer

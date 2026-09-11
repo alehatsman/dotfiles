@@ -251,7 +251,7 @@
   unless: "grep -q '/usr/lib/wsl/lib' /etc/environment || [ ! -f /usr/lib/wsl/lib/nvidia-smi ]"
   tags: [wsl, gpu]
 
-# CUDA stays shell until mooncake's pkg.repo apt driver gains the
+# CUDA stays shell until the pkg.repo apt driver gains the
 # .deb-keyring-install pattern (the cuda-keyring_1.1-1_all.deb route
 # isn't a normal source-list-with-gpg-key flow — it's a single .deb
 # that drops the source.list AND the keyring in one go).
