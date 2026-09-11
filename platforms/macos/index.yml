@@ -193,6 +193,42 @@
   when: os == "darwin"
   tags: [macos, defaults]
 
+# Corner-click secondary click, explicitly off. It physically actuates
+# before macOS resolves the click location, so the bottom-right corner
+# fires a real click on whatever's under the cursor before the menu
+# opens -- felt as "it clicked the link, then opened a context menu".
+# Two-finger secondary click above does the same job without that fault.
+# These write 0/off rather than removing the steps, because a machine
+# that already had corner-click on (value 2) needs an explicit reset --
+# an absent step leaves whatever was on disk untouched.
+- name: "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick off"
+  defaults:
+    domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
+    key: "TrackpadCornerSecondaryClick"
+    type: int
+    value: 0
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior off"
+  defaults:
+    domain: NSGlobalDomain
+    key: "com.apple.trackpad.trackpadCornerClickBehavior"
+    type: int
+    value: 0
+    current_host: true
+  when: os == "darwin"
+  tags: [macos, defaults]
+
+- name: "com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick off"
+  defaults:
+    domain: com.apple.AppleMultitouchTrackpad
+    key: "TrackpadCornerSecondaryClick"
+    type: int
+    value: 0
+  when: os == "darwin"
+  tags: [macos, defaults]
+
 # Font smoothing off (`-g` is NSGlobalDomain said shorter)
 - name: "NSGlobalDomain AppleFontSmoothing"
   defaults:
