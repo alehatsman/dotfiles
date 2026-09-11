@@ -163,33 +163,14 @@
   when: os == "darwin"
   tags: [macos, defaults]
 
-# Secondary click: bottom-right corner and two fingers, on the bluetooth
-  # trackpad, the per-host global keys and the built-in one
-- name: "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick"
-  defaults:
-    domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
-    key: "TrackpadCornerSecondaryClick"
-    type: int
-    value: 2
-  when: os == "darwin"
-  tags: [macos, defaults]
-
+# Secondary click: two fingers, on the bluetooth trackpad, the per-host
+  # global keys and the built-in one
 - name: "com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick"
   defaults:
     domain: com.apple.driver.AppleBluetoothMultitouch.trackpad
     key: "TrackpadRightClick"
     type: bool
     value: true
-  when: os == "darwin"
-  tags: [macos, defaults]
-
-- name: "NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior"
-  defaults:
-    domain: NSGlobalDomain
-    key: "com.apple.trackpad.trackpadCornerClickBehavior"
-    type: int
-    value: 1
-    current_host: true
   when: os == "darwin"
   tags: [macos, defaults]
 
@@ -200,15 +181,6 @@
     type: bool
     value: true
     current_host: true
-  when: os == "darwin"
-  tags: [macos, defaults]
-
-- name: "com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick"
-  defaults:
-    domain: com.apple.AppleMultitouchTrackpad
-    key: "TrackpadCornerSecondaryClick"
-    type: int
-    value: 2
   when: os == "darwin"
   tags: [macos, defaults]
 
@@ -251,3 +223,50 @@
     [ "$menu" = "(/System/Library/CoreServices/MenuExtras/AirPort.menu,/System/Library/CoreServices/MenuExtras/Bluetooth.menu,/System/Library/CoreServices/MenuExtras/Clock.menu,/System/Library/CoreServices/MenuExtras/Displays.menu,/System/Library/CoreServices/MenuExtras/Volume.menu)" ]
   when: os == "darwin"
   tags: [macos, defaults]
+
+# CapsLock -> left Ctrl. macOS has no persistent `defaults write` for this
+# (the per-keyboard modifiermapping key is tied to a specific hardware ID
+# and breaks across keyboards); `hidutil` is the generic, device-agnostic
+# way, but its remap does not survive a reboot on its own, hence the
+# LaunchDaemon to reapply it at every boot.
+- name: Deploy capslock-ctrl LaunchDaemon
+  file:
+    path: /Library/LaunchDaemons/com.dotfiles.capslock-ctrl.plist
+    state: file
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>com.dotfiles.capslock-ctrl</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>/usr/bin/hidutil</string>
+          <string>property</string>
+          <string>--set</string>
+          <string>{"UserKeyMapping":[{"HIDKeyboardModifierMappingSrc":0x700000039,"HIDKeyboardModifierMappingDst":0x7000000E0}]}</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true/>
+      </dict>
+      </plist>
+    mode: '0644'
+  sudo: true
+  when: os == "darwin"
+  tags: [macos, keyboard]
+
+- name: Load capslock-ctrl LaunchDaemon into the running session
+  # Reapplies on every run rather than gating on launchctl's loaded state,
+  # since bootstrap alone won't pick up a changed plist once already
+  # loaded -- boot out first, then in, matching the file's current content.
+  shell: |
+    set -euo pipefail
+    launchctl bootout system/com.dotfiles.capslock-ctrl 2>/dev/null || true
+    launchctl bootstrap system /Library/LaunchDaemons/com.dotfiles.capslock-ctrl.plist
+  unless: |
+    set -eu
+    hidutil property --get UserKeyMapping 2>/dev/null | grep -q 700000039
+  sudo: true
+  when: os == "darwin"
+  tags: [macos, keyboard]
