@@ -45,7 +45,7 @@ macos_list_profiles() {
   security dump-keychain 2>/dev/null \
     | grep -o "\"${KEYCHAIN_PROFILE_PREFIX}[^\"]*\"" \
     | sed -E "s/\"${KEYCHAIN_PROFILE_PREFIX}([^\"]*)\"/\1/" \
-    | sort -u
+    | sort -u || true
 }
 
 # --- Linux (file) backend ---

@@ -511,6 +511,7 @@ cheat() {
 
 if type kubectl > /dev/null 2>&1; then
   alias k8s="kubectl"
+  source <(kubectl completion zsh)
   compdef k8s=kubectl
 fi
 
