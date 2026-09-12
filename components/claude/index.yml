@@ -29,17 +29,18 @@
     state: file
   tags: [claude]
 
-- name: "Install claude-autoapprove"
+- name: "Install isayes"
+  # isayes ships its own provision task for build+install (cargo build
+  # --release, then copy to ~/.local/bin/isayes) — reuse it rather than
+  # duplicating the build steps here.
   shell: |
     set -euo pipefail
     tmpdir=$(mktemp -d)
     trap 'rm -rf "$tmpdir"' EXIT
-    git clone https://github.com/alehatsman/claude-autoapprove "$tmpdir/claude-autoapprove"
-    cd "$tmpdir/claude-autoapprove"
-    go build -o cry-aye ./cmd/cry-aye
-    mkdir -p "$HOME/.local/bin"
-    mv cry-aye "$HOME/.local/bin/cry-aye"
-  creates: ~/.local/bin/cry-aye
+    git clone https://github.com/alehatsman/isayes "$tmpdir/isayes"
+    cd "$tmpdir/isayes"
+    provision apply tasks/install.yml
+  creates: ~/.local/bin/isayes
   tags: [claude]
 
 # These three already carried their own gate, as a `||` short-circuit
