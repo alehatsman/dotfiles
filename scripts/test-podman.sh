@@ -3,9 +3,9 @@
 # Default to Ubuntu 22.04 if no OS specified
 OS="${1:-ubuntu:22.04}"
 
-echo "Testing dotfiles in Docker container: $OS"
+echo "Testing dotfiles in Podman container: $OS"
 
-docker run --rm -v $(pwd):/dotfiles -w /dotfiles $OS bash -c "
+podman run --rm -v $(pwd):/dotfiles -w /dotfiles $OS bash -c "
   # Update package manager
   if command -v apt-get &> /dev/null; then
     apt-get update && apt-get install -y curl git tar
@@ -23,5 +23,5 @@ docker run --rm -v $(pwd):/dotfiles -w /dotfiles $OS bash -c "
   echo 'Running provision plan for main_pc.yml...'
   provision plan --plan-no-probe main_pc.yml
 
-  echo 'Docker test completed successfully!'
+  echo 'Podman test completed successfully!'
 "

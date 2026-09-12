@@ -69,7 +69,7 @@ machines/<m>/      per-host: index.yml (component set), vars.yml
 components/<c>/    unit of config: index.yml + templates/*.j2
 platforms/<p>/     OS-specific: arch, macos, windows
 shared/            variables.yml, bootstrap.yml
-scripts/           test-docker.sh
+scripts/           test-podman.sh
 docs/              nvim, tmux, keybindings, windows-ssh-setup
 justfile           dev surface (`just`)
 ```

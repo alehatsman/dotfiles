@@ -11,9 +11,13 @@
   tags: [dev, python]
 
 - name: Install Python 3 (brew)
-  pkg:
-    name: python
-    manager: brew
+  # `pkg` verifies by checking `brew list --formula` for the exact name
+  # given. "python" is only an alias -- brew lists the resolved formula
+  # (currently python@3.14), so the alias never matches and `pkg` reports
+  # the install failed even when it worked. Gate on the binary instead,
+  # same pattern as the rustup step above.
+  shell: brew install python
+  unless: command -v python3 >/dev/null 2>&1
   when: brew_available
   tags: [dev, python]
 

@@ -175,8 +175,8 @@ alias l="ls -1"
 alias c="clear"
 alias md="mkdir -p"
 
-# Docker
-alias docker_clean="docker system prune --all --volumes"
+# Podman
+alias podman_clean="podman system prune --all --volumes"
 
 # Git
 g() {
@@ -614,9 +614,9 @@ rr() {
   rush $command
 }
 
-# Docker
+# Podman
 
-alias dps="docker ps"
+alias dps="podman ps"
 
 alias ..='cd ..'
 alias ....='cd ../../'

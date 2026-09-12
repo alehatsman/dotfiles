@@ -62,7 +62,11 @@
       - mosh
       - nmap
       - hashicorp/tap/packer
-      - python
+      # Not "python" here: it's a brew alias, and `pkg`'s verify compares
+      # against `brew list --formula`, which reports the resolved formula
+      # name, not the alias -- so this entry always reports failed even
+      # when installed. components/languages/index.yml installs it with
+      # a binary-presence check instead.
       - ripgrep
       - shellcheck
       - shfmt
@@ -97,6 +101,13 @@
       - lua-language-server
       - xclip
       - pngpaste  # clipboard->PNG for img-clip.nvim (paste screenshots into notes)
+
+      # Containers (podman, not docker/docker-desktop — see platforms/arch's
+      # equivalent list). No buildah here: homebrew-core ships no macOS
+      # formula for it, Linux-only; `podman build` covers image builds.
+      - podman
+      - podman-compose
+      - lazydocker
     cask_apps:
       - adobe-acrobat-reader
       # alacritty: NOT here. Homebrew disabled the cask on 2026-09-01 —
@@ -107,7 +118,6 @@
       # what a reinstated cask or a hand-installed build would read).
       - amazon-workspaces
       - anki
-      - docker
       # 1Password CLI's cask install prompts for sudo (needed once, to link
       # into the system keychain) — same class of caveat as the alacritty
       # note above; --keep-going/-K covers it same as any other sudo step.
@@ -115,7 +125,7 @@
       - 1password-cli
       - font-fira-code
       - google-drive
-      - google-cloud-sdk
+      - gcloud-cli  # renamed upstream from google-cloud-sdk; "state present" checks brew list --cask, which reports the new name
       - kap
       - pgadmin4
       - postman
@@ -167,3 +177,17 @@
   retry:
     attempts: 2
     delay: 10s
+
+# podman has no daemon on macOS -- it runs containers inside a small Linux
+# VM it manages itself (qemu-backed), which is what docker-desktop's VM
+# did. `machine init` creates that VM once; `machine start` is safe to
+# repeat, so the whole thing is one idempotent step.
+- name: Set up the podman machine VM
+  shell: |
+    set -euo pipefail
+    podman machine inspect podman-machine-default >/dev/null 2>&1 || podman machine init
+    podman machine start
+  unless: |
+    podman machine inspect podman-machine-default 2>/dev/null | grep -q '"State": "running"'
+  tags: [macos, containers]
+  timeout: 5m
