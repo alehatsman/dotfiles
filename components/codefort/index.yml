@@ -53,6 +53,64 @@ steps:
     sudo: true
     tags: [codefort, build]
 
+  # ───────────────── MIGRATION (moongit → codefort, one-time) ────────────────
+  # codefort's cutover runbook (docs/plan-rename-codefort.md in the codefort
+  # repo) never ran against this host. These four steps replay it: stop the
+  # old unit, then move the checkout, data dir + DB, and config dir + env
+  # files to their renamed paths. Each `unless` skips when the new path
+  # already exists (already migrated) or the old path never existed (fresh
+  # host, never ran moongit) — so this whole block is a no-op after the
+  # first apply. Must run before any step below that creates or seeds a
+  # codefort_* path, or that step's `creates:`/`file:` guard would fire
+  # first and leave the pre-rename data behind untouched (data dir) or,
+  # worse, silently generate a fresh blank secret env file over real HTTP
+  # Basic credentials.
+
+  - name: "Retire the pre-rename moongit.service, if present"
+    # Stopped before any data move below — moving the DB out from under a
+    # running server risks the -wal sidecar. The daemon rename means the old
+    # unit is not replaced; left running it would also still hold :8080.
+    shell: |
+      set -eu
+      systemctl --user disable --now moongit.service || true
+      rm -f ~/.config/systemd/user/moongit.service
+    unless: test ! -f ~/.config/systemd/user/moongit.service
+    tags: [codefort, migrate]
+
+  - name: "Migrate the pre-rename checkout (~/projects/moongit → {{ codefort_src_dir }})"
+    shell: mv ~/projects/moongit {{ codefort_src_dir | expanduser }}
+    unless: test -e {{ codefort_src_dir | expanduser }} || test ! -d ~/projects/moongit
+    tags: [codefort, migrate]
+
+  - name: "Migrate the pre-rename data dir + database (~/.local/share/moongit → {{ codefort_data_dir }})"
+    # Whole-dir mv carries repos/ with it; the DB and its -wal/-shm sidecars
+    # (which may not exist after a clean stop) are renamed in place after.
+    shell: |
+      set -eu
+      mv ~/.local/share/moongit {{ codefort_data_dir | expanduser }}
+      d={{ codefort_data_dir | expanduser }}
+      [ -f "$d/moongit.db" ]     && mv "$d/moongit.db"     "$d/codefort.db"
+      [ -f "$d/moongit.db-wal" ] && mv "$d/moongit.db-wal" "$d/codefort.db-wal"
+      [ -f "$d/moongit.db-shm" ] && mv "$d/moongit.db-shm" "$d/codefort.db-shm"
+      true
+    unless: test -e {{ codefort_data_dir | expanduser }} || test ! -d ~/.local/share/moongit
+    tags: [codefort, migrate]
+
+  - name: "Migrate the pre-rename config dir + env files (~/.config/moongit → ~/.config/codefort)"
+    # agent.env keeps its name (it always did); only the two moongit.*-named
+    # files inside are renamed. codefort.env is re-rendered fresh below
+    # regardless, but codefort.secret.env is create-once, so moving the real
+    # one here is what preserves the HTTP Basic password across the rename.
+    shell: |
+      set -eu
+      mv ~/.config/moongit ~/.config/codefort
+      d=~/.config/codefort
+      [ -f "$d/moongit.env" ]        && mv "$d/moongit.env"        "$d/codefort.env"
+      [ -f "$d/moongit.secret.env" ] && mv "$d/moongit.secret.env" "$d/codefort.secret.env"
+      true
+    unless: test -e ~/.config/codefort || test ! -d ~/.config/moongit
+    tags: [codefort, migrate]
+
   # ───────────────── DIRECTORIES ─────────────────────────────────────────────
 
   - name: "Ensure ~/.local/bin exists"
@@ -149,19 +207,6 @@ steps:
       CODEFORT_BASIC_PASS=
       EOF
     creates: "{{ codefort_secret_env_file | expanduser }}"
-    tags: [codefort, service]
-
-  - name: "Retire the pre-rename moongit.service, if present"
-    # The rename gives the daemon a new unit name, so the old unit is not
-    # replaced — it is left behind, still enabled and still bound to :8080,
-    # which makes codefort.service fail to start with a port conflict that
-    # says nothing about a rename. `unless` skips this on every host that
-    # never ran moongit and on every apply after the first.
-    shell: |
-      set -eu
-      systemctl --user disable --now moongit.service || true
-      rm -f ~/.config/systemd/user/moongit.service
-    unless: test ! -f ~/.config/systemd/user/moongit.service
     tags: [codefort, service]
 
   # os.systemd wrote the unit, reloaded, enabled and started it in one
