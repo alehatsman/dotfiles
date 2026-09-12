@@ -82,6 +82,9 @@
 - import: ../../components/clojure/index.yml
   tags: [dev, clojure, config]
 
+- import: ../../components/teleport/index.yml
+  tags: [tools, teleport]
+
 - name: Use zsh component
   use: ../../components/zsh/index.yml
   tags: [core, shell]
