@@ -201,40 +201,40 @@
   failed_when: result.rc not in [0, 3]
   changed_when: result.rc == 0
 
-# moongit server: moongitd binds *:8080 inside WSL; mirrored networking
+# codefort server: codefortd binds *:8080 inside WSL; mirrored networking
 # exposes it on the host NIC, so other boxes on the LAN can hit
 # http://<this-pc-ip>:8080 directly — no `ssh -L` tunnel (which coalesces
 # the SSE transcript stream). Same two-rule shape as SSH above: the WinFW
 # rule opens the host's NICs, the Hyper-V rule opens the VM boundary.
 # Both required under networkingMode=mirrored + firewall=true.
-- name: Add firewall rule for moongit
+- name: Add firewall rule for codefort
   # exit 3 = already present. `changed` is therefore honest here, which it
   # never was under the typed action (migration §3.4).
   shell:
     interpreter: powershell
     script: |
-      $name = "WSL2 moongit"
+      $name = "WSL2 codefort"
       if (Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue) { exit 3 }
       New-NetFirewallRule -DisplayName $name `
-        -Description "WSL moongit server (port exposed via mirrored networking)" `
-        -Direction Inbound -Protocol TCP -LocalPort {{ wsl_moongit_port }} `
+        -Description "WSL codefort server (port exposed via mirrored networking)" `
+        -Direction Inbound -Protocol TCP -LocalPort {{ wsl_codefort_port }} `
         -Action Allow -Profile Domain,Private | Out-Null
   failed_when: result.rc not in [0, 3]
   changed_when: result.rc == 0
   # Tagged so an apply can target just these two rules without re-running
-  # the whole host bootstrap: --tags moongit
-  tags: [moongit, firewall]
+  # the whole host bootstrap: --tags codefort
+  tags: [codefort, firewall]
 
-- name: Add Hyper-V firewall rule for moongit
+- name: Add Hyper-V firewall rule for codefort
   # New-NetFirewallHyperVRule takes no -Description, so the description
-  # stays a comment: WSL moongit server (Hyper-V VM boundary; mirrored networking)
+  # stays a comment: WSL codefort server (Hyper-V VM boundary; mirrored networking)
   # vm_creator_id: auto — discover WSL's subscriber GUID at apply time,
   # falling back to the well-known constant on a box that has never
   # booted a WSL VM.
   shell:
     interpreter: powershell
     script: |
-      $name = "WSL2 moongit"
+      $name = "WSL2 codefort"
       $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -match 'WSL' } |
         Select-Object -First 1 -ExpandProperty VMCreatorID)
@@ -242,10 +242,10 @@
       if (Get-NetFirewallHyperVRule -VMCreatorID $wslId -ErrorAction SilentlyContinue |
             Where-Object { $_.DisplayName -eq $name }) { exit 3 }
       New-NetFirewallHyperVRule -DisplayName $name -VMCreatorID $wslId `
-        -Direction Inbound -Protocol TCP -LocalPorts {{ wsl_moongit_port }} -Action Allow | Out-Null
+        -Direction Inbound -Protocol TCP -LocalPorts {{ wsl_codefort_port }} -Action Allow | Out-Null
   failed_when: result.rc not in [0, 3]
   changed_when: result.rc == 0
-  tags: [moongit, firewall]
+  tags: [codefort, firewall]
 
 # Belt-and-suspenders to vmIdleTimeout=-1 in .wslconfig: a repeating
 # scheduled task that re-runs `systemctl start ssh` every 5 minutes. It's

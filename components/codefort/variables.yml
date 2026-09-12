@@ -1,0 +1,43 @@
+---
+# Component-local defaults for codefort — a private self-hosted git host.
+# Override at the machine level via machines/<m>/vars.yml.
+#
+# The component builds from the existing local working tree rather than
+# cloning github.com/alehatsman/codefort — the server deploys what you have
+# reviewed locally, not whatever is on the remote. Point codefort_src_dir at
+# that checkout. The build is sha-gated on the tree's
+# committed HEAD — deploy committed code to the server, not WIP.
+codefort_src_dir: "~/projects/codefort"
+
+# Installed binaries (daemon + client) and their data dir. Mirrors the
+# paths the repo's tasks.yml backup/restore helpers expect.
+codefort_bin_path: "~/.local/bin/codefortd"
+codefort_client_path: "~/.local/bin/cf"
+codefort_data_dir: "~/.local/share/codefort"
+codefort_repos_dir: "~/.local/share/codefort/repos"
+
+# Built web UI served by codefortd (CODEFORT_WEB_DIR). Lives in the source
+# tree's web/dist, produced by the `vite build` step below.
+codefort_web_dir: "~/projects/codefort/web/dist"
+
+# Managed environment file consumed by the systemd unit. Re-rendered on
+# every apply — keeps the unit free of host-specific absolute paths. No
+# secrets live here.
+codefort_env_file: "~/.config/codefort/codefort.env"
+
+# Secret env file holding the HTTP Basic credentials that gate the web UI
+# + git smart-HTTP (the /api surface keeps its Bearer-token auth). It is
+# CREATED ONCE and never overwritten by apply, so hand-edited creds
+# survive. Lives outside the repo, so the password is never committed.
+# Empty creds (the seeded default) = basic auth disabled. To enable:
+#   edit ~/.config/codefort/codefort.secret.env, then
+#   systemctl --user restart codefort.service
+codefort_secret_env_file: "~/.config/codefort/codefort.secret.env"
+
+# Agent identity env file sourced by the shell (components/zsh). Holds
+# CODEFORT_SERVER + CODEFORT_DATA_DIR (so the codefortd CLI used by the gwc
+# worktree helper hits the live db) and a baseline CODEFORT_TOKEN minted
+# under this host's name. CREATED ONCE and never clobbered — the plaintext
+# token is shown only at mint time. Per-worktree tokens (gwc) override
+# CODEFORT_TOKEN on cd; this is the fallback identity for the main checkout.
+codefort_agent_env_file: "~/.config/codefort/agent.env"

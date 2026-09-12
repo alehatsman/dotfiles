@@ -1,6 +1,6 @@
 # dotfiles CI — validates all machine configs and runs static plan dry-runs on every push.
 #
-# Schema (moongit internal/ci/ci.go): version "1"; `on.push.branches` gates
+# Schema (codefort internal/ci/ci.go): version "1"; `on.push.branches` gates
 # which refs trigger a run; `jobs` is a DAG wired by `needs`. Each job runs in a
 # throwaway container off `image:`.
 #
@@ -14,9 +14,9 @@
 #
 # NOTE: image: provision-ci:latest is currently unbuildable — it and its
 # mooncake-ci:latest base were removed along with mooncake
-# (components/mooncake, components/provision). moongitd's runner still execs
+# (components/mooncake, components/provision). codefortd's runner still execs
 # every CI step as `mooncake step '<yaml>'` inside the container, a contract
-# in moongit's own source (separate repo), not this file. This CI job will
+# in codefort's own source (separate repo), not this file. This CI job will
 # not run until that runner stops requiring mooncake.
 version: "1"
 on:

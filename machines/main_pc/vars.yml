@@ -5,7 +5,7 @@ computer_name: mainpc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
 
-# Always-on server box: it hosts moongit and builds every CI image, so the
+# Always-on server box: it hosts codefort and builds every CI image, so the
 # host must never sleep or hibernate and the WSL VM must never be torn down
 # with it. Turns on the AC power steps and the WSL-Session-Keepalive task in
 # platforms/windows/bootstrap.yml, and turns off "Restore AC sleep timeout".
@@ -24,17 +24,17 @@ windows_prevent_sleep: true
 # one unidentified key) are all stale — safe to drop on the render.
 fleet_peer_enabled: "true"
 
-# moongit server (components/moongit, MOONGIT_ADDR=:8080). moongitd binds
+# codefort server (components/codefort, CODEFORT_ADDR=:8080). codefortd binds
 # *:8080, so mirrored networking puts it on the Windows host's LAN IP —
 # but the Hyper-V VM defaults to DefaultInboundAction=Block, so reaching
 # it from another box needs BOTH a Windows Firewall rule AND a Hyper-V
 # Firewall rule (see bootstrap.yml), same as wsl_ssh_port.
 # Direct LAN access avoids the SSE-coalescing an `ssh -L 8080` tunnel adds.
-wsl_moongit_port: "8080"
+wsl_codefort_port: "8080"
 
 # ─── claude — host-specific system prompt ─────────────────────────────────
-# main_pc is the fleet's coordination hub: it runs the moongit server
-# (components/moongit). Agents here can take a slim host-specific
-# ~/.claude/CLAUDE.md that mandates mgit issue coordination instead of the
+# main_pc is the fleet's coordination hub: it runs the codefort server
+# (components/codefort). Agents here can take a slim host-specific
+# ~/.claude/CLAUDE.md that mandates cf issue coordination instead of the
 # shared trooper prompt. Path is resolved relative to components/claude/.
 # claude_system_prompt_src: "../../machines/main_pc/CLAUDE.md"

@@ -14,6 +14,6 @@ Failures: classify first — caused-by-change / pre-existing / environment / dep
 
 Default: judgment call with blast radius → ask, don't pick.
 
-My tools: provision (alehatsman/provision, declarative provisioning), moongit (alehatsman/moongit, self-hosted git + CI). Use them. Friction — crashes, missing capability, unclear errors, broken idempotency — gets captured, not routed around: gh issue create. Never patch it unless I say so. Never derail the current task; queue it and raise it at close.
+My tools: provision (alehatsman/provision, declarative provisioning), codefort (alehatsman/codefort, self-hosted git + CI). Use them. Friction — crashes, missing capability, unclear errors, broken idempotency — gets captured, not routed around: gh issue create. Never patch it unless I say so. Never derail the current task; queue it and raise it at close.
 
 Close with: changes, files, validation, branch/commit, queued friction, commit message.

@@ -90,7 +90,7 @@ PowerShell before applying inside WSL.
 ## Components
 
 `alacritty · asciinema · claude · clojure · git · google-cloud · hyprland ·
-languages · moongit · nvim · palette · ssh · terraform · tmux · usql · zsh`
+languages · codefort · nvim · palette · ssh · terraform · tmux · usql · zsh`
 
 Each is self-contained: `index.yml` declares steps, `templates/*.j2` render
 into place. Add a component → reference it from a machine's `index.yml`.
@@ -99,7 +99,7 @@ into place. Add a component → reference it from a machine's `index.yml`.
 
 - All config flows through dotfiles + provision. No drift.
 - Templates are Jinja2; pass literal `{{ }}` via `{% verbatim %}`.
-- Track work as moongit issues (`mgit`): claim before coding, close when
+- Track work as codefort issues (`cf`): claim before coding, close when
   merged. Worktrees for non-trivial changes. Never auto-push. See
   [CLAUDE.md](CLAUDE.md).
 

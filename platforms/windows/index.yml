@@ -112,7 +112,7 @@
 # ─── Tailscale ────────────────────────────────────────────────────────────
 # The WSL guest owns the tailnet node on these boxes, NOT the Windows host
 # (dotfiles#90). Everything a tailnet peer wants here — sshd :{{ wsl_ssh_port }},
-# moongitd — is bound inside this VM, so running tailscaled here puts those
+# codefortd — is bound inside this VM, so running tailscaled here puts those
 # ports on tailscale0 directly: no Windows Firewall rule, no Hyper-V
 # firewall rule, no dependency on mirrored networking carrying inbound
 # traffic across the VM boundary.
