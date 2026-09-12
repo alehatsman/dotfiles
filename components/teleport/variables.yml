@@ -14,6 +14,7 @@ teleport_sha256_aarch64_apple_darwin: "0ae2d3c34047779dd2bf459f7eaa0498ebf197ce8
 teleport_sha256_x86_64_apple_darwin: "6011f4af6f0953950cce89af987bbd1d731e6be590f3e9b71251615085569928"
 
 teleport_bin_dir: "~/.local/bin"
+teleport_port: "7337"
 teleport_log_dir: "~/Library/Logs"
 teleport_launch_agent_label: "com.alehatsman.teleportd"
 

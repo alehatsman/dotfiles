@@ -30,6 +30,10 @@
 # exist inside a sourced zsh session (NVIDIA_GIT_BASE, JAVA_HOME, GCPATH).
 - vars:
     teleport_path: "{{ home }}/bin:{{ home }}/.local/bin:{{ home }}/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:{{ home }}/go/bin:{{ home }}/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    # The sha256 pinned for *this* arch — single source of truth for both
+    # the install step's reinstall check (below) and, via `download`, what
+    # actually got fetched.
+    teleport_expected_sha256: "{{ teleport_sha256_aarch64_apple_darwin if arch == 'aarch64' else teleport_sha256_x86_64_apple_darwin }}"
 
 - name: "Ensure teleport_bin_dir exists"
   file:
@@ -61,6 +65,14 @@
 # on disk. `teleport` (the CLI client) rides in the same archive as of a
 # later milestone than teleport_version; its absence in older releases is
 # not an error (mirrors scripts/install.sh in that repo).
+#
+# Reinstalls are gated on teleport_expected_sha256, not `creates:` on the
+# binary path (dotfiles#10). `creates` only asked "does *a* teleportd
+# exist" — permanently true after the first apply, even once a newer
+# archive lands under the same pinned tag (the "-dev" prerelease gets
+# republished with different bytes on every merge to its repo's main). The
+# `.teleportd.sha256` stamp records which pinned sha256 is actually
+# installed, mirroring components/codefort's `.sha` sidecar pattern.
 - name: "Install teleportd (+ teleport CLI, if shipped) to teleport_bin_dir"
   shell: |
     set -euo pipefail
@@ -74,7 +86,11 @@
     if [ -f "$tmp/teleport-$target/teleport" ]; then
       install -m 0755 "$tmp/teleport-$target/teleport" "{{ teleport_bin_dir | expanduser }}/teleport"
     fi
-  creates: "{{ teleport_bin_dir | expanduser }}/teleportd"
+    printf '%s\n' "{{ teleport_expected_sha256 }}" > "{{ teleport_bin_dir | expanduser }}/.teleportd.sha256"
+  unless: |
+    test -x "{{ teleport_bin_dir | expanduser }}/teleportd" && \
+      [ "$(cat "{{ teleport_bin_dir | expanduser }}/.teleportd.sha256" 2>/dev/null)" = "{{ teleport_expected_sha256 }}" ]
+  register: teleport_install
   when: os == 'darwin'
   tags: [teleport]
 
@@ -106,9 +122,42 @@
   when: os == 'darwin'
   tags: [teleport]
 
-# launchd equivalent of codefort's `daemon-reload`: bootstrap does not
-# reload an already-loaded job, so a changed plist needs bootout first.
+# `service: state: started` needs the job already bootstrapped — it
+# cannot load a plist that was never loaded (provision spec §6.6) — so
+# this has to run, and succeed, before "Enable + start" below whenever
+# teleportd isn't actually answering on its port, not just when the plist
+# changed. Testing here found a `service: state: restarted` (kickstart -k)
+# step used for "the binary was reinstalled, bounce the process" left the
+# job entirely missing from `launchctl print` seconds later, for reasons
+# that didn't reproduce cleanly — so a binary-only reinstall
+# (`teleport_install.changed`) now goes through the exact same
+# bootout+bootstrap this step already uses for plist changes, a path
+# that's held up under repeated testing, rather than trusting kickstart.
+#
+# Probing the port rather than `launchctl print` on purpose: a launchd
+# entry existing says nothing about whether the process behind it is
+# actually the one serving {{ teleport_port }} — the port-race this step's
+# own wait-loop guards against (below) produced exactly that split once
+# during testing. `teleport_loaded.rc != 0` catches that state, "vanished
+# between applies", and "never bootstrapped" all the same way.
+- name: "Check whether teleportd is reachable on its expected port"
+  shell: nc -z -w 2 127.0.0.1 {{ teleport_port }}
+  register: teleport_loaded
+  changed_when: false
+  failed_when: false
+  when: os == 'darwin'
+  tags: [teleport]
+
 # `|| true` on bootout because a first-ever install has nothing loaded yet.
+#
+# bootout tells launchd to drop the job immediately, but the old process
+# itself can take a beat to actually release its listening socket — seen
+# here: bootstrap ran right after bootout, the old teleportd hadn't closed
+# :7337 yet, and the new process fell back to teleportd's own ephemeral-port
+# behavior (docs/08-packaging.md#port-discovery — do not hardcode 7337) —
+# silently deaf to `tailscale serve`, which only ever proxies :{{ teleport_port }}.
+# Wait for the port to actually free up before bootstrapping; fail loudly
+# instead of bootstrapping onto a port nothing will proxy to.
 - name: "(Re)bootstrap the teleportd LaunchAgent"
   shell: |
     set -euo pipefail
@@ -116,8 +165,19 @@
     label="{{ teleport_launch_agent_label }}"
     plist="{{ ('~/Library/LaunchAgents/' + teleport_launch_agent_label + '.plist') | expanduser }}"
     launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+    for _ in $(seq 1 20); do
+      lsof -ti "tcp:{{ teleport_port }}" >/dev/null 2>&1 || break
+      sleep 0.25
+    done
+    if lsof -ti "tcp:{{ teleport_port }}" >/dev/null 2>&1; then
+      echo "error: 127.0.0.1:{{ teleport_port }} still held 5s after bootout — refusing to" \
+           "bootstrap onto a fallback port tailscale serve won't proxy" >&2
+      exit 1
+    fi
     launchctl bootstrap "gui/$uid" "$plist"
-  when: os == 'darwin' and teleport_plist.changed
+  when: >-
+    os == 'darwin' and
+    (teleport_plist.changed or teleport_install.changed or teleport_loaded.rc != 0)
   changed_when: true
   tags: [teleport]
 
@@ -138,7 +198,7 @@
   # however, guarantee teleportd itself is running post-reboot on macOS —
   # that's the LaunchAgent's job, and macOS has no headless (logged-out)
   # equivalent yet (see the header comment).
-  shell: tailscale serve --bg http://127.0.0.1:7337
-  unless: tailscale serve status 2>/dev/null | grep -q '127.0.0.1:7337'
+  shell: tailscale serve --bg http://127.0.0.1:{{ teleport_port }}
+  unless: tailscale serve status 2>/dev/null | grep -q '127.0.0.1:{{ teleport_port }}'
   when: os == 'darwin'
   tags: [teleport]
