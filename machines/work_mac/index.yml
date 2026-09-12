@@ -67,6 +67,9 @@
 - import: ../../components/usql/index.yml
   tags: [tools, usql]
 
+- import: ../../components/teleport/index.yml
+  tags: [tools, teleport]
+
 - name: Use zsh component
   use: ../../components/zsh/index.yml
   tags: [core, shell]

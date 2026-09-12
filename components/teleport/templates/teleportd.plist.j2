@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Managed by provision — components/teleport/templates/teleportd.plist.j2.
+  macOS has no headless autostart path for teleportd yet (`teleportd service
+  install` is Linux-only, alehatsman/teleport issue #40) — this LaunchAgent
+  is the login-scoped equivalent docs/08-packaging.md#autostart-at-login
+  calls for. Login-scoped, not a LaunchDaemon: a system-level service would
+  run as a different, more privileged user.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>{{ teleport_launch_agent_label }}</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>{{ (teleport_bin_dir + '/teleportd') | expanduser }}</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>{{ teleport_path }}</string>
+	</dict>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>{{ (teleport_log_dir + '/teleportd.log') | expanduser }}</string>
+	<key>StandardErrorPath</key>
+	<string>{{ (teleport_log_dir + '/teleportd.err.log') | expanduser }}</string>
+</dict>
+</plist>
