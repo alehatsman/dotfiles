@@ -310,6 +310,7 @@
   shell: |
     set -euo pipefail
     killall cfprefsd Finder SystemUIServer 2>/dev/null || true
+  changed_when: true
   when: os == "darwin"
   tags: [macos, defaults]
 
