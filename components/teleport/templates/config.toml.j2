@@ -1,0 +1,10 @@
+# Managed by provision — components/teleport/templates/config.toml.j2.
+# Edit teleport_tailnet_hostname in machines/<m>/vars.yml, not this file.
+#
+# teleportd binds 127.0.0.1 only; `tailscale serve` proxies it to the
+# tailnet over HTTPS. These two lines are what let the phone's tailnet
+# origin/Host header through auth.rs's checks (docs/06-security.md,
+# docs/07-remote-access.md in alehatsman/teleport). auth_token stays on
+# the built-in default (true) — loopback is not a user boundary.
+allowed_origins = ["https://{{ teleport_tailnet_hostname }}"]
+allowed_hosts   = ["{{ teleport_tailnet_hostname }}"]

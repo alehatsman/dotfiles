@@ -1,0 +1,144 @@
+---
+# teleport — alehatsman/teleport's local headless terminal/session daemon
+# (teleportd), reached over Tailscale Serve for phone/remote access.
+#
+# teleportd binds 127.0.0.1 only (docs/06-security.md in that repo); it is
+# never exposed directly. `tailscale serve` proxies it to the tailnet over
+# HTTPS — no public exposure, no bespoke auth to build
+# (docs/07-remote-access.md). macOS has no headless autostart path yet
+# (`teleportd service install` is Linux-only — issue #40), so this installs
+# a login-scoped LaunchAgent by hand, the equivalent docs/08-packaging.md
+# calls for.
+#
+# Darwin only for now — the only machine that imports this is work_mac.
+# arch-gated steps below are what make it safe to import from a shared
+# platform file later without an Intel Mac silently getting no binary.
+
+- vars_file: ./variables.yml
+
+# vars_file values are data, not rendered (provision spec §3.3) — `{{ home }}`
+# in variables.yml would stay the literal seven characters. This has to
+# compute against `home`, so it's a `vars:` step instead.
+#
+# teleportd is launchd-started, not spawned from an interactive login
+# shell, so it inherits launchd's bare PATH (/usr/bin:/bin:/usr/sbin:/sbin)
+# — no /opt/homebrew/bin. That's invisible for the `$SHELL -l` preset
+# (login shell re-sources .zprofile/.zshrc and rebuilds PATH itself) but
+# breaks presets that exec a named binary directly (`claude`, `codex`):
+# those inherit teleportd's own PATH with no shell in between. Mirrors the
+# PATH components/zsh/templates/.zshrc.j2 builds, minus vars that only
+# exist inside a sourced zsh session (NVIDIA_GIT_BASE, JAVA_HOME, GCPATH).
+- vars:
+    teleport_path: "{{ home }}/bin:{{ home }}/.local/bin:{{ home }}/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:{{ home }}/go/bin:{{ home }}/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+- name: "Ensure teleport_bin_dir exists"
+  file:
+    path: "{{ teleport_bin_dir }}"
+    state: dir
+  when: os == 'darwin'
+  tags: [teleport]
+
+# ───────────────────────── fetch + install teleportd ───────────────────────
+
+- name: "Fetch the teleportd release (aarch64-apple-darwin)"
+  download:
+    url: "https://github.com/alehatsman/teleport/releases/download/{{ teleport_version }}/teleport-aarch64-apple-darwin.tar.gz"
+    dest: "~/.cache/dotfiles/teleport-{{ teleport_version }}-aarch64-apple-darwin.tar.gz"
+    sha256: "{{ teleport_sha256_aarch64_apple_darwin }}"
+  when: os == 'darwin' and arch == 'aarch64'
+  tags: [teleport]
+
+- name: "Fetch the teleportd release (x86_64-apple-darwin)"
+  download:
+    url: "https://github.com/alehatsman/teleport/releases/download/{{ teleport_version }}/teleport-x86_64-apple-darwin.tar.gz"
+    dest: "~/.cache/dotfiles/teleport-{{ teleport_version }}-x86_64-apple-darwin.tar.gz"
+    sha256: "{{ teleport_sha256_x86_64_apple_darwin }}"
+  when: os == 'darwin' and arch == 'x86_64'
+  tags: [teleport]
+
+# One unpack step covers both arches — only one of the two archives above
+# was ever fetched, so `%target%` here just needs to name whichever one is
+# on disk. `teleport` (the CLI client) rides in the same archive as of a
+# later milestone than teleport_version; its absence in older releases is
+# not an error (mirrors scripts/install.sh in that repo).
+- name: "Install teleportd (+ teleport CLI, if shipped) to teleport_bin_dir"
+  shell: |
+    set -euo pipefail
+    target="aarch64-apple-darwin"
+    [ "{{ arch }}" = "x86_64" ] && target="x86_64-apple-darwin"
+    archive="$HOME/.cache/dotfiles/teleport-{{ teleport_version }}-$target.tar.gz"
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    tar -xzf "$archive" -C "$tmp"
+    install -m 0755 "$tmp/teleport-$target/teleportd" "{{ teleport_bin_dir | expanduser }}/teleportd"
+    if [ -f "$tmp/teleport-$target/teleport" ]; then
+      install -m 0755 "$tmp/teleport-$target/teleport" "{{ teleport_bin_dir | expanduser }}/teleport"
+    fi
+  creates: "{{ teleport_bin_dir | expanduser }}/teleportd"
+  when: os == 'darwin'
+  tags: [teleport]
+
+# ───────────────────────── config ───────────────────────────────────────────
+
+- name: "Deploy teleportd config.toml (tailnet origin/host allowlist)"
+  template:
+    src: ./templates/config.toml.j2
+    dest: "{{ teleport_data_dir }}/config.toml"
+    mode: '0644'
+  when: os == 'darwin'
+  tags: [teleport]
+
+# ───────────────────────── autostart (LaunchAgent) ──────────────────────────
+
+- name: "Ensure ~/Library/LaunchAgents exists"
+  file:
+    path: ~/Library/LaunchAgents
+    state: dir
+  when: os == 'darwin'
+  tags: [teleport]
+
+- name: "Deploy the teleportd LaunchAgent"
+  template:
+    src: ./templates/teleportd.plist.j2
+    dest: "~/Library/LaunchAgents/{{ teleport_launch_agent_label }}.plist"
+    mode: '0644'
+  register: teleport_plist
+  when: os == 'darwin'
+  tags: [teleport]
+
+# launchd equivalent of codefort's `daemon-reload`: bootstrap does not
+# reload an already-loaded job, so a changed plist needs bootout first.
+# `|| true` on bootout because a first-ever install has nothing loaded yet.
+- name: "(Re)bootstrap the teleportd LaunchAgent"
+  shell: |
+    set -euo pipefail
+    uid=$(id -u)
+    label="{{ teleport_launch_agent_label }}"
+    plist="{{ ('~/Library/LaunchAgents/' + teleport_launch_agent_label + '.plist') | expanduser }}"
+    launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+    launchctl bootstrap "gui/$uid" "$plist"
+  when: os == 'darwin' and teleport_plist.changed
+  changed_when: true
+  tags: [teleport]
+
+- name: "Enable + start teleportd"
+  service:
+    name: "{{ teleport_launch_agent_label }}"
+    scope: user
+    state: started
+    enabled: true
+  when: os == 'darwin'
+  tags: [teleport]
+
+# ───────────────────────── phone/remote access (Tailscale Serve) ───────────
+
+- name: "Proxy teleportd to the tailnet via Tailscale Serve"
+  # --bg persists the Serve config across tailscaled restarts and reboots
+  # (docs/07-remote-access.md#default-tailscale-serve). It does not,
+  # however, guarantee teleportd itself is running post-reboot on macOS —
+  # that's the LaunchAgent's job, and macOS has no headless (logged-out)
+  # equivalent yet (see the header comment).
+  shell: tailscale serve --bg http://127.0.0.1:7337
+  unless: tailscale serve status 2>/dev/null | grep -q '127.0.0.1:7337'
+  when: os == 'darwin'
+  tags: [teleport]
