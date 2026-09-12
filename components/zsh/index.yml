@@ -46,11 +46,21 @@ steps:
 
   - name: Deploy .zshenv
     # Sourced by ALL zsh (incl. non-interactive scripts/cron/agent shells) —
-    # holds env that must apply regardless of shell type (cargo). See
-    # templates/.zshenv.j2 (dotfiles #33).
+    # holds env that must apply regardless of shell type (cargo, PATH prefix).
+    # See templates/.zshenv.j2 (dotfiles #33).
     template:
       src: ./templates/.zshenv.j2
       dest: ~/.zshenv
+    tags: [zsh, config]
+
+  - name: Deploy .zprofile
+    # Login shells, after /etc/zprofile. macOS's path_helper rebuilds PATH with
+    # /etc/paths ahead of everything, demoting the prefix .zshenv just set, so
+    # the prefix has to be re-asserted once path_helper has had its turn. The
+    # template carries the measurement.
+    template:
+      src: ./templates/.zprofile.j2
+      dest: ~/.zprofile
     tags: [zsh, config]
 
   - name: Deploy .zshrc

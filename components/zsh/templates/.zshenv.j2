@@ -6,3 +6,24 @@
 
 # Rust/cargo — guarded so a box without rustup doesn't error on every shell.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# ── PATH ─────────────────────────────────────────────────────────────────────
+# Here, not in ~/.zshrc, because .zshrc is interactive-only and the shells that
+# were broken are the non-interactive ones: provision's own `shell` steps, agent
+# tool shells, cron, git hooks. On a Mac /usr/bin carries bash 3.2 and python
+# 3.9 while Homebrew's bash 5.3 and python 3.14 sit in /opt/homebrew/bin — so
+# which interpreter a tool got was decided by whether a human happened to be
+# typing. That is not a property you want a CI gate to depend on.
+#
+# `typeset -U` makes this idempotent: zsh ties $path to $PATH, and -U drops
+# duplicates on assignment, so a nested shell re-sourcing this moves an entry
+# instead of growing PATH without bound.
+#
+# Only the ordering-critical prefix lives here. The full interactive PATH stays
+# in ~/.zshrc — one list, one owner, no second source of truth.
+typeset -U path PATH
+{% if os == 'darwin' %}
+[[ -d /opt/homebrew/bin ]] && path=(/opt/homebrew/bin $path)
+{% endif %}
+[[ -d $HOME/bin ]]        && path=($HOME/bin $path)
+[[ -d $HOME/.local/bin ]] && path=($HOME/.local/bin $path)
