@@ -11,8 +11,9 @@
 # calls for.
 #
 # Darwin only for now — the only machine that imports this is work_mac.
-# arch-gated steps below are what make it safe to import from a shared
-# platform file later without an Intel Mac silently getting no binary.
+# Built from source via cargo (components/languages must be imported
+# first so rustup/cargo are on PATH), so there is no per-arch binary to
+# track — the same build step works on Intel and Apple Silicon.
 
 - vars_file: ./variables.yml
 
@@ -30,10 +31,6 @@
 # exist inside a sourced zsh session (NVIDIA_GIT_BASE, JAVA_HOME, GCPATH).
 - vars:
     teleport_path: "{{ home }}/bin:{{ home }}/.local/bin:{{ home }}/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:{{ home }}/go/bin:{{ home }}/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-    # The sha256 pinned for *this* arch — single source of truth for both
-    # the install step's reinstall check (below) and, via `download`, what
-    # actually got fetched.
-    teleport_expected_sha256: "{{ teleport_sha256_aarch64_apple_darwin if arch == 'aarch64' else teleport_sha256_x86_64_apple_darwin }}"
 
 - name: "Ensure teleport_bin_dir exists"
   file:
@@ -42,56 +39,59 @@
   when: os == 'darwin'
   tags: [teleport]
 
-# ───────────────────────── fetch + install teleportd ───────────────────────
+# ───────────────────────── build + install teleportd from source ───────────
 
-- name: "Fetch the teleportd release (aarch64-apple-darwin)"
-  download:
-    url: "https://github.com/alehatsman/teleport/releases/download/{{ teleport_version }}/teleport-aarch64-apple-darwin.tar.gz"
-    dest: "~/.cache/dotfiles/teleport-{{ teleport_version }}-aarch64-apple-darwin.tar.gz"
-    sha256: "{{ teleport_sha256_aarch64_apple_darwin }}"
-  when: os == 'darwin' and arch == 'aarch64'
-  tags: [teleport]
-
-- name: "Fetch the teleportd release (x86_64-apple-darwin)"
-  download:
-    url: "https://github.com/alehatsman/teleport/releases/download/{{ teleport_version }}/teleport-x86_64-apple-darwin.tar.gz"
-    dest: "~/.cache/dotfiles/teleport-{{ teleport_version }}-x86_64-apple-darwin.tar.gz"
-    sha256: "{{ teleport_sha256_x86_64_apple_darwin }}"
-  when: os == 'darwin' and arch == 'x86_64'
-  tags: [teleport]
-
-# One unpack step covers both arches — only one of the two archives above
-# was ever fetched, so `%target%` here just needs to name whichever one is
-# on disk. `teleport` (the CLI client) rides in the same archive as of a
-# later milestone than teleport_version; its absence in older releases is
-# not an error (mirrors scripts/install.sh in that repo).
+# Built from source, not downloaded — teleport only ships a floating
+# "-dev" prerelease (github.com/alehatsman/teleport/releases), republished
+# with different bytes on every merge to main, so there is no stable
+# tagged tarball to pin a sha256 to. Tracks main: every apply resolves
+# main's current HEAD commit and rebuilds only when that commit has moved
+# since the last install.
 #
-# Reinstalls are gated on teleport_expected_sha256, not `creates:` on the
-# binary path (dotfiles#10). `creates` only asked "does *a* teleportd
-# exist" — permanently true after the first apply, even once a newer
-# archive lands under the same pinned tag (the "-dev" prerelease gets
-# republished with different bytes on every merge to its repo's main). The
-# `.teleportd.sha256` stamp records which pinned sha256 is actually
-# installed, mirroring components/codefort's `.sha` sidecar pattern.
-- name: "Install teleportd (+ teleport CLI, if shipped) to teleport_bin_dir"
+# Reinstalls are gated on the resolved commit, not `creates:` on the
+# binary path (dotfiles#10) — `creates` only asks "does *a* teleportd
+# exist", permanently true after the first apply even once main has moved
+# on. The `.teleportd.commit` stamp records which commit is actually
+# installed, mirroring the old `.teleportd.sha256` tarball-hash stamp.
+#
+# `cargo install --path` (not `cargo build --release` + manual `install`)
+# because it resolves the native target itself — no per-arch build dirs to
+# track, unlike the tarball flow this replaced. `--root` points both
+# builds at a scratch prefix so the resulting binaries land at a known
+# `<root>/bin/<name>` path this step then copies into teleport_bin_dir.
+#
+# cli/ and daemon/ are two independent Cargo projects, not workspace
+# members (no root Cargo.toml in the repo) — each needs its own
+# `cargo install --path`.
+#
+# Web UI is built first and baked into teleportd via the `embedded-web`
+# cargo feature (docs/16-release-pipeline.md#embedding-the-web-ui —
+# rust-embed reads `../web/dist` at compile time), the same shape the
+# repo's own release workflow uses, so the installed binary is
+# self-contained — no `--web-dist` flag, no separate asset dir to keep in
+# sync with the binary. Requires node/npm on PATH (brew's `node` formula,
+# platforms/macos/packages.yml).
+- name: "Build and install teleportd (+ teleport CLI) from source"
   shell: |
     set -euo pipefail
-    target="aarch64-apple-darwin"
-    [ "{{ arch }}" = "x86_64" ] && target="x86_64-apple-darwin"
-    archive="$HOME/.cache/dotfiles/teleport-{{ teleport_version }}-$target.tar.gz"
     tmp=$(mktemp -d)
     trap 'rm -rf "$tmp"' EXIT
-    tar -xzf "$archive" -C "$tmp"
-    install -m 0755 "$tmp/teleport-$target/teleportd" "{{ teleport_bin_dir | expanduser }}/teleportd"
-    if [ -f "$tmp/teleport-$target/teleport" ]; then
-      install -m 0755 "$tmp/teleport-$target/teleport" "{{ teleport_bin_dir | expanduser }}/teleport"
-    fi
-    printf '%s\n' "{{ teleport_expected_sha256 }}" > "{{ teleport_bin_dir | expanduser }}/.teleportd.sha256"
+    git clone --depth 1 "{{ teleport_repo_url }}.git" "$tmp/src"
+    commit=$(git -C "$tmp/src" rev-parse HEAD)
+    ( cd "$tmp/src/web" && npm ci && npm run build )
+    cargo install --locked --path "$tmp/src/daemon" --features embedded-web --bin teleportd --root "$tmp/out"
+    cargo install --locked --path "$tmp/src/cli" --bin teleport --root "$tmp/out"
+    install -m 0755 "$tmp/out/bin/teleportd" "{{ teleport_bin_dir | expanduser }}/teleportd"
+    install -m 0755 "$tmp/out/bin/teleport" "{{ teleport_bin_dir | expanduser }}/teleport"
+    printf '%s\n' "$commit" > "{{ teleport_bin_dir | expanduser }}/.teleportd.commit"
   unless: |
+    set -euo pipefail
+    latest=$(git ls-remote "{{ teleport_repo_url }}.git" refs/heads/main | cut -f1)
     test -x "{{ teleport_bin_dir | expanduser }}/teleportd" && \
-      [ "$(cat "{{ teleport_bin_dir | expanduser }}/.teleportd.sha256" 2>/dev/null)" = "{{ teleport_expected_sha256 }}" ]
+      [ "$(cat "{{ teleport_bin_dir | expanduser }}/.teleportd.commit" 2>/dev/null)" = "$latest" ]
   register: teleport_install
   when: os == 'darwin'
+  timeout: 20m
   tags: [teleport]
 
 # ───────────────────────── config ───────────────────────────────────────────

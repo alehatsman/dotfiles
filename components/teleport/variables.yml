@@ -3,15 +3,12 @@
 # headless terminal/session daemon (teleportd) reached over Tailscale.
 # Override at the machine level via machines/<m>/vars.yml.
 
-# Pinned release tag. Only a "-dev" prerelease exists today
-# (github.com/alehatsman/teleport/releases) — its assets get republished on
-# every merge to main, so the sha256 pins below can go stale. Bump both
-# together when that happens (`gh release view <tag> -R alehatsman/teleport`
-# then re-checksum).
-teleport_version: "v0.0.0-dev"
-
-teleport_sha256_aarch64_apple_darwin: "0ae2d3c34047779dd2bf459f7eaa0498ebf197ce824bc8dd7bce6f0422107762"
-teleport_sha256_x86_64_apple_darwin: "6011f4af6f0953950cce89af987bbd1d731e6be590f3e9b71251615085569928"
+# Built from source, tracking main — teleport only ships a "-dev"
+# prerelease today (github.com/alehatsman/teleport/releases), republished
+# with different bytes on every merge, so there's no stable tagged release
+# to pin a tarball to. The install step (index.yml) resolves main's HEAD
+# commit itself and rebuilds only when that commit moves.
+teleport_repo_url: "https://github.com/alehatsman/teleport"
 
 teleport_bin_dir: "~/.local/bin"
 teleport_port: "7337"
