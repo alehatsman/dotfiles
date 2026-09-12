@@ -83,18 +83,18 @@
     use_win32yank: "true"
   tags: [editor, nvim]
 
-# Private self-hosted git host. Builds from ~/projects/moongit and runs
-# moongitd as a user systemd service (API + git + web UI on one port).
+# Private self-hosted git host. Builds from ~/projects/codefort and runs
+# codefortd as a user systemd service (API + git + web UI on one port).
 # This box is the main server.
-- name: Use moongit component
+- name: Use codefort component
   # No props: every remaining prop has a component default.
-  use: ../../components/moongit/index.yml
-  tags: [tools, moongit]
+  use: ../../components/codefort/index.yml
+  tags: [tools, codefort]
 
 # mooncake + the provision CI-image build were removed with mooncake. This
-# box's moongit-ci / moongit-ci-dev / provision-ci images are no longer
-# built — moongit's own CI runner execs `mooncake step` inside them, which
-# needs a fix in the moongit repo (out of scope here). See CLAUDE.md.
+# box's codefort-ci / codefort-ci-dev / provision-ci images are no longer
+# built — codefort's own CI runner execs `mooncake step` inside them, which
+# needs a fix in the codefort repo (out of scope here). See CLAUDE.md.
 
 # Inbound fleet access. Gated on fleet_peer_enabled (false in ./vars.yml
 # until dotfiles#2's authorized_keys reconciliation is done) — see

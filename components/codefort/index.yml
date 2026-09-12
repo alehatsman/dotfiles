@@ -1,9 +1,9 @@
 ---
-# moongit — private self-hosted git host. Builds the daemon + web UI from
-# the local source tree and runs moongitd as a user systemd service.
+# codefort — private self-hosted git host. Builds the daemon + web UI from
+# the local source tree and runs codefortd as a user systemd service.
 #
-# Single service, single port: moongitd serves /api/*, git smart-HTTP, and
-# the built SPA (MOONGIT_WEB_DIR) on {{ props.moongit_addr }}. Linger
+# Single service, single port: codefortd serves /api/*, git smart-HTTP, and
+# the built SPA (CODEFORT_WEB_DIR) on {{ props.codefort_addr }}. Linger
 # (shared/bootstrap.yml) keeps the user service alive across logout, so the
 # box acts as a standalone server even with no interactive session.
 #
@@ -13,18 +13,18 @@
 # flips after the new revision is fully live.
 #
 # Force a rebuild:
-#   rm {{ moongit_bin_path }}.sha && provision apply ./main_pc.yml --tags moongit
+#   rm {{ codefort_bin_path }}.sha && provision apply ./main_pc.yml --tags codefort
 
 props:
-  moongit_addr:
+  codefort_addr:
     type: string
     default: ":8080"
-    description: Listen address for moongitd (host:port or :port).
-  moongit_max_concurrency:
+    description: Listen address for codefortd (host:port or :port).
+  codefort_max_concurrency:
     type: string
     default: "6"
-    description: Max concurrent CI + agent runs (MOONGIT_MAX_CONCURRENCY).
-  moongit_agent_reserved:
+    description: Max concurrent CI + agent runs (CODEFORT_MAX_CONCURRENCY).
+  codefort_agent_reserved:
     type: string
     default: "2"
     description: Run slots reserved for agents so CI backlog can't lock them out.
@@ -34,24 +34,24 @@ steps:
 
   # ───────────────── TOOLCHAIN GUARDS ────────────────────────────────────────
 
-  - name: "Ensure Go toolchain is installed (for building moongitd)"
+  - name: "Ensure Go toolchain is installed (for building codefortd)"
     # Provided by components/languages — fail-fast guard so the build step
     # doesn't error out cryptically.
     assert:
       command: command -v go
-    tags: [moongit, build]
+    tags: [codefort, build]
 
   - name: "Ensure Node toolchain is installed (for building the web UI)"
     assert:
       command: command -v npm
-    tags: [moongit, build]
+    tags: [codefort, build]
 
   - name: "Ensure git is installed"
     pkg:
       name: git
       state: present
     sudo: true
-    tags: [moongit, build]
+    tags: [codefort, build]
 
   # ───────────────── DIRECTORIES ─────────────────────────────────────────────
 
@@ -59,94 +59,80 @@ steps:
     file:
       path: ~/.local/bin
       state: dir
-    tags: [moongit, build]
+    tags: [codefort, build]
 
   - name: "Ensure data + repos dirs exist"
     # Creating the leaf repos dir materializes the parent data dir too.
     file:
-      path: "{{ moongit_repos_dir }}"
+      path: "{{ codefort_repos_dir }}"
       state: dir
-    tags: [moongit, build]
+    tags: [codefort, build]
 
   - name: "Ensure config dir for the env file exists"
     file:
-      path: ~/.config/moongit
+      path: ~/.config/codefort
       state: dir
-    tags: [moongit, service]
+    tags: [codefort, service]
 
   # ───────────────── BUILD (sha-gated on committed HEAD) ──────────────────────
 
-  - name: "Build moongitd + moongit client"
-    # {{ moongit_src_dir }} is unquoted on purpose so bash expands ~ at run
+  - name: "Build codefortd + codefort client"
+    # {{ codefort_src_dir }} is unquoted on purpose so bash expands ~ at run
     # time.
     shell: |
       set -euo pipefail
-      cd {{ moongit_src_dir }}
-      go build -trimpath -ldflags "-s -w" -o ./bin/moongitd ./cmd/moongitd
-      go build -trimpath -ldflags "-s -w" -o ./bin/moongit  ./cmd/moongit
+      cd {{ codefort_src_dir }}
+      go build -trimpath -ldflags "-s -w" -o ./bin/codefortd ./cmd/codefortd
+      go build -trimpath -ldflags "-s -w" -o ./bin/cf        ./cmd/cf
     unless: |
-      test -x {{ moongit_bin_path }} && \
-        [ "$(cat {{ moongit_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ moongit_src_dir }} rev-parse HEAD 2>/dev/null)" ]
-    tags: [moongit, build]
+      test -x {{ codefort_bin_path }} && \
+        [ "$(cat {{ codefort_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ codefort_src_dir }} rev-parse HEAD 2>/dev/null)" ]
+    tags: [codefort, build]
 
   - name: "Build the web UI (vite build → web/dist)"
     shell: |
       set -euo pipefail
-      cd {{ moongit_src_dir }}/web
+      cd {{ codefort_src_dir }}/web
       npm install
       npm run build
     unless: |
-      test -x {{ moongit_bin_path }} && \
-        [ "$(cat {{ moongit_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ moongit_src_dir }} rev-parse HEAD 2>/dev/null)" ]
+      test -x {{ codefort_bin_path }} && \
+        [ "$(cat {{ codefort_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ codefort_src_dir }} rev-parse HEAD 2>/dev/null)" ]
     timeout: 10m
-    tags: [moongit, build]
+    tags: [codefort, build]
 
-  - name: "Install moongitd + moongit to ~/.local/bin"
+  - name: "Install codefortd + codefort to ~/.local/bin"
     # No sha write here — the restart step stamps it last so the gate only
     # flips once the new revision is actually running.
     shell: |
       set -euo pipefail
-      install -m 0755 {{ moongit_src_dir }}/bin/moongitd {{ moongit_bin_path }}
-      install -m 0755 {{ moongit_src_dir }}/bin/moongit  {{ moongit_client_path }}
+      install -m 0755 {{ codefort_src_dir }}/bin/codefortd {{ codefort_bin_path }}
+      install -m 0755 {{ codefort_src_dir }}/bin/cf        {{ codefort_client_path }}
     unless: |
-      test -x {{ moongit_bin_path }} && \
-        [ "$(cat {{ moongit_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ moongit_src_dir }} rev-parse HEAD 2>/dev/null)" ]
-    tags: [moongit, build]
-
-  - name: "Create mgitd alias → moongitd"
-    file:
-      path: ~/.local/bin/mgitd
-      src: "{{ moongit_bin_path }}"
-      state: link
-    tags: [moongit, build]
-
-  - name: "Create mgit alias → moongit"
-    file:
-      path: ~/.local/bin/mgit
-      src: "{{ moongit_client_path }}"
-      state: link
-    tags: [moongit, build]
+      test -x {{ codefort_bin_path }} && \
+        [ "$(cat {{ codefort_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ codefort_src_dir }} rev-parse HEAD 2>/dev/null)" ]
+    tags: [codefort, build]
 
   # ───────────────── SERVICE (user-scope systemd unit) ───────────────────────
 
-  - name: "Render moongit environment file"
+  - name: "Render codefort environment file"
     # Host-specific absolute paths live here, not in the unit. systemd does
     # not expand ~, so every path is run through expanduser. No secrets —
     # those live in the secret env file seeded below.
     file:
-      path: "{{ moongit_env_file }}"
+      path: "{{ codefort_env_file }}"
       state: file
       content: |
-        MOONGIT_ADDR={{ props.moongit_addr }}
-        MOONGIT_DATA_DIR={{ moongit_data_dir | expanduser }}
-        MOONGIT_REPOS_DIR={{ moongit_repos_dir | expanduser }}
-        MOONGIT_WEB_DIR={{ moongit_web_dir | expanduser }}
-        MOONGIT_MAX_CONCURRENCY={{ props.moongit_max_concurrency }}
-        MOONGIT_AGENT_RESERVED={{ props.moongit_agent_reserved }}
+        CODEFORT_ADDR={{ props.codefort_addr }}
+        CODEFORT_DATA_DIR={{ codefort_data_dir | expanduser }}
+        CODEFORT_REPOS_DIR={{ codefort_repos_dir | expanduser }}
+        CODEFORT_WEB_DIR={{ codefort_web_dir | expanduser }}
+        CODEFORT_MAX_CONCURRENCY={{ props.codefort_max_concurrency }}
+        CODEFORT_AGENT_RESERVED={{ props.codefort_agent_reserved }}
       mode: '0644'
-    tags: [moongit, service]
+    tags: [codefort, service]
 
-  - name: "Seed moongit secret env file (HTTP Basic creds) if missing"
+  - name: "Seed codefort secret env file (HTTP Basic creds) if missing"
     # Created once, NEVER overwritten — `creates:` skips the step when the
     # file already exists, so hand-edited credentials survive every apply.
     # umask 077 makes the file 0600 from birth (it carries the password).
@@ -155,15 +141,28 @@ steps:
     shell: |
       set -eu
       umask 077
-      cat > {{ moongit_secret_env_file }} <<'EOF'
-      # HTTP Basic auth for the moongit web UI + git smart-HTTP.
-      # Fill both in, then: systemctl --user restart moongit.service
+      cat > {{ codefort_secret_env_file }} <<'EOF'
+      # HTTP Basic auth for the codefort web UI + git smart-HTTP.
+      # Fill both in, then: systemctl --user restart codefort.service
       # Leave empty to disable. This file is never committed or clobbered.
-      MOONGIT_BASIC_USER=
-      MOONGIT_BASIC_PASS=
+      CODEFORT_BASIC_USER=
+      CODEFORT_BASIC_PASS=
       EOF
-    creates: "{{ moongit_secret_env_file | expanduser }}"
-    tags: [moongit, service]
+    creates: "{{ codefort_secret_env_file | expanduser }}"
+    tags: [codefort, service]
+
+  - name: "Retire the pre-rename moongit.service, if present"
+    # The rename gives the daemon a new unit name, so the old unit is not
+    # replaced — it is left behind, still enabled and still bound to :8080,
+    # which makes codefort.service fail to start with a port conflict that
+    # says nothing about a rename. `unless` skips this on every host that
+    # never ran moongit and on every apply after the first.
+    shell: |
+      set -eu
+      systemctl --user disable --now moongit.service || true
+      rm -f ~/.config/systemd/user/moongit.service
+    unless: test ! -f ~/.config/systemd/user/moongit.service
+    tags: [codefort, service]
 
   # os.systemd wrote the unit, reloaded, enabled and started it in one
   # step, and reload_on_change restarted it when the unit body drifted.
@@ -175,128 +174,128 @@ steps:
       path: ~/.config/systemd/user
       state: dir
       mode: '0755'
-    tags: [moongit, service]
+    tags: [codefort, service]
 
-  - name: "Deploy the moongit user unit"
+  - name: "Deploy the codefort user unit"
     template:
-      src: ./units/moongit.service.j2
-      dest: ~/.config/systemd/user/moongit.service
+      src: ./units/codefort.service.j2
+      dest: ~/.config/systemd/user/codefort.service
       mode: '0644'
-    register: moongit_unit
-    tags: [moongit, service]
+    register: codefort_unit
+    tags: [codefort, service]
 
   - name: "Reload the user systemd manager"
     cmd: [systemctl, --user, daemon-reload]
-    when: moongit_unit.changed
+    when: codefort_unit.changed
     # See the Tailscale refresh in platforms/windows/index.yml: `when`
     # decides whether it runs, `changed_when` says what it did. A reload
     # that only runs after the unit file changed did reload the manager.
     changed_when: true
-    tags: [moongit, service]
+    tags: [codefort, service]
 
-  - name: "Enable + start moongit"
+  - name: "Enable + start codefort"
     service:
-      name: moongit.service
+      name: codefort.service
       scope: user
       state: started
       enabled: true
-    tags: [moongit, service]
+    tags: [codefort, service]
 
   # This is reload_on_change: restart when the UNIT body changed. Binary
   # changes are handled by the stamp step below, EnvironmentFile content
   # changes by the drift probe.
-  - name: "Restart moongit when its unit changed"
+  - name: "Restart codefort when its unit changed"
     service:
-      name: moongit.service
+      name: codefort.service
       scope: user
       state: restarted
-    when: moongit_unit.changed
-    tags: [moongit, service]
+    when: codefort_unit.changed
+    tags: [codefort, service]
 
-  - name: "Restart moongit if the managed env file drifted from the running process"
+  - name: "Restart codefort if the managed env file drifted from the running process"
     # The unit-changed restart above only fires on UNIT changes, not on
     # EnvironmentFile content changes. So when a managed env value is
     # added/changed, the running process keeps the stale env until
     # restarted. Compare the live process env to the rendered file and
     # restart only on drift — idempotent, no restart once in sync.
-    # Probes MOONGIT_ADDR as the sentinel (it was MOONGIT_DEX_URL until
+    # Probes CODEFORT_ADDR as the sentinel (it was CODEFORT_DEX_URL until
     # dotfiles#91 removed dex).
     shell: |
       set -euo pipefail
-      pid=$(systemctl --user show -p MainPID --value moongit.service 2>/dev/null || echo 0)
+      pid=$(systemctl --user show -p MainPID --value codefort.service 2>/dev/null || echo 0)
       live=""
-      [ "$pid" -gt 0 ] && live=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep '^MOONGIT_ADDR=' || true)
-      want="MOONGIT_ADDR={{ props.moongit_addr }}"
+      [ "$pid" -gt 0 ] && live=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | grep '^CODEFORT_ADDR=' || true)
+      want="CODEFORT_ADDR={{ props.codefort_addr }}"
       if [ "$live" != "$want" ]; then
-        systemctl --user restart moongit.service
+        systemctl --user restart codefort.service
       fi
     changed_when: false
-    tags: [moongit, service]
+    tags: [codefort, service]
 
-  - name: "Restart moongit + stamp deployed revision"
+  - name: "Restart codefort + stamp deployed revision"
     # Runs only when HEAD differs from the installed .sha — picks up the
     # freshly-installed binary, then writes the sidecar last so build /
     # install / restart all gate on the same flip.
     shell: |
       set -euo pipefail
-      systemctl --user restart moongit.service
-      git -C {{ moongit_src_dir }} rev-parse HEAD > {{ moongit_bin_path }}.sha
-      chmod 0644 {{ moongit_bin_path }}.sha
+      systemctl --user restart codefort.service
+      git -C {{ codefort_src_dir }} rev-parse HEAD > {{ codefort_bin_path }}.sha
+      chmod 0644 {{ codefort_bin_path }}.sha
     unless: |
-      test -x {{ moongit_bin_path }} && \
-        [ "$(cat {{ moongit_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ moongit_src_dir }} rev-parse HEAD 2>/dev/null)" ]
-    tags: [moongit, service]
+      test -x {{ codefort_bin_path }} && \
+        [ "$(cat {{ codefort_bin_path }}.sha 2>/dev/null)" = "$(git -C {{ codefort_src_dir }} rev-parse HEAD 2>/dev/null)" ]
+    tags: [codefort, service]
 
   # ───────────────── READINESS ───────────────────────────────────────────────
 
   # 30 attempts x 2s is the 60s timeout wait.http declared (migration
   # §3.10). `retry` composes with `assert` (spec §6.7), which is how a
   # readiness gate is written.
-  - name: "Wait for moongit to become ready"
+  - name: "Wait for codefort to become ready"
     assert:
-      command: curl -fsS -o /dev/null http://127.0.0.1{{ props.moongit_addr }}/healthz
-      msg: "moongit did not become ready"
+      command: curl -fsS -o /dev/null http://127.0.0.1{{ props.codefort_addr }}/healthz
+      msg: "codefort did not become ready"
     retry: { attempts: 30, delay: 2s }
-    tags: [moongit, verify]
+    tags: [codefort, verify]
 
   - name: "Note: mint an API token to use /api/*"
     # The daemon rejects all /api/* calls until a token exists. Minting is
     # interactive (the secret prints once), so it's not part of declarative
     # apply. git smart-HTTP and the web UI work without one.
-    shell: echo "moongit up on {{ props.moongit_addr }}. If /api/* 401s, run:{{ ' ' }}{{ moongit_bin_path }} token create <name>"
+    shell: echo "codefort up on {{ props.codefort_addr }}. If /api/* 401s, run:{{ ' ' }}{{ codefort_bin_path }} token create <name>"
     changed_when: false
-    tags: [moongit, verify]
+    tags: [codefort, verify]
 
   # ───────────────── AGENT IDENTITY (baseline token + shell env) ──────────────
 
   - name: "Seed agent identity env file (mint baseline token, once)"
-    # Writes {{ moongit_agent_env_file }} with MOONGIT_SERVER, MOONGIT_DATA_DIR
-    # (so the moongitd CLI invoked by the gwc worktree helper hits the live
-    # db, not ./data), and a baseline MOONGIT_TOKEN minted under this host's
+    # Writes {{ codefort_agent_env_file }} with CODEFORT_SERVER, CODEFORT_DATA_DIR
+    # (so the codefortd CLI invoked by the gwc worktree helper hits the live
+    # db, not ./data), and a baseline CODEFORT_TOKEN minted under this host's
     # name. CREATED ONCE and never clobbered — the plaintext is shown only at
     # mint time, so a re-render can't recover it. zsh sources this file.
     # To rotate: revoke the token, delete its row, remove this file, re-apply.
     shell: |
       set -eu
       umask 077
-      export MOONGIT_DATA_DIR="{{ moongit_data_dir | expanduser }}"
-      tok=$({{ moongit_bin_path }} token create "{{ computer_name }}" 2>/dev/null | grep -oE 'mgt_[0-9a-f]+' | head -1)
+      export CODEFORT_DATA_DIR="{{ codefort_data_dir | expanduser }}"
+      tok=$({{ codefort_bin_path }} token create "{{ computer_name }}" 2>/dev/null | grep -oE 'cf_[0-9a-f]+' | head -1)
       [ -n "$tok" ] || { echo "token mint failed (name '{{ computer_name }}' may already exist — revoke + delete the row, then retry)" >&2; exit 1; }
-      mkdir -p ~/.config/moongit
-      cat > "{{ moongit_agent_env_file | expanduser }}" <<EOF
-      export MOONGIT_SERVER=http://127.0.0.1{{ props.moongit_addr }}
-      export MOONGIT_DATA_DIR={{ moongit_data_dir | expanduser }}
-      export MOONGIT_TOKEN=$tok
+      mkdir -p ~/.config/codefort
+      cat > "{{ codefort_agent_env_file | expanduser }}" <<EOF
+      export CODEFORT_SERVER=http://127.0.0.1{{ props.codefort_addr }}
+      export CODEFORT_DATA_DIR={{ codefort_data_dir | expanduser }}
+      export CODEFORT_TOKEN=$tok
       EOF
-      chmod 0600 "{{ moongit_agent_env_file | expanduser }}"
-    creates: "{{ moongit_agent_env_file | expanduser }}"
-    tags: [moongit, token]
+      chmod 0600 "{{ codefort_agent_env_file | expanduser }}"
+    creates: "{{ codefort_agent_env_file | expanduser }}"
+    tags: [codefort, token]
 
   # ───────────────── CI CONTAINER IMAGES: REMOVED (mooncake ripped out) ───────
-  # moongit-ci:latest / moongit-ci-dev:latest used to bundle mooncake because
-  # moongitd's own runner execs every server-side CI step as
+  # codefort-ci:latest / codefort-ci-dev:latest used to bundle mooncake because
+  # codefortd's own runner execs every server-side CI step as
   # `mooncake step '<yaml>'` inside the container — that contract lives in
-  # moongit's Go source (a separate repo), not here. mooncake is gone from
-  # this repo, so these images are no longer built. moongit's CI runner will
-  # fail until moongit's own runner stops requiring mooncake — that's a
-  # moongit-repo change, out of scope for dotfiles.
+  # codefort's Go source (a separate repo), not here. mooncake is gone from
+  # this repo, so these images are no longer built. codefort's CI runner will
+  # fail until codefort's own runner stops requiring mooncake — that's a
+  # codefort-repo change, out of scope for dotfiles.

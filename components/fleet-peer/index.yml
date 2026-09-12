@@ -2,7 +2,7 @@
 # fleet-peer — make this machine reachable BY the rest of the fleet over SSH.
 #
 # components/ssh/index.yml is the mirror image of this file: it provisions the
-# machine's *outbound* identity key so this box can reach GitHub, moongit and
+# machine's *outbound* identity key so this box can reach GitHub, codefort and
 # main_pc-wsl. Nothing there — or anywhere else in the repo before dotfiles#2 —
 # ever opened the inbound direction, which is why `mac` sat as a leaf: able to
 # reach main_pc but unreachable from it.

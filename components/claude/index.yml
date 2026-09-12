@@ -47,9 +47,9 @@
 # either way, so provision could only report `unknown`. Lifting the same
 # test into `unless` changes nothing about what happens on the machine and
 # lets `plan` say which of them has work to do.
-- name: "Register moongit MCP server"
-  shell: claude mcp add --scope user -e MOONGIT_TOKEN="$MOONGIT_TOKEN" -- moongit mgit mcp
-  unless: claude mcp list 2>/dev/null | grep -q '^moongit'
+- name: "Register codefort MCP server"
+  shell: claude mcp add --scope user -e CODEFORT_TOKEN="$CODEFORT_TOKEN" -- codefort cf mcp
+  unless: claude mcp list 2>/dev/null | grep -q '^codefort'
   tags: [claude]
 
 - name: "Add the claude-plugins-official marketplace"

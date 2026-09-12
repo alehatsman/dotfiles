@@ -14,7 +14,7 @@
   unless: test -e "$HOME/projects" || ! test -d "$HOME/Projects"
   tags: [core, home]
 
-# User-scope systemd units (moongit) need to survive logout — otherwise a
+# User-scope systemd units (codefort) need to survive logout — otherwise a
 # non-interactive session has no user systemd bus to talk to. Idempotent:
 # enable-linger is a no-op when already enabled.
 - name: Enable systemd linger for {{ username }} so user services survive logout

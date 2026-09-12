@@ -2,7 +2,7 @@
 # ssh — the machine's own identity key.
 #
 # Imported from shared/bootstrap.yml, so every machine gets this before
-# anything that talks to GitHub. It matters on a fresh box: moongit
+# anything that talks to GitHub. It matters on a fresh box: codefort
 # remotes are SSH, so a machine with no key gets a confusing
 # permission-denied deep inside an apply rather than at the point the key
 # was missing.
@@ -34,7 +34,7 @@
     echo
     echo "────────────────────────────────────────────────────────────────"
     echo "A NEW SSH KEY WAS CREATED. Add it to GitHub before the"
-    echo "moongit steps need it:"
+    echo "codefort steps need it:"
     echo
     echo "    https://github.com/settings/ssh/new"
     echo

@@ -189,7 +189,7 @@
 - name: Reload systemd for the RAPL units
   cmd: [systemctl, daemon-reload]
   when: rapl_unit.changed or rapl_resume_unit.changed
-  # Same shape as the user-manager reload in components/moongit: `when`
+  # Same shape as the user-manager reload in components/codefort: `when`
   # decides whether it runs, `changed_when` says what it did. It is not
   # `false` -- a reload that only fires after a unit file changed did
   # change the manager's view of that unit, and the exit code is not the
@@ -261,7 +261,7 @@
 - name: Reload systemd for the iGPU units
   cmd: [systemctl, daemon-reload]
   when: gt_unit.changed or gt_resume_unit.changed
-  # Same shape as the user-manager reload in components/moongit: `when`
+  # Same shape as the user-manager reload in components/codefort: `when`
   # decides whether it runs, `changed_when` says what it did. It is not
   # `false` -- a reload that only fires after a unit file changed did
   # change the manager's view of that unit, and the exit code is not the

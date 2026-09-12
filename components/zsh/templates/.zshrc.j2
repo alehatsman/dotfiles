@@ -56,11 +56,11 @@ fi
 
 export SSH_KEY_PATH=~/.ssh/id_ed25519
 
-# moongit — agent.env exports MOONGIT_SERVER +
-# MOONGIT_DATA_DIR (and a baseline MOONGIT_TOKEN for ad-hoc interactive
-# mgit). Per-Claude identity is NOT resolved here — the `ce` launcher below
+# codefort — agent.env exports CODEFORT_SERVER +
+# CODEFORT_DATA_DIR (and a baseline CODEFORT_TOKEN for ad-hoc interactive
+# cf). Per-Claude identity is NOT resolved here — the `ce` launcher below
 # mints/exports a session token so each spawned agent inherits its own.
-[[ -r ~/.config/moongit/agent.env ]] && source ~/.config/moongit/agent.env
+[[ -r ~/.config/codefort/agent.env ]] && source ~/.config/codefort/agent.env
 
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 
@@ -309,9 +309,9 @@ _gw_default() {
   done
 }
 
-# moongit — derive <owner>/<repo> from a checkout's origin (github), used to
-# build the `moongit` mirror remote URL.
-_moongit_owner_repo() {
+# codefort — derive <owner>/<repo> from a checkout's origin (github), used to
+# build the `codefort` mirror remote URL.
+_codefort_owner_repo() {
   local url
   url=$(git -C "$1" remote get-url origin 2>/dev/null) || return 1
   url=${url%.git}
@@ -323,23 +323,23 @@ _moongit_owner_repo() {
   print -r -- "$url"
 }
 
-# moongit — add the `moongit` mirror remote + dual push-url to a worktree so
-# `git push` also lands on the moongit server (and mgit can resolve the repo
+# codefort — add the `codefort` mirror remote + dual push-url to a worktree so
+# `git push` also lands on the codefort server (and cf can resolve the repo
 # from it). Identity is NOT handled here — see the `ce` launcher. No-op where
-# the repo has no origin / moongit isn't configured.
-_moongit_worktree_setup() {
+# the repo has no origin / codefort isn't configured.
+_codefort_worktree_setup() {
   local wt="$1" gd owner_repo mg_url origin_fetch
   gd=$(git -C "$wt" rev-parse --git-dir 2>/dev/null) || return 0
-  # Ensure a `moongit` mirror remote (shared across a repo's worktrees).
-  if ! git -C "$wt" remote get-url moongit >/dev/null 2>&1; then
-    owner_repo=$(_moongit_owner_repo "$wt") \
-      && git -C "$wt" remote add moongit \
-           "${MOONGIT_SERVER:-http://127.0.0.1:8080}/${owner_repo}.git"
+  # Ensure a `codefort` mirror remote (shared across a repo's worktrees).
+  if ! git -C "$wt" remote get-url codefort >/dev/null 2>&1; then
+    owner_repo=$(_codefort_owner_repo "$wt") \
+      && git -C "$wt" remote add codefort \
+           "${CODEFORT_SERVER:-http://127.0.0.1:8080}/${owner_repo}.git"
   fi
-  # Mirror code on push: make `git push origin` also hit moongit. Adding any
+  # Mirror code on push: make `git push origin` also hit codefort. Adding any
   # pushurl drops the implicit one, so pin the github fetch url first, then
-  # add moongit. Idempotent on the moongit pushurl.
-  mg_url=$(git -C "$wt" remote get-url moongit 2>/dev/null)
+  # add codefort. Idempotent on the codefort pushurl.
+  mg_url=$(git -C "$wt" remote get-url codefort 2>/dev/null)
   origin_fetch=$(git -C "$wt" remote get-url origin 2>/dev/null)
   if [[ -n "$mg_url" ]] \
      && ! git -C "$wt" config --get-all remote.origin.pushurl 2>/dev/null | grep -qxF "$mg_url"; then
@@ -372,7 +372,7 @@ gwc() { # git worktree create: gwc <name> [base]
       || { _gw_prune_dirs "$wt"; return 1 }
   fi
   cd "$wt"
-  _moongit_worktree_setup "$wt"
+  _codefort_worktree_setup "$wt"
 }
 
 gwd() { # git worktree delete (safe): gwd <name>
@@ -768,13 +768,13 @@ NOTES_PATH="$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/Notes"
 alias n="cd \"$NOTES_PATH\" && nvim ."
 {% endif %}
 
-# Launch Claude with a fresh moongit identity.
+# Launch Claude with a fresh codefort identity.
 ce() {
-  if command -v moongitd >/dev/null; then
-    [[ -r ~/.config/moongit/agent.env ]] &&
-      source ~/.config/moongit/agent.env
+  if command -v codefortd >/dev/null; then
+    [[ -r ~/.config/codefort/agent.env ]] &&
+      source ~/.config/codefort/agent.env
 
-    local seqfile="$HOME/.config/moongit/agent-seq"
+    local seqfile="$HOME/.config/codefort/agent-seq"
     local n ident token
 
     mkdir -p "${seqfile:h}"
@@ -785,16 +785,16 @@ ce() {
 
       ident="agent#$n"
       token=$(
-        moongitd token create "$ident" 2>/dev/null |
-          grep -om1 'mgt_[0-9a-f]\+'
+        codefortd token create "$ident" 2>/dev/null |
+          grep -om1 'cf_[0-9a-f]\+'
       )
 
       [[ -n "$token" ]] && break
     done
 
     if [[ -n "$token" ]]; then
-      export MOONGIT_TOKEN="$token"
-      print -u2 -- "moongit identity: $ident"
+      export CODEFORT_TOKEN="$token"
+      print -u2 -- "codefort identity: $ident"
     fi
   fi
 

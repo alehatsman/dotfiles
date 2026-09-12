@@ -8,11 +8,11 @@ wsl_ssh_port: "2222"
 # + netsh portproxy + a persistent-session keepalive instead (dotfiles #16).
 # Enables the portproxy/keepalive steps in platforms/windows/bootstrap.yml.
 wsl_networking_mode: "mirrored"
-# moongit server port. mini_pc isn't the moongit host (main_pc is), but
+# codefort server port. mini_pc isn't the codefort host (main_pc is), but
 # the shared platforms/windows/bootstrap.yml opens this port uniformly on
 # every Windows box, so the var must be defined or the firewall step fails
-# rendering "{{ wsl_moongit_port }}". moongitd binds *:8080 inside WSL.
-wsl_moongit_port: "8080"
+# rendering "{{ wsl_codefort_port }}". codefortd binds *:8080 inside WSL.
+wsl_codefort_port: "8080"
 
 # Server box — never sleep on AC. Disables standby + hibernate so WSL and
 # its ssh daemon stay reachable 24/7.
