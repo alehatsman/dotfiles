@@ -29,13 +29,21 @@
   tags: [dev, python]
 
 # Rust via rustup. `--no-modify-path` keeps shell init untouched —
-# the cargo bin dir is added by zsh config.
+# the cargo bin dir is added by zsh config (.zshenv sources ~/.cargo/env).
+#
+# Gate on what this step produces — ~/.cargo/env and a working
+# ~/.cargo/bin/cargo — not on `rustup` being somewhere on PATH. A rustup
+# from another source (Homebrew's formula links only `rustup`, its
+# cargo/rustc proxies stay in /opt/homebrew/opt/rustup/bin) satisfied the
+# old check, the installer never ran, and cargo was unreachable from every
+# shell (dotfiles#13). Re-running the installer over an existing ~/.rustup
+# is safe: it reuses the installed toolchain and writes the missing shims.
 - name: Install Rust toolchain via rustup
   shell: |
     set -euo pipefail
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
       sh -s -- -y --default-toolchain stable --profile default --no-modify-path
-  unless: command -v rustup >/dev/null 2>&1 && rustup show >/dev/null 2>&1
+  unless: test -f "$HOME/.cargo/env" && "$HOME/.cargo/bin/cargo" --version >/dev/null 2>&1
   tags: [dev, rust]
 
 - name: Install Go toolchain (apt)
