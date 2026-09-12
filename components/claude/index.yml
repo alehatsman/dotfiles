@@ -81,3 +81,16 @@
   shell: claude plugins install typescript-lsp@claude-plugins-official --scope user
   unless: claude plugins list 2>/dev/null | grep -q 'typescript-lsp@claude-plugins-official'
   tags: [claude]
+
+- name: "Make sure ~/.local/bin exists"
+  file:
+    path: "~/.local/bin"
+    state: dir
+  tags: [claude]
+
+- name: "Deploy claude-account switcher"
+  file:
+    path: "~/.local/bin/claude-account"
+    src: "./scripts/claude-account.sh"
+    state: link
+  tags: [claude]
