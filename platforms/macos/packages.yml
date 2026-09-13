@@ -182,12 +182,31 @@
 # VM it manages itself (qemu-backed), which is what docker-desktop's VM
 # did. `machine init` creates that VM once; `machine start` is safe to
 # repeat, so the whole thing is one idempotent step.
+#
+# Sized explicitly (dotfiles#17): podman's default 2 GiB OOM-kills the linker
+# on Rust builds inside containers. A VM that exists at the wrong size is
+# stopped, resized, and started again -- `machine set` refuses a running VM.
+# Resources are read by grepping the inspect JSON, not `--format`, because
+# its Go-template braces collide with this file's own templating.
 - name: Set up the podman machine VM
   shell: |
     set -euo pipefail
-    podman machine inspect podman-machine-default >/dev/null 2>&1 || podman machine init
-    podman machine start
+    m=podman-machine-default
+    mem="{{ podman_machine_memory_mib }}"
+    cpus="{{ podman_machine_cpus }}"
+    field() { podman machine inspect "$m" | grep -m1 "\"$1\":" | tr -dc '0-9'; }
+    if ! podman machine inspect "$m" >/dev/null 2>&1; then
+      podman machine init --memory "$mem" --cpus "$cpus" "$m"
+    elif [ "$(field Memory)" != "$mem" ] || [ "$(field CPUs)" != "$cpus" ]; then
+      podman machine stop "$m" || true
+      podman machine set --memory "$mem" --cpus "$cpus" "$m"
+    fi
+    podman machine start "$m" 2>/dev/null || podman machine inspect "$m" | grep -q '"State": "running"'
   unless: |
-    podman machine inspect podman-machine-default 2>/dev/null | grep -q '"State": "running"'
+    set -eu
+    j=$(podman machine inspect podman-machine-default 2>/dev/null)
+    printf '%s' "$j" | grep -q '"State": "running"' &&
+    [ "$(printf '%s' "$j" | grep -m1 '"Memory":' | tr -dc '0-9')" = "{{ podman_machine_memory_mib }}" ] &&
+    [ "$(printf '%s' "$j" | grep -m1 '"CPUs":' | tr -dc '0-9')" = "{{ podman_machine_cpus }}" ]
   tags: [macos, containers]
   timeout: 5m
