@@ -1,7 +1,15 @@
 ---
 # Component-local defaults for teleport (alehatsman/teleport) — a local
 # headless terminal/session daemon (teleportd) reached over Tailscale.
-# Override at the machine level via machines/<m>/vars.yml.
+#
+# NOTE: "override at the machine level via machines/<m>/vars.yml" does not
+# actually work for values also set here — this file's vars_file step runs
+# inside the component `import:`, after any machine-level vars_file, so it
+# unconditionally clobbers an earlier machine override back to what's below
+# (verified: setting teleport_tailnet_hostname in machines/mac/vars.yml made
+# no difference to the rendered config.toml). mac and work_mac both import
+# this component and currently share one hostname default — tracked as its
+# own issue (dotfiles#15) rather than fixed here.
 
 # Built from source, tracking main — teleport only ships a "-dev"
 # prerelease today (github.com/alehatsman/teleport/releases), republished
@@ -26,4 +34,8 @@ teleport_data_dir: "~/Library/Application Support/teleport"
 # so this stays whatever `tailscale status` reports even after `work_mac.yml`
 # renames the box to "work-mac". Update it (and re-apply) if the tailnet
 # name ever changes.
-teleport_tailnet_hostname: "gj4vg9p1vj.tail37c478.ts.net"
+#
+# Was "gj4vg9p1vj.tail37c478.ts.net" — stale (dotfiles#14): mac's tailnet
+# DNS name is now "mac.tail37c478.ts.net" per `tailscale status --self`,
+# so teleportd was rejecting the real Origin/Host as not allowlisted.
+teleport_tailnet_hostname: "mac.tail37c478.ts.net"
