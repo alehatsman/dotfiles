@@ -25,42 +25,16 @@ setopt ignore_eof # don't exit on ctrl-d
 setopt share_history # share history between zsh sessions
 
 #---------------------------------------------
-# Exports
+# Exports — INTERACTIVE ONLY
 #---------------------------------------------
-export GPG_TTY=$(tty)
-export LANG=en_US.UTF-8
+# PATH, locale, editor and tool roots moved to ~/.config/zsh/env.zsh, sourced
+# by ~/.zshenv for every shell. Only things that need a human at a terminal
+# belong here now. Adding an `export PATH=` below re-splits the list this
+# whole change existed to unify — put it in env.zsh instead.
 
-export NODE_MODULES_BIN=./node_modules/.bin
-export GCPATH={{ GCP_PATH }}
-export JAVA_HOME={{ JAVA_HOME }}
-export CARGO_HOME=~/.cargo
+export GPG_TTY=$(tty)          # $(tty) is meaningless without one
 export ZPLUG_HOME={{ ZPLUG_HOME }}
 export FZF_BASE={{ FZF_BASE }}
-export NVIDIA_GIT_BASE=~/projects/nvidia/git-helpers
-
-# No $FZF_BASE/bin here: fzf installs no bin/ subdir under any of the three
-# prefixes (apt's examples dir, pacman's /usr/share/fzf, Homebrew's opt path),
-# so it only ever added a nonexistent entry to PATH (dotfiles#72).
-export PATH=$HOME/bin:$HOME/.local/bin:$HOME/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:$PATH:$NVIDIA_GIT_BASE/bin:$JAVA_HOME/bin:$GCPATH/bin:$HOME/go/bin:$NODE_MODULES_BIN:$CARGO_HOME/bin
-export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
-
-export VISUAL="nvim"
-export EDITOR="nvim"
-
-# GUI sudo prompt for non-TTY contexts (editor terminals, sudo -A).
-# Only set when the helper actually exists — it's deployed by the hyprland entry
-# (needs wofi), so non-Hyprland Linux boxes (WSL, headless) skip it.
-if [[ -x "$HOME/.local/bin/gui-askpass" ]]; then
-  export SUDO_ASKPASS=$HOME/.local/bin/gui-askpass
-fi
-
-export SSH_KEY_PATH=~/.ssh/id_ed25519
-
-# codefort — agent.env exports CODEFORT_SERVER +
-# CODEFORT_DATA_DIR (and a baseline CODEFORT_TOKEN for ad-hoc interactive
-# cf). Per-Claude identity is NOT resolved here — the `ce` launcher below
-# mints/exports a session token so each spawned agent inherits its own.
-[[ -r ~/.config/codefort/agent.env ]] && source ~/.config/codefort/agent.env
 
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 

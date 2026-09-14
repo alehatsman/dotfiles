@@ -44,10 +44,28 @@ steps:
   - vars_file: ./vars/macos_{{arch}}.yml
     when: os == "darwin"
 
+  - name: Ensure ~/.config/zsh exists
+    file:
+      path: ~/.config/zsh
+      state: dir
+    tags: [zsh, config]
+
+  - name: Deploy env.zsh
+    # The environment itself — PATH, locale, editor, tool roots — in one file
+    # sourced by both ~/.zshenv (every shell) and ~/.zprofile (again, after
+    # macOS's path_helper). Previously split between an ordering-critical
+    # prefix in .zshenv and the full list in the interactive-only .zshrc, which
+    # meant a non-interactive shell got an incomplete PATH (dotfiles #33; the
+    # case that forced it was teleportd spawning `claude` from launchd with no
+    # shell in between).
+    template:
+      src: ./templates/env.zsh.j2
+      dest: ~/.config/zsh/env.zsh
+    tags: [zsh, config]
+
   - name: Deploy .zshenv
-    # Sourced by ALL zsh (incl. non-interactive scripts/cron/agent shells) —
-    # holds env that must apply regardless of shell type (cargo, PATH prefix).
-    # See templates/.zshenv.j2 (dotfiles #33).
+    # Sourced by ALL zsh (incl. non-interactive scripts/cron/agent shells).
+    # Nothing but a source of env.zsh above.
     template:
       src: ./templates/.zshenv.j2
       dest: ~/.zshenv
@@ -55,8 +73,8 @@ steps:
 
   - name: Deploy .zprofile
     # Login shells, after /etc/zprofile. macOS's path_helper rebuilds PATH with
-    # /etc/paths ahead of everything, demoting the prefix .zshenv just set, so
-    # the prefix has to be re-asserted once path_helper has had its turn. The
+    # /etc/paths ahead of everything, demoting what .zshenv just set, so
+    # env.zsh has to be re-sourced once path_helper has had its turn. The
     # template carries the measurement.
     template:
       src: ./templates/.zprofile.j2
