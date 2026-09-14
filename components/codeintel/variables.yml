@@ -1,0 +1,24 @@
+---
+# Component-local defaults for codeintel (alehatsman/codeintel) — a Datalog
+# code-intelligence indexer with a one-tool MCP server.
+#
+# NOTE: the override caveat in components/teleport/variables.yml applies here
+# too — this file's vars_file step runs inside the component `import:`, after
+# any machine-level vars_file, so a machines/<m>/vars.yml value set for a key
+# below is clobbered back to this default (dotfiles#15). Nothing here is
+# per-machine today, so nothing is broken by it yet.
+
+# Built from source, tracking main. codeintel publishes no release artifacts
+# at all, so there is no tagged tarball to pin a sha256 to — the install step
+# resolves main's HEAD commit itself and rebuilds only when it moves.
+codeintel_repo_url: "https://github.com/alehatsman/codeintel"
+
+# Where the binary lands. This is also upstream `tasks/install.yml`'s own
+# default for its `dest` prop; it is repeated here because the commit stamp
+# below has to sit beside the binary, and this component needs the path to
+# write it.
+codeintel_bin_dir: "~/.local/bin"
+
+# Records which upstream commit produced the installed binary. Mirrors
+# teleport's `.teleportd.commit`.
+codeintel_commit_stamp: "~/.local/bin/.codeintel.commit"

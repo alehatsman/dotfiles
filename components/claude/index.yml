@@ -53,6 +53,22 @@
   unless: claude mcp list 2>/dev/null | grep -q '^codefort'
   tags: [claude]
 
+# User scope, not project scope: `codeintel mcp --path` defaults to `.`, so a
+# single registration follows whatever tree the session was started in and
+# there is nothing to re-add per repository. In a tree with no index it answers
+# `no-index` with a hint and exits 0 — that is codeintel's specified
+# degradation, not an error, so the tool being present everywhere costs a list
+# entry and nothing else.
+#
+# The binary comes from components/codeintel. This step does not depend on it:
+# `claude mcp add` records a command string and never resolves it, so the order
+# of the two imports does not matter. It does depend on `claude`, which is why
+# it lives here.
+- name: "Register codeintel MCP server"
+  shell: claude mcp add --scope user -- codeintel codeintel mcp
+  unless: claude mcp list 2>/dev/null | grep -q '^codeintel'
+  tags: [claude]
+
 - name: "Add the claude-plugins-official marketplace"
   shell: claude plugin marketplace add anthropics/claude-plugins-official
   unless: claude plugin marketplace list 2>/dev/null | grep -q 'claude-plugins-official'

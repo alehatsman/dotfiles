@@ -64,6 +64,13 @@
 - import: ../../components/languages/index.yml
   tags: [dev, languages]
 
+# After languages: the build below needs cargo on PATH. components/claude
+# registers `codeintel mcp` on every machine, so the binary is installed on
+# every machine too — a registration whose command does not exist is an entry
+# that fails only when an agent first calls it.
+- import: ../../components/codeintel/index.yml
+  tags: [dev, codeintel]
+
 - import: ../../components/usql/index.yml
   tags: [tools, usql]
 
