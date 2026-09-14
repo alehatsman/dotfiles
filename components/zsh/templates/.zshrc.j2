@@ -36,6 +36,14 @@ export GPG_TTY=$(tty)          # $(tty) is meaningless without one
 export ZPLUG_HOME={{ ZPLUG_HOME }}
 export FZF_BASE={{ FZF_BASE }}
 
+# teleport CLI — talk to the local teleportd daemon (127.0.0.1:7337, see
+# components/teleport). Interactive-only: a human running `teleport` at a
+# terminal, not something a teleport-spawned agent session needs.
+{% if os == 'darwin' %}
+export TELEPORT_URL="http://127.0.0.1:7337"
+export TELEPORT_TOKEN="$(cat "$HOME/Library/Application Support/teleport/token" 2>/dev/null)"
+{% endif %}
+
 export FZF_DEFAULT_COMMAND="rg --files --hidden"
 
 # Two layouts, one guard. Homebrew (mac) ships fzf's shell integration in a
