@@ -29,7 +29,8 @@
   tags: [dev, python]
 
 # Rust via rustup. `--no-modify-path` keeps shell init untouched —
-# the cargo bin dir is added by zsh config (.zshenv sources ~/.cargo/env).
+# the cargo bin dir is added by zsh config (~/.config/zsh/env.zsh, sourced by
+# .zshenv, sources ~/.cargo/env).
 #
 # Gate on what this step produces — ~/.cargo/env and a working
 # ~/.cargo/bin/cargo — not on `rustup` being somewhere on PATH. A rustup

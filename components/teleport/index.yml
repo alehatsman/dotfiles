@@ -34,16 +34,20 @@ steps:
   # in variables.yml would stay the literal seven characters. This has to
   # compute against `home`, so it's a `vars:` step instead.
   #
-  # teleportd is launchd-started, not spawned from an interactive login
-  # shell, so it inherits launchd's bare PATH (/usr/bin:/bin:/usr/sbin:/sbin)
-  # — no /opt/homebrew/bin. That's invisible for the `$SHELL -l` preset
-  # (login shell re-sources .zprofile/.zshrc and rebuilds PATH itself) but
-  # breaks presets that exec a named binary directly (`claude`, `codex`):
-  # those inherit teleportd's own PATH with no shell in between. Mirrors the
-  # PATH components/zsh/templates/.zshrc.j2 builds, minus vars that only
-  # exist inside a sourced zsh session (NVIDIA_GIT_BASE, JAVA_HOME, GCPATH).
+  # BOOTSTRAP PATH ONLY. This used to be a hand-mirrored copy of the full
+  # interactive PATH from components/zsh/templates/.zshrc.j2, because
+  # teleportd is launchd-started (bare /usr/bin:/bin:/usr/sbin:/sbin) and its
+  # `claude`/`codex` presets exec a named binary with no shell in between, so
+  # they inherited that bare PATH. Two lists, and the copy drifted.
+  #
+  # Fixed at both ends instead: teleport's presets now carry `login_shell`
+  # (see presets.toml below), so the agent's environment comes from the user's
+  # real login shell; and components/zsh moved the full PATH into
+  # ~/.config/zsh/env.zsh where a non-interactive login shell can see it. All
+  # this needs to do now is let launchd exec teleportd and let teleportd find
+  # $SHELL.
   - vars:
-      teleport_path: "{{ home }}/bin:{{ home }}/.local/bin:{{ home }}/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:{{ home }}/go/bin:{{ home }}/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      teleport_path: "{{ home }}/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
   - name: "Ensure teleport_bin_dir exists"
     file:
@@ -113,6 +117,20 @@ steps:
     template:
       src: ./templates/config.toml.j2
       dest: "{{ teleport_data_dir }}/config.toml"
+      mode: '0644'
+    when: os == 'darwin'
+    tags: [teleport]
+
+  - name: "Deploy teleportd presets.toml (login-shell agent presets)"
+    # teleportd writes this file itself on first run and then never touches it
+    # again (presets.rs::load_or_create generates on absence only), so an
+    # already-installed daemon would keep the pre-login_shell defaults forever.
+    # Managing it here is what actually turns the flag on — and makes the
+    # preset list a provisioned artifact rather than whatever first-run
+    # happened to leave behind.
+    template:
+      src: ./templates/presets.toml.j2
+      dest: "{{ teleport_data_dir }}/presets.toml"
       mode: '0644'
     when: os == 'darwin'
     tags: [teleport]

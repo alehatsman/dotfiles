@@ -11,18 +11,16 @@
 #     $ env PATH=/opt/homebrew/bin:/usr/bin /usr/libexec/path_helper -s
 #     PATH="/usr/local/bin:...:/usr/bin:/bin:...:/opt/homebrew/bin"
 #
-# Homebrew went in first and came out last. So the prefix ~/.zshenv sets is
-# demoted behind Apple's /usr/bin on every login shell, and moving the entry
-# into /etc/paths.d cannot win either — paths.d is always emitted after
+# Homebrew went in first and came out last. So everything ~/.zshenv put in
+# front is demoted behind Apple's /usr/bin on every login shell, and moving the
+# entries into /etc/paths.d cannot win either — paths.d is always emitted after
 # /etc/paths. Re-asserting after /etc/zprofile has run is the only point in the
 # sequence that survives.
 #
-# ~/.zshenv already ran `typeset -U path`, so these move an existing entry to
-# the front rather than duplicating it. On Linux there is no path_helper and
-# nothing was demoted, which makes every line below a no-op — kept uniform so
-# the file means one thing on all five machines.
-{% if os == 'darwin' %}
-[[ -d /opt/homebrew/bin ]] && path=(/opt/homebrew/bin $path)
-{% endif %}
-[[ -d $HOME/bin ]]        && path=($HOME/bin $path)
-[[ -d $HOME/.local/bin ]] && path=($HOME/.local/bin $path)
+# Re-sourcing the same file ~/.zshenv already sourced, rather than restating a
+# prefix here, is what keeps this from becoming a second list that drifts:
+# env.zsh runs `typeset -U path PATH`, so the second pass moves existing
+# entries to the front instead of duplicating them. On Linux there is no
+# path_helper and nothing was demoted, which makes this a cheap no-op — kept
+# uniform so the file means one thing on all five machines.
+[ -r "$HOME/.config/zsh/env.zsh" ] && . "$HOME/.config/zsh/env.zsh"

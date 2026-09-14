@@ -18,6 +18,13 @@
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
+	<!--
+	  Bootstrap PATH only — enough for launchd to exec teleportd and for
+	  teleportd to find $SHELL. The agent presets carry `login_shell`
+	  (templates/presets.toml.j2), so their real environment comes from
+	  ~/.config/zsh/env.zsh via that shell, not from this dict. Do not grow
+	  this back into a copy of the user's PATH; that copy drifted.
+	-->
 	<key>EnvironmentVariables</key>
 	<dict>
 		<key>PATH</key>

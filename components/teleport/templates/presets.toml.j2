@@ -1,0 +1,36 @@
+# Managed by provision — components/teleport/templates/presets.toml.j2.
+# Mirrors teleportd's own built-in defaults (daemon/src/presets.rs) plus the
+# `login_shell` flag, which teleportd leaves off for any presets.toml written
+# before that field existed (#[serde(default)] — it will not rewrite a file
+# that already exists).
+#
+# login_shell runs the command as `$SHELL -l -c 'exec "$0" "$@"' <cmd> <args>`
+# so the agent inherits the environment ~/.config/zsh/env.zsh builds — PATH,
+# EDITOR, LANG, CODEFORT_*, tool roots — instead of the bare one launchd hands
+# a background service. See alehatsman/teleport docs/03-pty-layer.md#spawn.
+
+[[presets]]
+id = "codex"
+label = "Codex"
+command = "codex"
+args = []
+icon = "codex"
+login_shell = true
+
+[[presets]]
+id = "claude"
+label = "Claude Code"
+command = "claude"
+args = []
+icon = "claude"
+login_shell = true
+
+# Already a login shell; wrapping it in another buys nothing but a second
+# startup.
+[[presets]]
+id = "shell"
+label = "Shell"
+command = "$SHELL"
+args = ["-l"]
+icon = "terminal"
+login_shell = false
