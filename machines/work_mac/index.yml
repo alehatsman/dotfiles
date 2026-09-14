@@ -67,7 +67,14 @@
 - import: ../../components/usql/index.yml
   tags: [tools, usql]
 
-- import: ../../components/teleport/index.yml
+- name: Use teleport component
+  use: ../../components/teleport/index.yml
+  props:
+    # This box's OS hostname (scutil ComputerName) reset to the default
+    # "GJ4VG9P1VJ" at some point, so Tailscale re-registered it under this
+    # name instead of "work-mac" (dotfiles#14/#15). Update this if the
+    # hostname/tailnet registration is ever fixed to follow "work-mac" again.
+    teleport_tailnet_hostname: gj4vg9p1vj.tail37c478.ts.net
   tags: [tools, teleport]
 
 - name: Use zsh component

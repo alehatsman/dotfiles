@@ -15,190 +15,203 @@
 # first so rustup/cargo are on PATH), so there is no per-arch binary to
 # track — the same build step works on Intel and Apple Silicon.
 
-- vars_file: ./variables.yml
+props:
+  teleport_tailnet_hostname:
+    type: string
+    default: "gj4vg9p1vj.tail37c478.ts.net"
+    description: >-
+      This box's tailnet MagicDNS name (`tailscale status --self`), allowlisted
+      in teleportd's config.toml. Genuinely per-machine — Tailscale pins it at
+      device registration and it does not follow OS hostname renames, so it
+      drifts independently per box. Must be set explicitly in each importing
+      machine's `use: … / props:` block (dotfiles#15); the default here is
+      just whichever box last needed fixing, not a shared value.
 
-# vars_file values are data, not rendered (provision spec §3.3) — `{{ home }}`
-# in variables.yml would stay the literal seven characters. This has to
-# compute against `home`, so it's a `vars:` step instead.
-#
-# teleportd is launchd-started, not spawned from an interactive login
-# shell, so it inherits launchd's bare PATH (/usr/bin:/bin:/usr/sbin:/sbin)
-# — no /opt/homebrew/bin. That's invisible for the `$SHELL -l` preset
-# (login shell re-sources .zprofile/.zshrc and rebuilds PATH itself) but
-# breaks presets that exec a named binary directly (`claude`, `codex`):
-# those inherit teleportd's own PATH with no shell in between. Mirrors the
-# PATH components/zsh/templates/.zshrc.j2 builds, minus vars that only
-# exist inside a sourced zsh session (NVIDIA_GIT_BASE, JAVA_HOME, GCPATH).
-- vars:
-    teleport_path: "{{ home }}/bin:{{ home }}/.local/bin:{{ home }}/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:{{ home }}/go/bin:{{ home }}/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+steps:
+  - vars_file: ./variables.yml
 
-- name: "Ensure teleport_bin_dir exists"
-  file:
-    path: "{{ teleport_bin_dir }}"
-    state: dir
-  when: os == 'darwin'
-  tags: [teleport]
+  # vars_file values are data, not rendered (provision spec §3.3) — `{{ home }}`
+  # in variables.yml would stay the literal seven characters. This has to
+  # compute against `home`, so it's a `vars:` step instead.
+  #
+  # teleportd is launchd-started, not spawned from an interactive login
+  # shell, so it inherits launchd's bare PATH (/usr/bin:/bin:/usr/sbin:/sbin)
+  # — no /opt/homebrew/bin. That's invisible for the `$SHELL -l` preset
+  # (login shell re-sources .zprofile/.zshrc and rebuilds PATH itself) but
+  # breaks presets that exec a named binary directly (`claude`, `codex`):
+  # those inherit teleportd's own PATH with no shell in between. Mirrors the
+  # PATH components/zsh/templates/.zshrc.j2 builds, minus vars that only
+  # exist inside a sourced zsh session (NVIDIA_GIT_BASE, JAVA_HOME, GCPATH).
+  - vars:
+      teleport_path: "{{ home }}/bin:{{ home }}/.local/bin:{{ home }}/.npm-global/bin:/opt/local/bin:/opt/homebrew/bin:{{ home }}/go/bin:{{ home }}/.cargo/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
-# ───────────────────────── build + install teleportd from source ───────────
+  - name: "Ensure teleport_bin_dir exists"
+    file:
+      path: "{{ teleport_bin_dir }}"
+      state: dir
+    when: os == 'darwin'
+    tags: [teleport]
 
-# Built from source, not downloaded — teleport only ships a floating
-# "-dev" prerelease (github.com/alehatsman/teleport/releases), republished
-# with different bytes on every merge to main, so there is no stable
-# tagged tarball to pin a sha256 to. Tracks main: every apply resolves
-# main's current HEAD commit and rebuilds only when that commit has moved
-# since the last install.
-#
-# Reinstalls are gated on the resolved commit, not `creates:` on the
-# binary path (dotfiles#10) — `creates` only asks "does *a* teleportd
-# exist", permanently true after the first apply even once main has moved
-# on. The `.teleportd.commit` stamp records which commit is actually
-# installed, mirroring the old `.teleportd.sha256` tarball-hash stamp.
-#
-# `cargo install --path` (not `cargo build --release` + manual `install`)
-# because it resolves the native target itself — no per-arch build dirs to
-# track, unlike the tarball flow this replaced. `--root` points both
-# builds at a scratch prefix so the resulting binaries land at a known
-# `<root>/bin/<name>` path this step then copies into teleport_bin_dir.
-#
-# cli/ and daemon/ are two independent Cargo projects, not workspace
-# members (no root Cargo.toml in the repo) — each needs its own
-# `cargo install --path`.
-#
-# Web UI is built first and baked into teleportd via the `embedded-web`
-# cargo feature (docs/16-release-pipeline.md#embedding-the-web-ui —
-# rust-embed reads `../web/dist` at compile time), the same shape the
-# repo's own release workflow uses, so the installed binary is
-# self-contained — no `--web-dist` flag, no separate asset dir to keep in
-# sync with the binary. Requires node/npm on PATH (brew's `node` formula,
-# platforms/macos/packages.yml).
-- name: "Build and install teleportd (+ teleport CLI) from source"
-  shell: |
-    set -euo pipefail
-    tmp=$(mktemp -d)
-    trap 'rm -rf "$tmp"' EXIT
-    git clone --depth 1 "{{ teleport_repo_url }}.git" "$tmp/src"
-    commit=$(git -C "$tmp/src" rev-parse HEAD)
-    ( cd "$tmp/src/web" && npm ci && npm run build )
-    cargo install --locked --path "$tmp/src/daemon" --features embedded-web --bin teleportd --root "$tmp/out"
-    cargo install --locked --path "$tmp/src/cli" --bin teleport --root "$tmp/out"
-    install -m 0755 "$tmp/out/bin/teleportd" "{{ teleport_bin_dir | expanduser }}/teleportd"
-    install -m 0755 "$tmp/out/bin/teleport" "{{ teleport_bin_dir | expanduser }}/teleport"
-    printf '%s\n' "$commit" > "{{ teleport_bin_dir | expanduser }}/.teleportd.commit"
-  unless: |
-    set -euo pipefail
-    latest=$(git ls-remote "{{ teleport_repo_url }}.git" refs/heads/main | cut -f1)
-    test -x "{{ teleport_bin_dir | expanduser }}/teleportd" && \
-      [ "$(cat "{{ teleport_bin_dir | expanduser }}/.teleportd.commit" 2>/dev/null)" = "$latest" ]
-  register: teleport_install
-  when: os == 'darwin'
-  timeout: 20m
-  tags: [teleport]
+  # ───────────────────────── build + install teleportd from source ───────────
 
-# ───────────────────────── config ───────────────────────────────────────────
+  # Built from source, not downloaded — teleport only ships a floating
+  # "-dev" prerelease (github.com/alehatsman/teleport/releases), republished
+  # with different bytes on every merge to main, so there is no stable
+  # tagged tarball to pin a sha256 to. Tracks main: every apply resolves
+  # main's current HEAD commit and rebuilds only when that commit has moved
+  # since the last install.
+  #
+  # Reinstalls are gated on the resolved commit, not `creates:` on the
+  # binary path (dotfiles#10) — `creates` only asks "does *a* teleportd
+  # exist", permanently true after the first apply even once main has moved
+  # on. The `.teleportd.commit` stamp records which commit is actually
+  # installed, mirroring the old `.teleportd.sha256` tarball-hash stamp.
+  #
+  # `cargo install --path` (not `cargo build --release` + manual `install`)
+  # because it resolves the native target itself — no per-arch build dirs to
+  # track, unlike the tarball flow this replaced. `--root` points both
+  # builds at a scratch prefix so the resulting binaries land at a known
+  # `<root>/bin/<name>` path this step then copies into teleport_bin_dir.
+  #
+  # cli/ and daemon/ are two independent Cargo projects, not workspace
+  # members (no root Cargo.toml in the repo) — each needs its own
+  # `cargo install --path`.
+  #
+  # Web UI is built first and baked into teleportd via the `embedded-web`
+  # cargo feature (docs/16-release-pipeline.md#embedding-the-web-ui —
+  # rust-embed reads `../web/dist` at compile time), the same shape the
+  # repo's own release workflow uses, so the installed binary is
+  # self-contained — no `--web-dist` flag, no separate asset dir to keep in
+  # sync with the binary. Requires node/npm on PATH (brew's `node` formula,
+  # platforms/macos/packages.yml).
+  - name: "Build and install teleportd (+ teleport CLI) from source"
+    shell: |
+      set -euo pipefail
+      tmp=$(mktemp -d)
+      trap 'rm -rf "$tmp"' EXIT
+      git clone --depth 1 "{{ teleport_repo_url }}.git" "$tmp/src"
+      commit=$(git -C "$tmp/src" rev-parse HEAD)
+      ( cd "$tmp/src/web" && npm ci && npm run build )
+      cargo install --locked --path "$tmp/src/daemon" --features embedded-web --bin teleportd --root "$tmp/out"
+      cargo install --locked --path "$tmp/src/cli" --bin teleport --root "$tmp/out"
+      install -m 0755 "$tmp/out/bin/teleportd" "{{ teleport_bin_dir | expanduser }}/teleportd"
+      install -m 0755 "$tmp/out/bin/teleport" "{{ teleport_bin_dir | expanduser }}/teleport"
+      printf '%s\n' "$commit" > "{{ teleport_bin_dir | expanduser }}/.teleportd.commit"
+    unless: |
+      set -euo pipefail
+      latest=$(git ls-remote "{{ teleport_repo_url }}.git" refs/heads/main | cut -f1)
+      test -x "{{ teleport_bin_dir | expanduser }}/teleportd" && \
+        [ "$(cat "{{ teleport_bin_dir | expanduser }}/.teleportd.commit" 2>/dev/null)" = "$latest" ]
+    register: teleport_install
+    when: os == 'darwin'
+    timeout: 20m
+    tags: [teleport]
 
-- name: "Deploy teleportd config.toml (tailnet origin/host allowlist)"
-  template:
-    src: ./templates/config.toml.j2
-    dest: "{{ teleport_data_dir }}/config.toml"
-    mode: '0644'
-  when: os == 'darwin'
-  tags: [teleport]
+  # ───────────────────────── config ───────────────────────────────────────────
 
-# ───────────────────────── autostart (LaunchAgent) ──────────────────────────
+  - name: "Deploy teleportd config.toml (tailnet origin/host allowlist)"
+    template:
+      src: ./templates/config.toml.j2
+      dest: "{{ teleport_data_dir }}/config.toml"
+      mode: '0644'
+    when: os == 'darwin'
+    tags: [teleport]
 
-- name: "Ensure ~/Library/LaunchAgents exists"
-  file:
-    path: ~/Library/LaunchAgents
-    state: dir
-  when: os == 'darwin'
-  tags: [teleport]
+  # ───────────────────────── autostart (LaunchAgent) ──────────────────────────
 
-- name: "Deploy the teleportd LaunchAgent"
-  template:
-    src: ./templates/teleportd.plist.j2
-    dest: "~/Library/LaunchAgents/{{ teleport_launch_agent_label }}.plist"
-    mode: '0644'
-  register: teleport_plist
-  when: os == 'darwin'
-  tags: [teleport]
+  - name: "Ensure ~/Library/LaunchAgents exists"
+    file:
+      path: ~/Library/LaunchAgents
+      state: dir
+    when: os == 'darwin'
+    tags: [teleport]
 
-# `service: state: started` needs the job already bootstrapped — it
-# cannot load a plist that was never loaded (provision spec §6.6) — so
-# this has to run, and succeed, before "Enable + start" below whenever
-# teleportd isn't actually answering on its port, not just when the plist
-# changed. Testing here found a `service: state: restarted` (kickstart -k)
-# step used for "the binary was reinstalled, bounce the process" left the
-# job entirely missing from `launchctl print` seconds later, for reasons
-# that didn't reproduce cleanly — so a binary-only reinstall
-# (`teleport_install.changed`) now goes through the exact same
-# bootout+bootstrap this step already uses for plist changes, a path
-# that's held up under repeated testing, rather than trusting kickstart.
-#
-# Probing the port rather than `launchctl print` on purpose: a launchd
-# entry existing says nothing about whether the process behind it is
-# actually the one serving {{ teleport_port }} — the port-race this step's
-# own wait-loop guards against (below) produced exactly that split once
-# during testing. `teleport_loaded.rc != 0` catches that state, "vanished
-# between applies", and "never bootstrapped" all the same way.
-- name: "Check whether teleportd is reachable on its expected port"
-  shell: nc -z -w 2 127.0.0.1 {{ teleport_port }}
-  register: teleport_loaded
-  changed_when: false
-  failed_when: false
-  when: os == 'darwin'
-  tags: [teleport]
+  - name: "Deploy the teleportd LaunchAgent"
+    template:
+      src: ./templates/teleportd.plist.j2
+      dest: "~/Library/LaunchAgents/{{ teleport_launch_agent_label }}.plist"
+      mode: '0644'
+    register: teleport_plist
+    when: os == 'darwin'
+    tags: [teleport]
 
-# `|| true` on bootout because a first-ever install has nothing loaded yet.
-#
-# bootout tells launchd to drop the job immediately, but the old process
-# itself can take a beat to actually release its listening socket — seen
-# here: bootstrap ran right after bootout, the old teleportd hadn't closed
-# :7337 yet, and the new process fell back to teleportd's own ephemeral-port
-# behavior (docs/08-packaging.md#port-discovery — do not hardcode 7337) —
-# silently deaf to `tailscale serve`, which only ever proxies :{{ teleport_port }}.
-# Wait for the port to actually free up before bootstrapping; fail loudly
-# instead of bootstrapping onto a port nothing will proxy to.
-- name: "(Re)bootstrap the teleportd LaunchAgent"
-  shell: |
-    set -euo pipefail
-    uid=$(id -u)
-    label="{{ teleport_launch_agent_label }}"
-    plist="{{ ('~/Library/LaunchAgents/' + teleport_launch_agent_label + '.plist') | expanduser }}"
-    launchctl bootout "gui/$uid/$label" 2>/dev/null || true
-    for _ in $(seq 1 20); do
-      lsof -ti "tcp:{{ teleport_port }}" >/dev/null 2>&1 || break
-      sleep 0.25
-    done
-    if lsof -ti "tcp:{{ teleport_port }}" >/dev/null 2>&1; then
-      echo "error: 127.0.0.1:{{ teleport_port }} still held 5s after bootout — refusing to" \
-           "bootstrap onto a fallback port tailscale serve won't proxy" >&2
-      exit 1
-    fi
-    launchctl bootstrap "gui/$uid" "$plist"
-  when: >-
-    os == 'darwin' and
-    (teleport_plist.changed or teleport_install.changed or teleport_loaded.rc != 0)
-  changed_when: true
-  tags: [teleport]
+  # `service: state: started` needs the job already bootstrapped — it
+  # cannot load a plist that was never loaded (provision spec §6.6) — so
+  # this has to run, and succeed, before "Enable + start" below whenever
+  # teleportd isn't actually answering on its port, not just when the plist
+  # changed. Testing here found a `service: state: restarted` (kickstart -k)
+  # step used for "the binary was reinstalled, bounce the process" left the
+  # job entirely missing from `launchctl print` seconds later, for reasons
+  # that didn't reproduce cleanly — so a binary-only reinstall
+  # (`teleport_install.changed`) now goes through the exact same
+  # bootout+bootstrap this step already uses for plist changes, a path
+  # that's held up under repeated testing, rather than trusting kickstart.
+  #
+  # Probing the port rather than `launchctl print` on purpose: a launchd
+  # entry existing says nothing about whether the process behind it is
+  # actually the one serving {{ teleport_port }} — the port-race this step's
+  # own wait-loop guards against (below) produced exactly that split once
+  # during testing. `teleport_loaded.rc != 0` catches that state, "vanished
+  # between applies", and "never bootstrapped" all the same way.
+  - name: "Check whether teleportd is reachable on its expected port"
+    shell: nc -z -w 2 127.0.0.1 {{ teleport_port }}
+    register: teleport_loaded
+    changed_when: false
+    failed_when: false
+    when: os == 'darwin'
+    tags: [teleport]
 
-- name: "Enable + start teleportd"
-  service:
-    name: "{{ teleport_launch_agent_label }}"
-    scope: user
-    state: started
-    enabled: true
-  when: os == 'darwin'
-  tags: [teleport]
+  # `|| true` on bootout because a first-ever install has nothing loaded yet.
+  #
+  # bootout tells launchd to drop the job immediately, but the old process
+  # itself can take a beat to actually release its listening socket — seen
+  # here: bootstrap ran right after bootout, the old teleportd hadn't closed
+  # :7337 yet, and the new process fell back to teleportd's own ephemeral-port
+  # behavior (docs/08-packaging.md#port-discovery — do not hardcode 7337) —
+  # silently deaf to `tailscale serve`, which only ever proxies :{{ teleport_port }}.
+  # Wait for the port to actually free up before bootstrapping; fail loudly
+  # instead of bootstrapping onto a port nothing will proxy to.
+  - name: "(Re)bootstrap the teleportd LaunchAgent"
+    shell: |
+      set -euo pipefail
+      uid=$(id -u)
+      label="{{ teleport_launch_agent_label }}"
+      plist="{{ ('~/Library/LaunchAgents/' + teleport_launch_agent_label + '.plist') | expanduser }}"
+      launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+      for _ in $(seq 1 20); do
+        lsof -ti "tcp:{{ teleport_port }}" >/dev/null 2>&1 || break
+        sleep 0.25
+      done
+      if lsof -ti "tcp:{{ teleport_port }}" >/dev/null 2>&1; then
+        echo "error: 127.0.0.1:{{ teleport_port }} still held 5s after bootout — refusing to" \
+             "bootstrap onto a fallback port tailscale serve won't proxy" >&2
+        exit 1
+      fi
+      launchctl bootstrap "gui/$uid" "$plist"
+    when: >-
+      os == 'darwin' and
+      (teleport_plist.changed or teleport_install.changed or teleport_loaded.rc != 0)
+    changed_when: true
+    tags: [teleport]
 
-# ───────────────────────── phone/remote access (Tailscale Serve) ───────────
+  - name: "Enable + start teleportd"
+    service:
+      name: "{{ teleport_launch_agent_label }}"
+      scope: user
+      state: started
+      enabled: true
+    when: os == 'darwin'
+    tags: [teleport]
 
-- name: "Proxy teleportd to the tailnet via Tailscale Serve"
-  # --bg persists the Serve config across tailscaled restarts and reboots
-  # (docs/07-remote-access.md#default-tailscale-serve). It does not,
-  # however, guarantee teleportd itself is running post-reboot on macOS —
-  # that's the LaunchAgent's job, and macOS has no headless (logged-out)
-  # equivalent yet (see the header comment).
-  shell: tailscale serve --bg http://127.0.0.1:{{ teleport_port }}
-  unless: tailscale serve status 2>/dev/null | grep -q '127.0.0.1:{{ teleport_port }}'
-  when: os == 'darwin'
-  tags: [teleport]
+  # ───────────────────────── phone/remote access (Tailscale Serve) ───────────
+
+  - name: "Proxy teleportd to the tailnet via Tailscale Serve"
+    # --bg persists the Serve config across tailscaled restarts and reboots
+    # (docs/07-remote-access.md#default-tailscale-serve). It does not,
+    # however, guarantee teleportd itself is running post-reboot on macOS —
+    # that's the LaunchAgent's job, and macOS has no headless (logged-out)
+    # equivalent yet (see the header comment).
+    shell: tailscale serve --bg http://127.0.0.1:{{ teleport_port }}
+    unless: tailscale serve status 2>/dev/null | grep -q '127.0.0.1:{{ teleport_port }}'
+    when: os == 'darwin'
+    tags: [teleport]

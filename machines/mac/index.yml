@@ -82,7 +82,13 @@
 - import: ../../components/clojure/index.yml
   tags: [dev, clojure, config]
 
-- import: ../../components/teleport/index.yml
+- name: Use teleport component
+  use: ../../components/teleport/index.yml
+  props:
+    # mac's tailnet name at last check (dotfiles#14/#15) — offline right
+    # now, so unverified against a fresh `tailscale status --self`. Update
+    # if teleportd starts rejecting the real Origin/Host on this box again.
+    teleport_tailnet_hostname: mac.tail37c478.ts.net
   tags: [tools, teleport]
 
 - name: Use zsh component

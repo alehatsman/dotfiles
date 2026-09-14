@@ -28,14 +28,6 @@ teleport_launch_agent_label: "com.alehatsman.teleportd"
 # this is where config.toml must be written for the daemon to pick it up.
 teleport_data_dir: "~/Library/Application Support/teleport"
 
-# The tailnet MagicDNS name that reaches this box today (`tailscale status`
-# --self). Tailscale pins a device's name at registration; it does not
-# follow later OS hostname/`scutil --set ComputerName` changes on its own,
-# so this stays whatever `tailscale status` reports even after `work_mac.yml`
-# renames the box to "work-mac". Update it (and re-apply) if the tailnet
-# name ever changes.
-#
-# Was "gj4vg9p1vj.tail37c478.ts.net" — stale (dotfiles#14): mac's tailnet
-# DNS name is now "mac.tail37c478.ts.net" per `tailscale status --self`,
-# so teleportd was rejecting the real Origin/Host as not allowlisted.
-teleport_tailnet_hostname: "mac.tail37c478.ts.net"
+# teleport_tailnet_hostname moved to components/teleport/index.yml's props
+# block (dotfiles#15) — it's genuinely per-machine, so it's set explicitly
+# in each importing machine's `use: … / props:` block, not defaulted here.
