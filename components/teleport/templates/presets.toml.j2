@@ -1,8 +1,11 @@
 # Managed by provision — components/teleport/templates/presets.toml.j2.
-# Mirrors teleportd's own built-in defaults (daemon/src/presets.rs) plus the
-# `login_shell` flag, which teleportd leaves off for any presets.toml written
-# before that field existed (#[serde(default)] — it will not rewrite a file
-# that already exists).
+# Mirrors teleportd's own built-in defaults (daemon/src/presets.rs). The point
+# of managing the file at all is that teleportd writes it once, on first run,
+# and then never touches it again — so every field added after that first run
+# (`login_shell`, `resume_args`, both #[serde(default)]) stays silently off
+# until something rewrites the file. That something is this template, which
+# means new upstream fields have to be mirrored here by hand; a missed one
+# parses clean and just quietly does nothing.
 #
 # login_shell runs the command as `$SHELL -l -c 'exec "$0" "$@"' <cmd> <args>`
 # so the agent inherits the environment ~/.config/zsh/env.zsh builds — PATH,
@@ -16,6 +19,10 @@ command = "codex"
 args = []
 icon = "codex"
 login_shell = true
+# Empty on purpose, matching upstream: codex's resume flag has not been
+# verified against a real binary, and a wrong flag turns a Resume button into
+# a failed spawn. Add it here once someone checks.
+resume_args = []
 
 [[presets]]
 id = "claude"
@@ -24,6 +31,11 @@ command = "claude"
 args = []
 icon = "claude"
 login_shell = true
+# What the UI gates the Resume action on (empty ⇒ no Resume button at all).
+# Bare `--resume` opens Claude Code's own picker; deliberately not
+# `--continue`, which silently takes the newest conversation in the directory
+# and would point four restored agents at the same one.
+resume_args = ["--resume"]
 
 # Already a login shell; wrapping it in another buys nothing but a second
 # startup.
@@ -34,3 +46,4 @@ command = "$SHELL"
 args = ["-l"]
 icon = "terminal"
 login_shell = false
+resume_args = []
