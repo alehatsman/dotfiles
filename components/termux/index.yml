@@ -49,10 +49,10 @@ steps:
     shell: |
       set -eu
       mkdir -p "{{ stage | expanduser }}" && cd "{{ stage | expanduser }}"
-      mkdir -p .config/git/hooks .config/zsh .config/nvim/colors .termux
+      mkdir -p .config/git/hooks .config/zsh .config/nvim/colors .termux .ssh
     unless: |
       cd "{{ stage | expanduser }}" &&
-      test -d .config/git/hooks -a -d .config/zsh -a -d .config/nvim/colors -a -d .termux
+      test -d .config/git/hooks -a -d .config/zsh -a -d .config/nvim/colors -a -d .termux -a -d .ssh
     tags: [termux, config]
 
   - name: Stage tmux config
@@ -147,6 +147,24 @@ steps:
       dest: "{{ stage }}/.termux/colors.properties"
     tags: [termux, config]
 
+  # Who may ssh/mosh in: the same declared list fleet-peer renders on the
+  # other machines (shared/variables.yml).
+  - name: Stage authorized_keys
+    file:
+      path: "{{ stage }}/.ssh/authorized_keys"
+      state: file
+      content: |
+        {% for k in fleet_ssh_keys %}
+        {{ k }}
+        {% endfor %}
+    tags: [termux, ssh]
+
+  - name: Stage ssh config
+    template:
+      src: ../ssh/templates/config.j2
+      dest: "{{ stage }}/.ssh/config"
+    tags: [termux, ssh]
+
   # ─── Mirror into Termux ───────────────────────────────────────────────
   - name: Sync the staging tree into Termux
     shell: ./sync.sh push "{{ stage | expanduser }}" {{ termux_home }} {{ termux_prefix }}
@@ -187,6 +205,14 @@ steps:
     shell: echo 'chsh -s zsh' | {{ termux_sh }}
     unless: echo 'case "$(readlink "$HOME/.termux/shell")" in */zsh) ;; *) exit 1 ;; esac' | {{ termux_sh }}
     tags: [termux, shell]
+
+  # sshd (:8022) as a termux-services (runit) service. runsvdir starts with
+  # a Termux session, so sshd runs while Termux does; removing `down` is
+  # what `sv-enable` persists.
+  - name: Enable the Termux sshd service
+    shell: echo 'rm -f "$PREFIX/var/service/sshd/down"' | {{ termux_sh }}
+    unless: echo 'test ! -e "$PREFIX/var/service/sshd/down"' | {{ termux_sh }}
+    tags: [termux, ssh]
 
   - name: SSH key on the phone
     shell: echo 'mkdir -p ~/.ssh && ssh-keygen -q -t ed25519 -N "" -C pixel-termux -f ~/.ssh/id_ed25519' | {{ termux_sh }}

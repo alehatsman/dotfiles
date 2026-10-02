@@ -13,3 +13,7 @@ computer_name: mac
 # ships PasswordAuthentication yes — hardening that is manual, since it edits
 # /etc/ssh/sshd_config).
 fleet_peer_enabled: "true"
+
+# ~/.ssh/config from ssh_hosts (shared/variables.yml); the old hand-written
+# file held only the main_pc-wsl entry, which ssh_hosts carries.
+ssh_config_managed: "true"

@@ -1,0 +1,8 @@
+# ~/.ssh/config — rendered by components/ssh from ssh_hosts in
+# shared/variables.yml. Do not hand-edit.
+{% for h in ssh_hosts %}
+Host {{ h.name }}
+    HostName {{ h.hostname }}{% if h.port is defined %}
+    Port {{ h.port }}{% endif %}{% if h.user is defined %}
+    User {{ h.user }}{% endif %}
+{% endfor %}

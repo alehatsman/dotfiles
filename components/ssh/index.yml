@@ -46,6 +46,14 @@
   unless: test -f "{{ ssh_key_path | expanduser }}"
   tags: [ssh, core]
 
+- name: Deploy ~/.ssh/config
+  template:
+    src: ./templates/config.j2
+    dest: ~/.ssh/config
+    mode: '0600'
+  when: ssh_config_managed == 'true'
+  tags: [ssh, config]
+
 - name: Verify the SSH identity key is present
   assert:
     command: test -f "{{ ssh_key_path | expanduser }}"
