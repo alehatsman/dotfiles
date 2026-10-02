@@ -8,7 +8,7 @@
 #   2. Settings > About phone > tap Build number x7; Developer options >
 #      USB debugging on; plug in, Allow this Mac.
 #   3. Apps (GrapheneOS store) > Google Play services > Install. Sign in to
-#      Play; install Microsoft Authenticator.
+#      Play. The plan then opens each Play app's page; you tap Install.
 #   4. After the first apply: open Termux once so it bootstraps, apply again.
 #   5. Done: Developer options > USB debugging off.
 
@@ -98,6 +98,28 @@
     ! adb shell pm path com.google.android.gms | grep -q . ||
     { adb shell dumpsys deviceidle whitelist | grep -q ',com.google.android.gms,' &&
       adb shell cmd appops get com.google.android.gms RUN_ANY_IN_BACKGROUND | grep -q allow; }
+  tags: [pixel, play]
+
+# Play can't be driven reliably from adb (lost confirm dialogs, stray
+# Install buttons), so a human taps Install; this opens each missing app's
+# page in turn and waits for it to land. Re-apply resumes where it stopped.
+- name: Play Store apps (tap Install on each page that opens)
+  shell: |
+    set -eu
+    adb shell pm path com.android.vending >/dev/null || { echo "install sandboxed Play first (manual step 3)" >&2; exit 1; }
+    for id in {{ play_apps }}; do
+      adb shell pm path "$id" >/dev/null 2>&1 && continue
+      echo "waiting for Install tap: $id" >&2
+      adb shell am start -a android.intent.action.VIEW -d "market://details?id=$id" -p com.android.vending >/dev/null
+      t=0
+      until adb shell pm path "$id" >/dev/null 2>&1; do
+        sleep 3; t=$((t + 3))
+        [ "$t" -lt 300 ] || { echo "not installed after 5m: $id" >&2; exit 1; }
+      done
+    done
+  unless: |
+    for id in {{ play_apps }}; do adb shell pm path "$id" >/dev/null 2>&1 || exit 1; done
+  timeout: 30m
   tags: [pixel, play]
 
 # ─── Termux ───────────────────────────────────────────────────────────────

@@ -18,3 +18,9 @@ termux_sh: >-
   HOME=/data/data/com.termux/files/home PREFIX=/data/data/com.termux/files/usr
   PATH=/data/data/com.termux/files/usr/bin TMPDIR=/data/data/com.termux/files/usr/tmp
   LANG=en_US.UTF-8 /data/data/com.termux/files/usr/bin/bash -s
+
+# Play Store apps. Installed by a human tap: the plan opens each missing
+# app's Play page and waits (dotfiles#28).
+play_apps: >-
+  com.azure.authenticator com.onepassword.android org.telegram.messenger
+  com.nordvpn.android de.mobileconcepts.cyberghost
