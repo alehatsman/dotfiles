@@ -1,0 +1,121 @@
+---
+# pixel — Pixel 9a, GrapheneOS. Every step runs on the Mac and reaches the
+# phone through adb; each is `unless`-gated, so a converged phone plans clean.
+#
+# Manual, once, in order (nothing below can do these):
+#   1. Flash GrapheneOS from https://grapheneos.org/install/web and lock the
+#      bootloader. First-boot wizard: leave "OEM unlocking" ticked (disables it).
+#   2. Settings > About phone > tap Build number x7; Developer options >
+#      USB debugging on; plug in, Allow this Mac.
+#   3. Apps (GrapheneOS store) > Google Play services > Install. Sign in to
+#      Play; install Microsoft Authenticator.
+#   4. After the first apply: open Termux once so it bootstraps, apply again.
+#   5. Done: Developer options > USB debugging off.
+
+- name: adb on the Mac
+  pkg:
+    name: android-platform-tools
+    manager: brew
+    cask: true
+    state: present
+  when: os == 'darwin'
+  tags: [pixel, adb]
+
+- name: Refuse unless exactly one authorized {{ pixel_model }} is attached
+  assert:
+    command: |
+      set -eu
+      [ "$(adb devices | grep -c 'device$')" = 1 ] || { echo "need exactly one authorized adb device" >&2; exit 1; }
+      [ "$(adb shell getprop ro.product.model | tr -d '\r')" = "{{ pixel_model }}" ]
+  tags: [pixel, safety]
+
+# ─── APKs, pinned ─────────────────────────────────────────────────────────
+- name: Fetch Unexpected Keyboard {{ unexpected_keyboard_version }}
+  download:
+    url: https://github.com/Julow/Unexpected-Keyboard/releases/download/{{ unexpected_keyboard_version }}/Unexpected-Keyboard-release.apk
+    dest: ~/.cache/dotfiles/pixel/unexpected-keyboard-{{ unexpected_keyboard_version }}.apk
+    sha256: "{{ unexpected_keyboard_sha256 }}"
+  tags: [pixel, apk]
+
+- name: Install Unexpected Keyboard
+  shell: adb install -r "$HOME/.cache/dotfiles/pixel/unexpected-keyboard-{{ unexpected_keyboard_version }}.apk"
+  unless: adb shell dumpsys package juloo.keyboard2 | grep -q 'versionName={{ unexpected_keyboard_version }}'
+  tags: [pixel, apk]
+
+- name: Fetch Termux {{ termux_version }}
+  download:
+    url: https://github.com/termux/termux-app/releases/download/v{{ termux_version }}/termux-app_v{{ termux_version }}+github-debug_arm64-v8a.apk
+    dest: ~/.cache/dotfiles/pixel/termux-{{ termux_version }}-arm64.apk
+    sha256: "{{ termux_sha256 }}"
+  tags: [pixel, apk, termux]
+
+- name: Install Termux
+  shell: adb install -r "$HOME/.cache/dotfiles/pixel/termux-{{ termux_version }}-arm64.apk"
+  unless: adb shell dumpsys package com.termux | grep -q 'versionName={{ termux_version }}'
+  tags: [pixel, apk, termux]
+
+# ─── System settings ──────────────────────────────────────────────────────
+- name: Unexpected Keyboard as the default keyboard
+  shell: |
+    set -eu
+    adb shell ime enable juloo.keyboard2/.Keyboard2
+    adb shell ime set juloo.keyboard2/.Keyboard2
+  unless: '[ "$(adb shell settings get secure default_input_method | tr -d "\r")" = juloo.keyboard2/.Keyboard2 ]'
+  tags: [pixel, keyboard]
+
+# Zero animations, 120 Hz ceiling (min left alone: idle drop saves battery),
+# 300 ms long-press. One table drives both the apply and the check.
+- name: Snappy UI
+  shell: |
+    set -eu
+    while read -r ns key val; do adb shell -n settings put "$ns" "$key" "$val"; done <<'EOF'
+    global window_animation_scale 0
+    global transition_animation_scale 0
+    global animator_duration_scale 0
+    system peak_refresh_rate 120
+    secure long_press_timeout 300
+    EOF
+  unless: |
+    set -eu
+    while read -r ns key val; do
+      [ "$(adb shell -n settings get "$ns" "$key" | tr -d '\r')" = "$val" ] || exit 1
+    done <<'EOF'
+    global window_animation_scale 0
+    global transition_animation_scale 0
+    global animator_duration_scale 0
+    system peak_refresh_rate 120
+    secure long_press_timeout 300
+    EOF
+  tags: [pixel, ui]
+
+# Late MFA pushes otherwise. A no-op until sandboxed Play is installed.
+- name: Exempt Play services from battery optimization
+  shell: |
+    set -eu
+    adb shell cmd appops set com.google.android.gms RUN_ANY_IN_BACKGROUND allow
+    adb shell dumpsys deviceidle whitelist +com.google.android.gms
+  unless: |
+    ! adb shell pm path com.google.android.gms | grep -q . ||
+    { adb shell dumpsys deviceidle whitelist | grep -q ',com.google.android.gms,' &&
+      adb shell cmd appops get com.google.android.gms RUN_ANY_IN_BACKGROUND | grep -q allow; }
+  tags: [pixel, play]
+
+# ─── Termux ───────────────────────────────────────────────────────────────
+- name: Refuse until Termux has bootstrapped (open it once)
+  assert:
+    command: adb shell run-as com.termux test -x files/usr/bin/apt-get
+    msg: open Termux on the phone once so it unpacks its base system, then re-apply
+  tags: [pixel, termux]
+
+- name: Termux packages
+  shell: |
+    set -eu
+    {{ termux_sh }} <<'EOF'
+    set -eu
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y -o Dpkg::Options::=--force-confold {{ termux_pkgs }}
+    EOF
+  unless: echo 'dpkg -s {{ termux_pkgs }} >/dev/null 2>&1' | {{ termux_sh }}
+  timeout: 10m
+  tags: [pixel, termux]

@@ -30,6 +30,10 @@ work_mac:
     mkdir -p ~/.local/state/provision
     provision apply work_mac.yml --json >> ~/.local/state/provision/work_mac.jsonl
 
+pixel:
+    mkdir -p ~/.local/state/provision
+    provision apply pixel.yml --json >> ~/.local/state/provision/pixel.jsonl
+
 # Plan one machine, e.g. `just plan x1`
 plan m:
     provision plan {{m}}.yml
@@ -38,7 +42,7 @@ plan m:
 ci:
     #!/usr/bin/env bash
     set -euo pipefail
-    for m in main_pc mini_pc x1 mac work_mac; do
+    for m in main_pc mini_pc x1 mac work_mac pixel; do
         echo "== $m"
         provision plan --plan-no-probe "$m.yml"
     done
