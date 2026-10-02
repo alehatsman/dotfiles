@@ -98,10 +98,11 @@ into place. Add a component → reference it from a machine's `index.yml`.
 
 ## Rules of engagement
 
-- All config flows through dotfiles + provision. No drift.
+- All config flows through dotfiles + provision. No drift. That includes
+  removals: an app nobody declared gets declared or goes `state: absent`.
 - Templates are Jinja2; pass literal `{{ }}` via `{% verbatim %}`.
 - Track work as codefort issues (`cf`): claim before coding, close when
-  merged. Worktrees for non-trivial changes. Never auto-push. See
+  merged. codefort down or `cf` missing → GitHub issues on this repo. Worktrees for non-trivial changes. Never auto-push. See
   [CLAUDE.md](CLAUDE.md).
 
 [MIT](LICENSE)

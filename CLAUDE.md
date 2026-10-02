@@ -12,4 +12,6 @@ this one — so CI (codefort.yml) will not run until codefort's runner is change
 to stop requiring mooncake. Do not silently re-add mooncake to work around
 that; it needs a codefort-side fix.
 
-Mgit workflow: see global CLAUDE.md. No code without an owned issue.
+Mgit workflow: see global CLAUDE.md. No code without an owned issue: a
+codefort issue (`cf`), or a GitHub issue on alehatsman/dotfiles when cf is
+missing or codefort is unreachable — don't stall on it.

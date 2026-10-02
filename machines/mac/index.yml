@@ -28,6 +28,13 @@
 - import: ../../platforms/macos/index.yml
   tags: [macos]
 
+# Discord was installed by hand into /Applications; a plain cask install
+# refuses an app that is already there. --adopt takes it over in place.
+- name: Adopt the hand-installed Discord into brew
+  shell: brew install --cask --adopt discord
+  unless: brew list --cask discord >/dev/null 2>&1 || [ ! -d /Applications/Discord.app ]
+  tags: [macos, packages, apps]
+
 - name: Install personal-mac casks
   pkg:
     manager: brew
@@ -37,7 +44,42 @@
       - google-chrome
       - slack
       - veracrypt
-  tags: [macos, packages]
+      - nordvpn
+      - discord
+      - claude-code
+  tags: [macos, packages, apps]
+
+# Installed by hand once, declared nowhere, used by no config (dotfiles#32).
+# Absent rather than forgotten, so the next audit starts clean. ollama's
+# models in ~/.ollama stay; brew does not touch them.
+- name: Remove unused casks
+  pkg:
+    manager: brew
+    cask: true
+    state: absent
+    names:
+      - docker-desktop  # podman replaced it (platforms/macos/packages.yml)
+  tags: [macos, packages, apps]
+
+- name: Remove unused formulae
+  pkg:
+    manager: brew
+    state: absent
+    names:
+      - ollama
+      - autoenv
+      - autojump
+      - pyenv-virtualenv
+      - watchman
+      - xsv
+      - boot-clj
+      - lastpass-cli
+      - terraform-inventory
+      - hub
+      - reattach-to-user-namespace
+      - ios-webkit-debug-proxy
+      - vim  # macOS ships /usr/bin/vim; nvim is the editor
+  tags: [macos, packages, apps]
 
 - name: Set computer name
   shell: |

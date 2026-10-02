@@ -27,7 +27,7 @@
     path: "~/.claude/CLAUDE.md"
     src: "{{ claude_system_prompt_src }}"
     state: file
-  tags: [claude]
+  tags: [claude, claude-prompt]
 
 - name: "Install isayes"
   # isayes ships its own provision task for build+install (cargo build
