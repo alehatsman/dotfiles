@@ -72,6 +72,13 @@ steps:
     register: nvim_config
     tags: [nvim, config]
 
+  # The tree deploy never deletes; a retired template is removed here.
+  - name: Remove the retired clojure ftplugin
+    file:
+      path: "{{ config_path }}/ftplugin/clojure.vim"
+      state: absent
+    tags: [nvim, config]
+
   - import: ./win32yank.yml
     when: props.use_win32yank == 'true'
     tags: [nvim, win32yank]

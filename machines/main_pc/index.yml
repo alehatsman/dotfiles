@@ -63,12 +63,6 @@
 - import: ../../components/asciinema/index.yml
   tags: [tools, asciinema]
 
-- import: ../../components/usql/index.yml
-  tags: [tools, usql]
-
-- import: ../../components/clojure/index.yml
-  tags: [dev, clojure, config]
-
 - name: Use zsh component
   use: ../../components/zsh/index.yml
   tags: [core, shell]

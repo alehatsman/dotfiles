@@ -30,23 +30,12 @@
     attempts: 3
     delay: 10s
 
-- name: Define brew taps, formulae, and casks
+# Shared by mac and work_mac. Work-only tools (cloud CLIs, clojure,
+# databases) live in machines/work_mac/index.yml, not here (dotfiles#34).
+- name: Define brew formulae and casks
   vars:
-    # Plain strings now: the `name:` field existed only to feed
-    # the old pkg.repo driver, whose `name:` was a filesystem label and so
-    # could not hold a slash. HashiCorp relicensed to BSL and pulled
-    # packer/terraform from homebrew-core; their tap is the only brew
-    # source for them.
-    taps:
-      - wata727/tflint
-      - borkdude/brew
-      - wagoodman/dive
-      - hashicorp/tap
     apps:
       - aria2
-      - aws-iam-authenticator
-      - awscli
-      - caddy
       - cmake
       - fd
       - fzf
@@ -57,11 +46,9 @@
       - htop
       - imagemagick
       - jq
-      - libpq
       - lsd
       - mosh
       - nmap
-      - hashicorp/tap/packer
       # Not "python" here: it's a brew alias, and `pkg`'s verify compares
       # against `brew list --formula`, which reports the resolved formula
       # name, not the alias -- so this entry always reports failed even
@@ -70,7 +57,6 @@
       - ripgrep
       - shellcheck
       - shfmt
-      - hashicorp/tap/terraform
       - tailscale
       - tig
       - tldr
@@ -80,11 +66,6 @@
       - zoxide
       - yq
       - just
-      - clojure
-      - leiningen
-      - clj-kondo
-      - dive
-      - kubernetes-cli
       - go
       - node
       - nvm
@@ -99,7 +80,6 @@
       - gh
       - code-minimap
       - lua-language-server
-      - xclip
       - pngpaste  # clipboard->PNG for img-clip.nvim (paste screenshots into notes)
 
       # Containers (podman, not docker/docker-desktop — see platforms/arch's
@@ -116,7 +96,6 @@
       # the whole fresh-machine apply down with it at step 19 of ~183.
       # components/alacritty still deploys the config (harmless, and it is
       # what a reinstated cask or a hand-installed build would read).
-      - amazon-workspaces
       - anki
       # 1Password CLI's cask install prompts for sudo (needed once, to link
       # into the system keychain) — same class of caveat as the alacritty
@@ -125,37 +104,11 @@
       - 1password-cli
       - font-fira-code
       - google-drive
-      - gcloud-cli  # renamed upstream from google-cloud-sdk; "state present" checks brew list --cask, which reports the new name
-      - kap
-      - pgadmin4
-      - postman
       - rectangle  # spectacle was discontinued and pulled from homebrew-cask; rectangle is the drop-in successor
       - telegram
-      - transmission
-      - tunnelblick
       - visual-studio-code
       - vlc
-      - xmind
       - font-jetbrains-mono-nerd-font
-
-# Two for_each passes over the same list collapse into one shell loop
-# (migration §3.6). provision has no loop construct — deliberately — and
-# a literal `for` reads better than either pass did.
-#
-# `brew tap | grep -qx` is the drift check the old pkg.repo brew driver
-# did internally, and it is what keeps brew's rc=1 on "already tapped"
-# from failing the step. Homebrew 6.0 refuses to load formulae from a
-# third-party tap unless it is explicitly trusted — `brew tap` no longer
-# implies trust — and `brew trust` is idempotent, so it runs every time.
-- name: Tap and trust brew taps
-  shell: |
-    set -euo pipefail
-    for t in {{ taps | join(' ') }}; do
-      brew tap | grep -qx "$t" || brew tap "$t"
-      brew trust "$t"
-    done
-  changed_when: false
-  timeout: 5m
 
 - name: Install brew formulae
   pkg:

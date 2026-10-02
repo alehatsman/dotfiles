@@ -81,6 +81,62 @@
       - vim  # macOS ships /usr/bin/vim; nvim is the editor
   tags: [macos, packages, apps]
 
+# Retired toolchains (dotfiles#34): Clojure, cloud/infra CLIs, databases.
+# work_mac still declares them in its own plan. Before languages, so the
+# clojure tools are gone before the JDK they depend on. Data dirs
+# (~/.m2, ~/.clojure, ~/.config/gcloud, ...) stay.
+- name: Remove retired formulae
+  pkg:
+    manager: brew
+    state: absent
+    names:
+      - clojure
+      - leiningen
+      - clj-kondo
+      - awscli
+      - aws-iam-authenticator
+      - packer
+      - terraform
+      - kubernetes-cli
+      - dive
+      - caddy
+      - libpq
+      - xclip  # X11 clipboard; macOS has pbcopy
+  tags: [macos, packages, apps]
+
+- name: Remove retired casks
+  pkg:
+    manager: brew
+    cask: true
+    state: absent
+    names:
+      - amazon-workspaces
+      - gcloud-cli
+      - pgadmin4
+      - postman
+      - kap
+      - transmission
+      - tunnelblick
+      - xmind
+  tags: [macos, packages, apps]
+
+# usql came from `go install` (no brew formula); components/usql is retired
+# here, work_mac still imports it.
+- name: Remove usql
+  file:
+    path: ~/go/bin/usql
+    state: absent
+  tags: [macos, packages, apps]
+
+- name: Untap retired brew taps
+  shell: |
+    set -euo pipefail
+    for t in wata727/tflint borkdude/brew wagoodman/dive hashicorp/tap adoptopenjdk/openjdk; do
+      if brew tap | grep -qx "$t"; then brew untap "$t"; fi
+    done
+  unless: "! brew tap | grep -qxE 'wata727/tflint|borkdude/brew|wagoodman/dive|hashicorp/tap|adoptopenjdk/openjdk'"
+  tags: [macos, packages, apps]
+
 - name: Set computer name
   shell: |
     set -euo pipefail
@@ -117,12 +173,6 @@
 
 - import: ../../components/languages/index.yml
   tags: [dev, languages]
-
-- import: ../../components/usql/index.yml
-  tags: [tools, usql]
-
-- import: ../../components/clojure/index.yml
-  tags: [dev, clojure, config]
 
 - name: Use teleport component
   use: ../../components/teleport/index.yml

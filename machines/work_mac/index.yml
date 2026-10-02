@@ -28,6 +28,62 @@
 - import: ../../platforms/macos/index.yml
   tags: [macos]
 
+# Work-only tools, moved out of platforms/macos when the personal mac
+# retired them (dotfiles#34). Unchanged for this box; pruning it is a
+# separate call.
+#
+# Homebrew 6.0 won't load formulae from a third-party tap unless it is
+# trusted -- `brew tap` no longer implies trust -- and `brew trust` is
+# idempotent, so it runs every time. HashiCorp pulled packer/terraform
+# from homebrew-core; their tap is the only brew source for them.
+- name: Tap and trust work brew taps
+  shell: |
+    set -euo pipefail
+    for t in wata727/tflint borkdude/brew wagoodman/dive hashicorp/tap; do
+      brew tap | grep -qx "$t" || brew tap "$t"
+      brew trust "$t"
+    done
+  changed_when: false
+  timeout: 5m
+  tags: [macos, packages]
+
+- name: Install work brew formulae
+  pkg:
+    manager: brew
+    state: present
+    names:
+      - aws-iam-authenticator
+      - awscli
+      - caddy
+      - libpq
+      - hashicorp/tap/packer
+      - hashicorp/tap/terraform
+      - clojure
+      - leiningen
+      - clj-kondo
+      - dive
+      - kubernetes-cli
+      - xclip
+  timeout: 30m
+  tags: [macos, packages]
+
+- name: Install work brew casks
+  pkg:
+    manager: brew
+    cask: true
+    state: present
+    names:
+      - amazon-workspaces
+      - gcloud-cli  # renamed upstream from google-cloud-sdk
+      - kap
+      - pgadmin4
+      - postman
+      - transmission
+      - tunnelblick
+      - xmind
+  timeout: 30m
+  tags: [macos, packages]
+
 - name: Set computer name
   shell: |
     set -euo pipefail

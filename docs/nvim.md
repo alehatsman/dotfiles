@@ -127,8 +127,3 @@ Go (`ftplugin/go.vim`):
 <leader>glr - GoBuildTags ''
 ```
 
-Clojure (`ftplugin/clojure.vim`), localleader = `<tab>`:
-```
-<localleader>cc - ConjureConnect
-<localleader>f - cljfmt fix current file
-```

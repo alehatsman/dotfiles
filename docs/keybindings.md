@@ -83,7 +83,6 @@ Completion (insert mode)
 
 Filetype-local
 - Go (`<leader>g…`): `gt` test, `gr` rename, `glr` build-tags
-- Clojure (`<localleader>…`): `cc` Conjure connect, `f` format
 
 ### Tmux — prefix `Ctrl+T`
 
@@ -230,7 +229,7 @@ With an `if-shell` Darwin branch using `pbpaste` (same shape as the late `@copy_
 
 `<localleader> = Tab` collides conceptually with Tab-for-completion in insert mode and Tab-for-indent in normal mode. They're in separate modes so there's no actual conflict, but the mental model is muddy. Candidates: `,` (classic), `\\` (default), or just keep Space-localleader equal to Space-leader.
 
-Low priority — only matters in clojure/go ftplugin where localleader is actually used.
+Low priority — only matters in the go ftplugin where localleader is actually used.
 
 ---
 

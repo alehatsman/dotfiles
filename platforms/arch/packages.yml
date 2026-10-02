@@ -99,24 +99,13 @@
       - npm
       - yarn
       - uv
-      - clojure
-      - rlwrap
-      - lua51
       - sqlite
-
-      # Cloud / infra
-      - aws-cli
 
       # Containers
       - podman
       - podman-compose
       - buildah
       - lazydocker
-
-      # Database
-      - postgresql
-      - redis
-      - pgcli
 
       # Offline / security
       - keepassxc
@@ -198,4 +187,21 @@
   retry:
     attempts: 2
     delay: 10s
+  tags: [arch, system, packages]
+
+# Retired with Clojure, the cloud CLIs and the databases (dotfiles#34).
+# Removed before components/languages drops the JDK clojure depends on.
+- name: Remove retired pacman packages
+  pkg:
+    manager: pacman
+    state: absent
+    names: [clojure, rlwrap, lua51, aws-cli, postgresql, redis, pgcli]
+  sudo: true
+  tags: [arch, system, packages]
+
+- name: Remove retired AUR packages
+  pkg:
+    manager: yay
+    state: absent
+    names: [usql-bin]
   tags: [arch, system, packages]

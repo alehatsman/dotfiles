@@ -44,8 +44,6 @@
     names:
       - gnupg
       - curl
-      - clojure
-      - rlwrap
       - make
       - cmake
       - dos2unix
@@ -57,10 +55,8 @@
       - just
       - mosh
       - nmap
-      - sshfs
       - tldr
       - tmux
-      - tor
       - tree
       - wget
       - yamllint
@@ -75,14 +71,11 @@
       # platform lists keep it.
       - npm
       - zsh
-      - lua5.1
       - golang-go
       - build-essential
       - python3-pip
       - httpie
       - hexyl
-      - ruby-full
-      - postgresql-client
       - wl-clipboard
       - zstd
       - bat
@@ -101,3 +94,19 @@
     mkdir -p ~/.local/bin
     ln -sf /usr/bin/batcat ~/.local/bin/bat
   unless: "command -v bat"
+
+# Retired with Clojure, the databases and the misc leftovers (dotfiles#34).
+# No autoremove: dropping auto-installed deps is an upgrade-class choice.
+- name: Remove retired apt packages
+  pkg:
+    manager: apt
+    state: absent
+    names: [clojure, rlwrap, sshfs, tor, lua5.1, ruby-full, postgresql-client]
+  sudo: true
+  timeout: 10m
+
+# usql came from `go install`; components/usql is retired on these boxes.
+- name: Remove usql
+  file:
+    path: ~/go/bin/usql
+    state: absent

@@ -4,3 +4,6 @@ is_wsl: false
 computer_name: work-mac
 
 EMAIL: aatsman@nvidia.com
+
+# JDK from components/languages; the personal fleet retired Java (dotfiles#34).
+java_enabled: "true"

@@ -1,8 +1,8 @@
 ---
 FZF_BASE: /usr/local/opt/fzf
-GCP_PATH: /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk
-# openjdk@21 is keg-only (brew doesn't symlink/register it) — languages
-# component installs this formula on every platform (dotfiles#52).
+GCP_PATH: /usr/local/Caskroom/gcloud-cli/latest/google-cloud-sdk
+# openjdk@21 is keg-only (brew doesn't symlink/register it). Installed by
+# components/languages only where java_enabled; env.zsh skips it if absent.
 JAVA_HOME: /usr/local/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 ZPLUG_HOME: /usr/local/opt/zplug
 zsh_shell_path: /usr/local/bin/zsh

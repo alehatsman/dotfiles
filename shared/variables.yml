@@ -10,6 +10,10 @@ FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
 use_win32yank: false
 
+# Java JDK (components/languages). Off for the personal fleet, which
+# retired Java with Clojure (dotfiles#34): "false" declares the JDK absent.
+java_enabled: "false"
+
 # WSL2 networking mode for Windows hosts (platforms/windows). Default
 # "mirrored" (guest ports on the host NIC directly). Override per-machine to
 # "nat" to use an internal IP + netsh portproxy + a persistent-session

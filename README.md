@@ -90,8 +90,9 @@ PowerShell before applying inside WSL.
 
 ## Components
 
-`alacritty · asciinema · claude · clojure · git · google-cloud · hyprland ·
-languages · codefort · nvim · palette · ssh · terraform · tmux · usql · zsh`
+`alacritty · asciinema · claude · codefort · codex · fleet-peer · git ·
+hyprland · languages · nvim · palette · ssh · teleport · termux · tmux ·
+usql · zsh`
 
 Each is self-contained: `index.yml` declares steps, `templates/*.j2` render
 into place. Add a component → reference it from a machine's `index.yml`.

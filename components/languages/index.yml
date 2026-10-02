@@ -68,23 +68,52 @@
   when: pacman_available
   tags: [dev, golang]
 
+# Java is opt-in per machine (java_enabled, dotfiles#34): the personal
+# fleet retired it with Clojure; work_mac keeps it. Off means absent, so a
+# box that had it converges clean. Platform package steps run before this
+# component, so the clojure tools that depend on the JDK are gone first.
 - name: Install Java JDK (apt)
   pkg:
     name: openjdk-21-jdk
   sudo: true
-  when: apt_available
+  when: apt_available and java_enabled == 'true'
+  tags: [dev, java]
+
+- name: Remove Java JDK (apt)
+  pkg:
+    name: openjdk-21-jdk
+    state: absent
+  sudo: true
+  when: apt_available and java_enabled != 'true'
   tags: [dev, java]
 
 - name: Install Java JDK (brew)
   pkg:
     name: openjdk@21
     manager: brew
-  when: brew_available
+  when: brew_available and java_enabled == 'true'
+  tags: [dev, java]
+
+# Unversioned openjdk too: clojure/leiningen pulled it in as a dependency.
+- name: Remove Java JDK (brew)
+  pkg:
+    names: [openjdk@21, openjdk]
+    manager: brew
+    state: absent
+  when: brew_available and java_enabled != 'true'
   tags: [dev, java]
 
 - name: Install Java JDK (pacman)
   pkg:
     name: jdk21-openjdk
   sudo: true
-  when: pacman_available
+  when: pacman_available and java_enabled == 'true'
+  tags: [dev, java]
+
+- name: Remove Java JDK (pacman)
+  pkg:
+    name: jdk21-openjdk
+    state: absent
+  sudo: true
+  when: pacman_available and java_enabled != 'true'
   tags: [dev, java]

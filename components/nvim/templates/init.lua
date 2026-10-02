@@ -139,7 +139,6 @@ require('lazy').setup({
   'vim-scripts/LargeFile',
 
   { 'fatih/vim-go', ft = { 'go' } },
-  { 'Olical/conjure', branch = 'develop', ft = { 'clj', 'cljs', 'clojure' } },
 
   'hrsh7th/cmp-nvim-lsp',
   'hrsh7th/cmp-buffer',

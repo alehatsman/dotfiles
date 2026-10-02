@@ -1,8 +1,8 @@
 ---
 FZF_BASE: /opt/homebrew/opt/fzf
-GCP_PATH: /opt/homebrew/Caskroom/google-cloud-sdk/latest/google-cloud-sdk
-# openjdk@21 is keg-only (brew doesn't symlink/register it) — languages
-# component installs this formula on every platform (dotfiles#52).
+GCP_PATH: /opt/homebrew/Caskroom/gcloud-cli/latest/google-cloud-sdk
+# openjdk@21 is keg-only (brew doesn't symlink/register it). Installed by
+# components/languages only where java_enabled; env.zsh skips it if absent.
 JAVA_HOME: /opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 ZPLUG_HOME: ~/.zplug
 # /opt/homebrew, not /opt/local: /opt/local is MacPorts, which isn't
