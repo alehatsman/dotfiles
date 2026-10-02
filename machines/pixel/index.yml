@@ -101,14 +101,15 @@
     EOF
   tags: [pixel, ui]
 
-# Always plugged in: stay-awake would keep it unlocked forever, and a
-# battery held at 100% wears out -- battery_charge_limit is GrapheneOS's
-# Battery > Charging optimization (80%).
-- name: Lock-down settings
+# Display stays on while on the cable (owner's call, dotfiles#30): the
+# phone never auto-locks there -- keep it somewhere physically trusted.
+# 15 = AC|USB|wireless|dock. A battery held at 100% wears out --
+# battery_charge_limit is GrapheneOS's Battery > Charging optimization (80%).
+- name: Power and lock settings
   shell: |
     set -eu
     while read -r ns key val; do adb shell -n settings put "$ns" "$key" "$val"; done <<'EOF'
-    global stay_on_while_plugged_in 0
+    global stay_on_while_plugged_in 15
     global battery_charge_limit 1
     secure lockscreen_scramble_pin_layout 1
     EOF
@@ -117,7 +118,7 @@
     while read -r ns key val; do
       [ "$(adb shell -n settings get "$ns" "$key" | tr -d '\r')" = "$val" ] || exit 1
     done <<'EOF'
-    global stay_on_while_plugged_in 0
+    global stay_on_while_plugged_in 15
     global battery_charge_limit 1
     secure lockscreen_scramble_pin_layout 1
     EOF
