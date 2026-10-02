@@ -10,19 +10,26 @@
     "pr": ""
   },
   "permissions": {
-    "defaultMode": "auto",
-    "skipDangerousModePermissionPrompt": true,
     "allow": [
       "Bash",
       "Read",
       "Edit",
       "Glob",
       "Grep"
-    ]
+    ],
+    "defaultMode": "auto",
+    "skipDangerousModePermissionPrompt": true
   },
   "enabledPlugins": {
     "lua-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "gopls-lsp@claude-plugins-official": true
-  }
+    "gopls-lsp@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true
+  },
+  "modelSettings": {
+    "claude-fable-5-1": {
+      "effortLevel": "medium"
+    }
+  },
+  "agentPushNotifEnabled": true
 }
