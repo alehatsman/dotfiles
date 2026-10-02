@@ -17,7 +17,8 @@ JAVA_HOME: ''
 ZPLUG_HOME: ~/.zplug
 
 # perl: zplug shells out to it (macOS ships it, Termux doesn't).
-termux_pkgs: neovim git openssh tmux zsh git-delta ripgrep fd fzf zoxide direnv perl
+# The rest is the shared CLI tool set (cli_bins, components/cli).
+termux_pkgs: neovim git openssh tmux zsh perl fzf ripgrep fd bat lsd git-delta zoxide direnv jq just gh htop tree lazygit
 
 # Termux's bash with Termux's environment, script on stdin. run-as starts
 # with umask 0, which leaves everything world-writable and makes zsh's

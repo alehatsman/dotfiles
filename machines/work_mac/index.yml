@@ -117,6 +117,9 @@
 - import: ../../components/git/index.yml
   tags: [core, git]
 
+- import: ../../components/cli/index.yml
+  tags: [core, cli]
+
 - import: ../../components/languages/index.yml
   tags: [dev, languages]
 

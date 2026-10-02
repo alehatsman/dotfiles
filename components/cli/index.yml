@@ -1,0 +1,83 @@
+---
+# The shared command-line tool set (dotfiles#35). One owner: the shared
+# configs call these (ls → lsd, git pager → delta, fzf preview → bat,
+# direnv/zoxide hooks, lazygit.nvim), so every dev machine gets all of them.
+# What must resolve is `cli_bins` in shared/variables.yml; the steps below
+# are how each package manager gets there. The pixel gets the same set via
+# termux_pkgs and asserts the same list (components/termux).
+#
+# Names differ per manager: rg=ripgrep, fd=fd-find (apt), delta=git-delta,
+# gh=github-cli (pacman).
+
+- name: Install the CLI tool set (pacman)
+  pkg:
+    manager: pacman
+    state: present
+    names: [fzf, ripgrep, fd, bat, lsd, git-delta, zoxide, direnv, jq, just, github-cli, htop, tree, lazygit]
+  sudo: true
+  when: pacman_available
+  timeout: 10m
+  tags: [cli, packages]
+
+- name: Install the CLI tool set (brew)
+  pkg:
+    manager: brew
+    state: present
+    names: [fzf, ripgrep, fd, bat, lsd, git-delta, zoxide, direnv, jq, just, gh, htop, tree, lazygit]
+  when: brew_available
+  timeout: 15m
+  tags: [cli, packages]
+
+# Ubuntu noble ships older releases (fzf 0.44, delta 0.16.5, lsd 1.0);
+# nothing in the shared configs needs newer. No lazygit package on noble.
+- name: Install the CLI tool set (apt)
+  pkg:
+    manager: apt
+    state: present
+    names: [fzf, ripgrep, fd-find, bat, lsd, git-delta, zoxide, direnv, jq, just, gh, htop, tree]
+  sudo: true
+  when: apt_available
+  timeout: 10m
+  tags: [cli, packages]
+
+# Debian renames two binaries to dodge name clashes; put the upstream
+# names on PATH in ~/.local/bin.
+- name: Shim fdfind → fd and batcat → bat (apt)
+  shell: |
+    set -euo pipefail
+    mkdir -p "$HOME/.local/bin"
+    ln -sfn /usr/bin/fdfind "$HOME/.local/bin/fd"
+    ln -sfn /usr/bin/batcat "$HOME/.local/bin/bat"
+  unless: test -L "$HOME/.local/bin/fd" && test -L "$HOME/.local/bin/bat"
+  when: apt_available
+  tags: [cli]
+
+# Same pattern as tree-sitter/zk in components/nvim: pinned release,
+# checksum-verified fetch, `creates`-gated unpack.
+- name: Fetch the lazygit release (apt)
+  download:
+    url: https://github.com/jesseduffield/lazygit/releases/download/v0.65.1/lazygit_0.65.1_linux_x86_64.tar.gz
+    dest: ~/.cache/dotfiles/lazygit_0.65.1_linux_x86_64.tar.gz
+    sha256: 02beacbcda0fa342e50ae3480ba8147307353af3fb28e1d5f790e02329c201a6
+  when: apt_available
+  tags: [cli]
+
+- name: Install lazygit (apt, release binary)
+  shell: |
+    set -euo pipefail
+    mkdir -p "$HOME/.local/bin"
+    tar -xzf "$HOME/.cache/dotfiles/lazygit_0.65.1_linux_x86_64.tar.gz" -C "$HOME/.local/bin" lazygit
+  creates: ~/.local/bin/lazygit
+  when: apt_available
+  tags: [cli]
+
+- name: Every shared CLI tool resolves
+  assert:
+    command: |
+      PATH="$HOME/.local/bin:$PATH"
+      missing=""
+      for b in {{ cli_bins | join(' ') }}; do
+        command -v "$b" >/dev/null 2>&1 || missing="$missing $b"
+      done
+      [ -z "$missing" ] || { echo "missing:$missing" >&2; exit 1; }
+  tags: [cli, verify]

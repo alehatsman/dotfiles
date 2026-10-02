@@ -49,20 +49,15 @@
       - dos2unix
       - git
       - graphviz
-      - htop
       - imagemagick
-      - jq
-      - just
       - mosh
       - nmap
       - tldr
       - tmux
-      - tree
       - wget
       - yamllint
       - unzip
       - neovim
-      - ripgrep
       - nodejs
       # No `yarn`: on Debian the name is a virtual package cmdtest provides,
       # so `apt-get install -y yarn` exits 0 having installed nothing and the
@@ -78,22 +73,11 @@
       - hexyl
       - wl-clipboard
       - zstd
-      - bat
-      - fzf
   sudo: true
   timeout: 20m
   retry:
     attempts: 3
     delay: 10s
-
-# Ubuntu installs bat as batcat to avoid a naming conflict; symlink it
-# into ~/.local/bin so `bat` works and the zshrc alias resolves.
-- name: Symlink batcat → bat
-  shell: |
-    set -euo pipefail
-    mkdir -p ~/.local/bin
-    ln -sf /usr/bin/batcat ~/.local/bin/bat
-  unless: "command -v bat"
 
 # Retired with Clojure, the databases and the misc leftovers (dotfiles#34).
 # No autoremove: dropping auto-installed deps is an upgrade-class choice.

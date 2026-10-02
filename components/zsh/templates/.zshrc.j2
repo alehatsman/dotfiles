@@ -151,7 +151,9 @@ alias sed=gsed
 if command -v bat &>/dev/null; then
   alias cat="bat --theme 'Monokai Extended Origin'"
 fi
-alias ls="lsd --icon never"
+if command -v lsd &>/dev/null; then
+  alias ls="lsd --icon never"
+fi
 
 alias l="ls -1"
 alias c="clear"

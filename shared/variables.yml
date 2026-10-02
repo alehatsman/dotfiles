@@ -10,6 +10,11 @@ FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
 use_win32yank: false
 
+# The shared CLI tool set (components/cli, dotfiles#35): binaries every dev
+# machine must resolve, because the shared configs call them. Installed per
+# package manager by components/cli; the pixel installs them via termux_pkgs.
+cli_bins: [fzf, rg, fd, bat, lsd, delta, zoxide, direnv, jq, just, gh, htop, tree, lazygit]
+
 # Java JDK (components/languages). Off for the personal fleet, which
 # retired Java with Clojure (dotfiles#34): "false" declares the JDK absent.
 java_enabled: "false"

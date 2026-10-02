@@ -193,6 +193,12 @@ steps:
     unless: echo 'test -f ~/.ssh/id_ed25519' | {{ termux_sh }}
     tags: [termux, ssh]
 
+  - name: Every shared CLI tool resolves
+    assert:
+      command: |
+        echo 'missing=""; for b in {{ cli_bins | join(' ') }}; do command -v "$b" >/dev/null || missing="$missing $b"; done; [ -z "$missing" ] || { echo "missing:$missing" >&2; exit 1; }' | {{ termux_sh }}
+    tags: [termux, packages, verify]
+
   # Last: everything above applies before this fails.
   - name: Phone SSH key is on GitHub
     assert:

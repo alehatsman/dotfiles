@@ -53,17 +53,8 @@
 
       # Terminal tools
       - tmux
-      - fzf
-      - bat
-      - lsd
-      - ripgrep
-      - fd
-      - tree
-      - htop
       - btop
       - tig
-      - lazygit
-      - jq
       - aria2
       - ffmpeg
       - imagemagick
@@ -93,7 +84,6 @@
       - lua-language-server
 
       # Development
-      - just
       - go
       - nodejs
       - npm
@@ -112,9 +102,7 @@
       - zeal
 
       # Misc
-      - github-cli
       - httpie
-      - direnv
       - cliphist
       - network-manager-applet
       - blueman
@@ -168,14 +156,12 @@
     manager: yay
     state: present
     names:
-      - git-delta
       - tealdeer
       - nwg-dock-hyprland
       - bruno-bin
       - shfmt
       - yq
       - code-minimap
-      - zoxide
       - tree-sitter-cli
       - google-chrome
       - 1password
