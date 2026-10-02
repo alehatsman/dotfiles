@@ -1,0 +1,205 @@
+---
+# Termux on the pixel (dotfiles#31). Runs on the Mac; reaches Termux through
+# `adb shell run-as com.termux` (the GitHub build is debuggable). Configs
+# come from the same component templates as every other machine, rendered
+# with Termux vars into a staging tree, then mirrored into Termux's $HOME.
+#
+# Settings in .termux/ apply the next time Termux starts.
+props: {}
+
+steps:
+  - vars_file: ../nvim/variables.yml
+  - vars_file: ./vars.yml
+  - import: ../palette/index.yml
+
+  - name: Refuse until Termux has bootstrapped (open it once)
+    assert:
+      command: adb shell run-as com.termux test -x files/usr/bin/apt-get
+      msg: open Termux on the phone once so it unpacks its base system, then re-apply
+    tags: [termux]
+
+  # Android firewalls a backgrounded app's uid (netpolicy APP_BACKGROUND),
+  # and run-as runs as Termux's uid: with Termux not on screen, apt, git and
+  # ssh below get no DNS. Battery-optimization exemption lifts the block.
+  - name: Exempt Termux from battery optimization
+    shell: |
+      set -eu
+      adb shell cmd appops set com.termux RUN_ANY_IN_BACKGROUND allow
+      adb shell dumpsys deviceidle whitelist +com.termux
+    unless: |
+      adb shell dumpsys deviceidle whitelist | grep -q ',com.termux,' &&
+      adb shell cmd appops get com.termux RUN_ANY_IN_BACKGROUND | grep -q allow
+    tags: [termux]
+
+  - name: Termux packages
+    shell: |
+      set -eu
+      {{ termux_sh }} <<'EOF'
+      set -eu
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y -o Dpkg::Options::=--force-confold {{ termux_pkgs }}
+      EOF
+    unless: echo 'dpkg -s {{ termux_pkgs }} >/dev/null 2>&1' | {{ termux_sh }}
+    timeout: 10m
+    tags: [termux, packages]
+
+  # ─── Render into the staging tree ─────────────────────────────────────
+  - name: Staging directories
+    shell: |
+      set -eu
+      mkdir -p "{{ stage | expanduser }}" && cd "{{ stage | expanduser }}"
+      mkdir -p .config/git/hooks .config/zsh .config/nvim/colors .termux
+    unless: |
+      cd "{{ stage | expanduser }}" &&
+      test -d .config/git/hooks -a -d .config/zsh -a -d .config/nvim/colors -a -d .termux
+    tags: [termux, config]
+
+  - name: Stage tmux config
+    template:
+      src: ../tmux/.tmux.conf.j2
+      dest: "{{ stage }}/.tmux.conf"
+    tags: [termux, config]
+
+  - name: Stage git config
+    template:
+      src: ../git/.gitconfig.j2
+      dest: "{{ stage }}/.gitconfig"
+    tags: [termux, config]
+
+  - name: Stage the global git hook dispatcher
+    file:
+      path: "{{ stage }}/.config/git/hooks/hook-dispatch"
+      src: ../git/hooks/hook-dispatch
+      state: file
+      mode: '0755'
+    tags: [termux, config]
+
+  # Same hook names as components/git; tar carries the symlinks across.
+  - name: Stage git hook links
+    shell: |
+      set -eu
+      d="{{ stage | expanduser }}/.config/git/hooks"
+      for h in applypatch-msg pre-applypatch post-applypatch \
+               pre-commit pre-merge-commit prepare-commit-msg commit-msg \
+               post-commit pre-rebase post-checkout post-merge pre-push \
+               post-rewrite pre-auto-gc push-to-checkout sendemail-validate; do
+        if [ ! -L "$d/$h" ]; then
+          ln -sfn hook-dispatch "$d/$h"
+          echo "linked $h"
+        fi
+      done
+    changed_when: "'linked' in result.stdout"
+    tags: [termux, config]
+
+  - name: Stage .zshenv
+    template:
+      src: ../zsh/templates/.zshenv.j2
+      dest: "{{ stage }}/.zshenv"
+    tags: [termux, config]
+
+  - name: Stage .zprofile
+    template:
+      src: ../zsh/templates/.zprofile.j2
+      dest: "{{ stage }}/.zprofile"
+    tags: [termux, config]
+
+  - name: Stage .zshrc
+    template:
+      src: ../zsh/templates/.zshrc.j2
+      dest: "{{ stage }}/.zshrc"
+    tags: [termux, config]
+
+  - name: Stage env.zsh
+    template:
+      src: ../zsh/templates/env.zsh.j2
+      dest: "{{ stage }}/.config/zsh/env.zsh"
+    tags: [termux, config]
+
+  - name: Stage .ignore
+    template:
+      src: ../zsh/templates/.ignore.j2
+      dest: "{{ stage }}/.ignore"
+    tags: [termux, config]
+
+  - name: Stage nvim config tree
+    template:
+      src: ../nvim/templates/
+      dest: "{{ stage }}/.config/nvim/"
+      mode: '0644'
+    tags: [termux, config]
+
+  - name: Stage nvim colorscheme
+    template:
+      src: ../palette/templates/monokai.vim.j2
+      dest: "{{ stage }}/.config/nvim/colors/monokai.vim"
+    tags: [termux, config]
+
+  - name: Stage Termux settings
+    template:
+      src: ./templates/termux.properties.j2
+      dest: "{{ stage }}/.termux/termux.properties"
+    tags: [termux, config]
+
+  - name: Stage Termux colors
+    template:
+      src: ./templates/colors.properties.j2
+      dest: "{{ stage }}/.termux/colors.properties"
+    tags: [termux, config]
+
+  # ─── Mirror into Termux ───────────────────────────────────────────────
+  - name: Sync the staging tree into Termux
+    shell: ./sync.sh push "{{ stage | expanduser }}" {{ termux_home }} {{ termux_prefix }}
+    unless: ./sync.sh check "{{ stage | expanduser }}" {{ termux_home }} {{ termux_prefix }}
+    cwd: .
+    tags: [termux, config]
+
+  # Anything group/world-writable in $HOME (run-as umask 0, before
+  # termux_sh set one) makes zsh's compaudit refuse to run compinit.
+  - name: Termux home private to Termux
+    shell: echo 'chmod -R go-rwx "$HOME"' | {{ termux_sh }}
+    unless: echo 'test -z "$(find "$HOME" ! -type l -perm /077 -print -quit)"' | {{ termux_sh }}
+    tags: [termux, config]
+
+  # Unpinned shallow clone, same as components/zsh.
+  - name: Clone zplug
+    shell: echo 'git clone --depth 1 https://github.com/zplug/zplug.git "$HOME/.zplug"' | {{ termux_sh }}
+    unless: echo 'test -d "$HOME/.zplug"' | {{ termux_sh }}
+    timeout: 5m
+    tags: [termux, plugins]
+
+  # .zshrc asks "Install? [y/N]" for missing plugins; until they are in,
+  # zplug load never runs compinit and every compdef line errors.
+  - name: Install zsh plugins
+    shell: echo 'zsh -i -c "zplug install" </dev/null' | {{ termux_sh }}
+    unless: echo 'zsh -i -c "zplug check" </dev/null >/dev/null 2>&1' | {{ termux_sh }}
+    timeout: 10m
+    tags: [termux, plugins]
+
+  # Same ref as components/tmux; the tmux config runs tpm.
+  - name: Clone tmux plugin manager (tpm)
+    shell: echo 'git clone --branch v3.1.0 https://github.com/tmux-plugins/tpm "$HOME/.config/tmux/plugins/tpm"' | {{ termux_sh }}
+    unless: echo 'test -d "$HOME/.config/tmux/plugins/tpm"' | {{ termux_sh }}
+    timeout: 5m
+    tags: [termux, plugins]
+
+  - name: zsh as the Termux login shell
+    shell: echo 'chsh -s zsh' | {{ termux_sh }}
+    unless: echo 'case "$(readlink "$HOME/.termux/shell")" in */zsh) ;; *) exit 1 ;; esac' | {{ termux_sh }}
+    tags: [termux, shell]
+
+  - name: SSH key on the phone
+    shell: echo 'mkdir -p ~/.ssh && ssh-keygen -q -t ed25519 -N "" -C pixel-termux -f ~/.ssh/id_ed25519' | {{ termux_sh }}
+    unless: echo 'test -f ~/.ssh/id_ed25519' | {{ termux_sh }}
+    tags: [termux, ssh]
+
+  # Last: everything above applies before this fails.
+  - name: Phone SSH key is on GitHub
+    assert:
+      command: |
+        echo 'ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -T git@github.com 2>&1 | grep -q "successfully authenticated"' | {{ termux_sh }} || {
+          echo "add this key at https://github.com/settings/ssh/new :" >&2
+          echo 'cat ~/.ssh/id_ed25519.pub' | {{ termux_sh }} >&2
+          exit 1
+        }
+    tags: [termux, ssh, check]

@@ -159,23 +159,8 @@
   tags: [pixel, play]
 
 # ─── Termux ───────────────────────────────────────────────────────────────
-- name: Refuse until Termux has bootstrapped (open it once)
-  assert:
-    command: adb shell run-as com.termux test -x files/usr/bin/apt-get
-    msg: open Termux on the phone once so it unpacks its base system, then re-apply
-  tags: [pixel, termux]
-
-- name: Termux packages
-  shell: |
-    set -eu
-    {{ termux_sh }} <<'EOF'
-    set -eu
-    export DEBIAN_FRONTEND=noninteractive
-    apt-get update
-    apt-get install -y -o Dpkg::Options::=--force-confold {{ termux_pkgs }}
-    EOF
-  unless: echo 'dpkg -s {{ termux_pkgs }} >/dev/null 2>&1' | {{ termux_sh }}
-  timeout: 10m
+- name: Termux (packages, dotfiles, zsh, SSH key)
+  use: ../../components/termux/index.yml
   tags: [pixel, termux]
 
 # ─── Checks ───────────────────────────────────────────────────────────────

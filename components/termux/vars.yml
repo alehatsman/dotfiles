@@ -1,0 +1,30 @@
+---
+# Termux on the pixel, rendered on the Mac (dotfiles#31). Scoped by `use`,
+# so `os` here only shadows the Mac's fact for this component's templates:
+# the shared templates' `os == 'linux'` branches are the ones Termux wants.
+os: linux
+
+termux_home: /data/data/com.termux/files/home
+termux_prefix: /data/data/com.termux/files/usr
+
+# Staging tree on the Mac, mirrored into Termux's $HOME by the sync step.
+stage: ~/.cache/dotfiles/pixel/termux/home
+
+# components/zsh/vars/<platform>.yml equivalents for Termux.
+FZF_BASE: /data/data/com.termux/files/usr/share/fzf
+GCP_PATH: ''
+JAVA_HOME: ''
+ZPLUG_HOME: ~/.zplug
+
+# perl: zplug shells out to it (macOS ships it, Termux doesn't).
+termux_pkgs: neovim git openssh tmux zsh git-delta ripgrep fd fzf zoxide direnv perl
+
+# Termux's bash with Termux's environment, script on stdin. run-as starts
+# with umask 0, which leaves everything world-writable and makes zsh's
+# compaudit abort compinit; 077 matches Termux's own.
+termux_sh: >-
+  adb shell run-as com.termux /data/data/com.termux/files/usr/bin/env -i
+  HOME=/data/data/com.termux/files/home PREFIX=/data/data/com.termux/files/usr
+  PATH=/data/data/com.termux/files/usr/bin TMPDIR=/data/data/com.termux/files/usr/tmp
+  LANG=en_US.UTF-8 TERM=xterm-256color /data/data/com.termux/files/usr/bin/bash -c
+  "'umask 077; exec /data/data/com.termux/files/usr/bin/bash -s'"
