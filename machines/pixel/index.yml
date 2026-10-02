@@ -10,7 +10,20 @@
 #   3. Apps (GrapheneOS store) > Google Play services > Install. Sign in to
 #      Play. The plan then opens each Play app's page; you tap Install.
 #   4. After the first apply: open Termux once so it bootstraps, apply again.
-#   5. Done: Developer options > USB debugging off.
+#   5. Settings the last step checks (it lists each one that drifted):
+#      Network & internet > VPN >
+#      NordVPN gear > Always-on + Block connections without VPN; Hotspot >
+#      "Turn off hotspot automatically" off, WPA3, long password.
+#   6. Not checkable from adb: Network & internet > SIMs > Allow 2G off;
+#      Security > duress PIN; SIM PIN.
+#   7. Authenticator: restore the cloud backup, but add new accounts only on
+#      the primary phone (one backup per Microsoft account, single writer).
+#      Work accounts: add this phone as a 2nd device at aka.ms/mysecurityinfo.
+#   8. Done: Developer options > USB debugging off.
+#
+# Roles (dotfiles#29): NordVPN always-on; cellular uplink for the routers --
+# GrapheneOS can't send hotspot traffic through a VPN, so the router holds
+# the VPN; backup authenticator.
 
 - name: adb on the Mac
   pkg:
@@ -88,6 +101,28 @@
     EOF
   tags: [pixel, ui]
 
+# Always plugged in: stay-awake would keep it unlocked forever, and a
+# battery held at 100% wears out -- battery_charge_limit is GrapheneOS's
+# Battery > Charging optimization (80%).
+- name: Lock-down settings
+  shell: |
+    set -eu
+    while read -r ns key val; do adb shell -n settings put "$ns" "$key" "$val"; done <<'EOF'
+    global stay_on_while_plugged_in 0
+    global battery_charge_limit 1
+    secure lockscreen_scramble_pin_layout 1
+    EOF
+  unless: |
+    set -eu
+    while read -r ns key val; do
+      [ "$(adb shell -n settings get "$ns" "$key" | tr -d '\r')" = "$val" ] || exit 1
+    done <<'EOF'
+    global stay_on_while_plugged_in 0
+    global battery_charge_limit 1
+    secure lockscreen_scramble_pin_layout 1
+    EOF
+  tags: [pixel, security]
+
 # Late MFA pushes otherwise. A no-op until sandboxed Play is installed.
 - name: Exempt Play services from battery optimization
   shell: |
@@ -141,3 +176,20 @@
   unless: echo 'dpkg -s {{ termux_pkgs }} >/dev/null 2>&1' | {{ termux_sh }}
   timeout: 10m
   tags: [pixel, termux]
+
+# ─── Checks ───────────────────────────────────────────────────────────────
+# Set by hand in Settings (adb can read them, not reliably set them). Last,
+# so everything above has applied before this fails. Lists every drift.
+- name: Role settings set by hand (header step 5)
+  assert:
+    command: |
+      bad=0
+      drift() { echo "drift: $1" >&2; bad=1; }
+      g() { adb shell -n settings get "$1" "$2" | tr -d '\r'; }
+      r=$(g global settings_reboot_after_timeout)
+      [ "$r" = null ] || [ "$r" = 64800000 ] || drift "auto-reboot is ${r}ms, want 18h (Security > Auto reboot)"
+      [ "$(g secure always_on_vpn_app)" = com.nordvpn.android ] || drift "always-on VPN not NordVPN (Network & internet > VPN)"
+      [ "$(g secure always_on_vpn_lockdown)" = 1 ] || drift "VPN lockdown off (VPN > NordVPN > Block connections without VPN)"
+      adb shell -n dumpsys wifi | grep -q 'AutoShutdownEnabled = false' || drift "hotspot auto-off on (Hotspot > Turn off hotspot automatically)"
+      exit $bad
+  tags: [pixel, check]
