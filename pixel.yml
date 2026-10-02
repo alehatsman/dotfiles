@@ -1,0 +1,12 @@
+---
+# pixel — Pixel 9a on GrapheneOS, provisioned from the Mac over adb.
+#
+# Apply:  provision apply ./pixel.yml
+# Plan:   provision plan  ./pixel.yml
+#
+# Not routed from provision.yml: the hostname there is the Mac's, and the
+# phone is a target reached over USB, not the host running the plan.
+
+- vars_file: ./shared/variables.yml
+- vars_file: ./machines/pixel/vars.yml
+- import: ./machines/pixel/index.yml

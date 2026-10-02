@@ -1,0 +1,20 @@
+---
+# pixel-specific variables. Driven from the Mac over adb (dotfiles#27).
+pixel_model: Pixel 9a
+
+unexpected_keyboard_version: 2.1.0
+unexpected_keyboard_sha256: d68353621aa2a23968469c657d006a82d4c099d0fce43b4bc9157a728d6f91ad
+
+# GitHub (debug) build: debuggable, which is what lets `run-as com.termux`
+# below reach Termux's apt. Never mix with the F-Droid/Play build -- the
+# signatures differ and switching means uninstalling Termux and its data.
+termux_version: 0.118.3
+termux_sha256: 72fdb596045116bf5ba1b5bdf5b26fddb9acc0bd074ad9f2da9eb0ae85e83a4e
+termux_pkgs: neovim git openssh tmux
+
+# Termux's bash with Termux's environment, script on stdin.
+termux_sh: >-
+  adb shell run-as com.termux /data/data/com.termux/files/usr/bin/env -i
+  HOME=/data/data/com.termux/files/home PREFIX=/data/data/com.termux/files/usr
+  PATH=/data/data/com.termux/files/usr/bin TMPDIR=/data/data/com.termux/files/usr/tmp
+  LANG=en_US.UTF-8 /data/data/com.termux/files/usr/bin/bash -s

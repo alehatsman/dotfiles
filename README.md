@@ -45,7 +45,7 @@ Per-platform notes:
 
 ```sh
 just                       # list recipes
-just <machine>             # apply  (x1|main_pc|mini_pc|mac|work_mac)
+just <machine>             # apply  (x1|main_pc|mini_pc|mac|work_mac|pixel)
 just plan <machine>        # plan, no changes
 just ci                    # parse + render all five plans, no system reads
 just backup                # snapshot rc files → ~/.dotfiles-backup
@@ -83,6 +83,7 @@ justfile           dev surface (`just`)
 | mini_pc | WSL                     | Windows host bootstrap first   |
 | mac     | macOS                   | Homebrew bootstraps itself     |
 | work_mac| macOS (NVIDIA work box) | Homebrew bootstraps itself     |
+| pixel   | Pixel 9a, GrapheneOS    | applied from the Mac over adb; manual steps in `machines/pixel/index.yml` |
 
 main_pc/mini_pc: run `platforms/windows/bootstrap.yml` from an Admin
 PowerShell before applying inside WSL.
