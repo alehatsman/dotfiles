@@ -16,9 +16,9 @@ GCP_PATH: ''
 JAVA_HOME: ''
 ZPLUG_HOME: ~/.zplug
 
-# The phone is on Nord Meshnet only: tailnet-only hosts in ssh_hosts are
-# reached through their `proxyjump` (shared/variables.yml).
-ssh_proxyjump_enabled: "true"
+# The phone is on Nord Meshnet only: tailnet hosts in ssh_hosts are
+# reached through their `tailnet_relay` (shared/variables.yml).
+ssh_tailnet_relay_enabled: "true"
 
 # perl: zplug shells out to it (macOS ships it, Termux doesn't).
 # The rest is the shared CLI tool set (cli_bins, components/cli).

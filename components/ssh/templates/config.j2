@@ -4,6 +4,7 @@
 Host {{ h.name }}
     HostName {{ h.hostname }}{% if h.port is defined %}
     Port {{ h.port }}{% endif %}{% if h.user is defined %}
-    User {{ h.user }}{% endif %}{% if h.proxyjump is defined and ssh_proxyjump_enabled == 'true' %}
-    ProxyJump {{ h.proxyjump }}{% endif %}
+    User {{ h.user }}{% endif %}{% if h.tailnet_relay is defined %}{% if ssh_tailnet_relay_enabled == 'true' %}
+    ProxyCommand ssh {{ h.tailnet_relay }} tailscale nc %h %p{% else %}
+    ProxyCommand tailscale nc %h %p{% endif %}{% endif %}
 {% endfor %}

@@ -90,17 +90,19 @@ fleet_ssh_keys:
 # hand-written config nobody has reconciled yet. The pixel always gets it.
 # mac and pixel9 are NordVPN Meshnet names (dotfiles#36): the phone's
 # always-on lockdown VPN keeps it off the tailnet.
-# work-mac is tailnet-only (no Nord there): from the pixel it is reached by
-# jumping through mac, which sits on both. `proxyjump` renders only where
-# ssh_proxyjump_enabled is "true" (the pixel); elsewhere the tailnet
-# reaches it directly.
+# work-mac is tailnet-only (no Nord there). Tailnet hosts are dialed with
+# `tailscale nc`, through tailscaled itself: on the mac, Nord Meshnet's
+# 100.64.0.0/10 route captures tailnet IPs, and the brew tailscaled has no
+# MagicDNS. Where ssh_tailnet_relay_enabled is "true" (the pixel, off the
+# tailnet), `tailscale nc` runs on the `tailnet_relay` host, which sits on
+# both networks.
 ssh_hosts:
   - {name: main_pc-wsl, hostname: 192.168.1.68, port: 2222, user: aleh}
   - {name: mac, hostname: mac.nord, user: alehatsman}
   - {name: pixel9, hostname: pixel9.nord, port: 8022}
-  - {name: work-mac, hostname: gj4vg9p1vj, user: aatsman, proxyjump: mac}
+  - {name: work-mac, hostname: gj4vg9p1vj, user: aatsman, tailnet_relay: mac}
 ssh_config_managed: "false"
-ssh_proxyjump_enabled: "false"
+ssh_tailnet_relay_enabled: "false"
 
 # Whether this machine accepts inbound fleet SSH. Default false: opening a
 # workstation to inbound SSH is opt-in, never a side effect of importing a
