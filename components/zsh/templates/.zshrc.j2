@@ -162,6 +162,16 @@ alias md="mkdir -p"
 # Podman
 alias podman_clean="podman system prune --all --volumes"
 
+# mt <host> [session] — attach to (or create) a tmux session on another
+# machine. The stand-in for mosh: the pixel's always-on NordVPN drops all
+# inbound UDP over Meshnet, so ssh + tmux is what survives drops there
+# (dotfiles#36). Hosts come from ~/.ssh/config (components/ssh).
+mt() {
+  [[ -n "$1" ]] || { echo "usage: mt <host> [session]" >&2; return 2 }
+  ssh -t "$1" tmux new -A -s "${2:-main}"
+}
+compdef _hosts mt
+
 # Git
 g() {
   if [[ $# > 0 ]]; then
