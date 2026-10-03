@@ -1,0 +1,75 @@
+---
+# gdrive-mirror — one-way mirror of selected Google Drive folders
+# (gdrive_mirror_dirs: documents, library, notes) into iCloud Drive
+# (dotfiles#41). A second, Google-independent copy of personal files.
+#
+# ~/gdrive is Google Drive for desktop's mirror-mode "My Drive" (real local
+# files). The LaunchAgent runs ~/.local/bin/gdrive-mirror hourly and at login.
+# Nothing is ever lost on the iCloud side: files deleted or overwritten in
+# Drive move to <dst>/_deleted/YYYY-MM-DD/<dir>/ (rsync --backup-dir) instead.
+#
+# GNU rsync, not /usr/bin/rsync: macOS ships openrsync, which silently skips
+# deletions when --delete is combined with --backup and still exits 0
+# (verified 2026-10-03, openrsync protocol 29). The script pins the brew path.
+#
+# Google-native files (.gdoc/.gsheet/.gslides) are 176-byte pointers and are
+# excluded — export them to docx/xlsx inside Drive (Takeout) so they ride along.
+#
+# Darwin only; imported by machines/mac.
+
+- vars_file: ./variables.yml
+
+- name: "Install GNU rsync (brew)"
+  pkg:
+    manager: brew
+    state: present
+    names: [rsync]
+  when: os == 'darwin'
+  timeout: 10m
+  tags: [gdrive-mirror, packages]
+
+- name: "Ensure ~/.local/bin exists"
+  file:
+    path: "~/.local/bin"
+    state: dir
+  when: os == 'darwin'
+  tags: [gdrive-mirror]
+
+- name: "Deploy the gdrive-mirror script"
+  template:
+    src: ./templates/gdrive-mirror.sh.j2
+    dest: "~/.local/bin/gdrive-mirror"
+    mode: '0755'
+  when: os == 'darwin'
+  tags: [gdrive-mirror]
+
+- name: "Deploy the gdrive-mirror LaunchAgent"
+  template:
+    src: ./templates/gdrive-mirror.plist.j2
+    dest: "~/Library/LaunchAgents/{{ gdrive_mirror_label }}.plist"
+    mode: '0644'
+  register: gdrive_mirror_plist
+  when: os == 'darwin'
+  tags: [gdrive-mirror]
+
+- name: "Check whether the gdrive-mirror job is loaded"
+  shell: launchctl print "gui/$(id -u)/{{ gdrive_mirror_label }}" >/dev/null 2>&1
+  register: gdrive_mirror_loaded
+  changed_when: false
+  failed_when: false
+  when: os == 'darwin'
+  tags: [gdrive-mirror]
+
+# Reload only when the plist changed or the job is missing. `|| true` on
+# bootout: a first install has nothing loaded. RunAtLoad fires one sync on
+# bootstrap.
+- name: "(Re)load the gdrive-mirror LaunchAgent"
+  shell: |
+    uid=$(id -u)
+    launchctl bootout "gui/$uid/{{ gdrive_mirror_label }}" 2>/dev/null || true
+    launchctl bootstrap "gui/$uid" "{{ ('~/Library/LaunchAgents/' + gdrive_mirror_label + '.plist') | expanduser }}"
+  when: >-
+    os == 'darwin' and
+    (gdrive_mirror_plist.changed or gdrive_mirror_loaded.rc != 0)
+  changed_when: true
+  tags: [gdrive-mirror]

@@ -1,0 +1,59 @@
+#!/bin/sh
+# Managed by provision — components/gdrive-mirror/templates/gdrive-mirror.sh.j2
+# (dotfiles#41). One-way mirror: selected Google Drive folders -> iCloud Drive.
+# Deleted/overwritten files go to $DST/_deleted/YYYY-MM-DD/<dir>/, never lost.
+set -eu
+
+SRC_ROOT="{{ gdrive_mirror_src_root | expanduser }}"
+DST="{{ gdrive_mirror_dst | expanduser }}"
+DIRS="{{ gdrive_mirror_dirs | join(' ') }}"
+RSYNC="{{ gdrive_mirror_rsync }}"
+MIN_FILES={{ gdrive_mirror_min_files }}
+
+log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
+
+[ -x "$RSYNC" ] || { log "error: $RSYNC missing (brew rsync)"; exit 1; }
+[ -d "$(dirname "$DST")" ] || { log "error: iCloud Drive not found: $(dirname "$DST")"; exit 1; }
+
+# Guard across all dirs, not per dir: one folder may legitimately be empty,
+# but a signed-out/unsynced Drive empties all of them — then refuse, or the
+# whole mirror would be quarantined into _deleted/.
+total=0
+for d in $DIRS; do
+  [ -d "$SRC_ROOT/$d" ] || continue
+  n=$(find "$SRC_ROOT/$d" -type f | head -n "$MIN_FILES" | wc -l | tr -d ' ')
+  total=$((total + n))
+done
+if [ "$total" -lt "$MIN_FILES" ]; then
+  log "error: sources have $total files (< $MIN_FILES) — Drive unsynced? refusing"
+  exit 1
+fi
+
+day=$(date +%Y-%m-%d)
+rc=0
+for d in $DIRS; do
+  if [ ! -d "$SRC_ROOT/$d" ]; then
+    # Missing source is an error, never a "delete everything" signal.
+    log "error: source missing, skipped: $SRC_ROOT/$d"
+    rc=1
+    continue
+  fi
+  mkdir -p "$DST/$d"
+  out=$(mktemp)
+  # No pipe on rsync: plain sh has no pipefail, a pipe would hide its exit code.
+  # --no-links: Drive shortcuts show up as dangling symlinks; skip them.
+  if ! "$RSYNC" -a --no-links --delete \
+    --backup --backup-dir="$DST/_deleted/$day/$d" \
+    --exclude='.DS_Store' --exclude='*.gdoc' --exclude='*.gsheet' --exclude='*.gslides' \
+    --exclude="$(printf 'Icon\r')" \
+    --stats "$SRC_ROOT/$d/" "$DST/$d/" >"$out" 2>&1; then
+    log "error: rsync failed: $d"
+    cat "$out"
+    rc=1
+  else
+    grep -E '^Number of (regular )?files|^Number of deleted|^Total transferred' "$out" | sed "s|^|  $d: |" || true
+    log "ok: $SRC_ROOT/$d -> $DST/$d"
+  fi
+  rm -f "$out"
+done
+exit "$rc"

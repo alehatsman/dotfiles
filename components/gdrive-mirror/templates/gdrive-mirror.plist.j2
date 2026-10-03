@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Managed by provision — components/gdrive-mirror/templates/gdrive-mirror.plist.j2
+  (dotfiles#41). Periodic one-way mirror of selected Google Drive folders to iCloud Drive.
+  Login-scoped LaunchAgent: needs the user's Drive and iCloud mounts.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>{{ gdrive_mirror_label }}</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>{{ '~/.local/bin/gdrive-mirror' | expanduser }}</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StartInterval</key>
+	<integer>{{ gdrive_mirror_interval }}</integer>
+	<key>LowPriorityIO</key>
+	<true/>
+	<key>ProcessType</key>
+	<string>Background</string>
+	<key>StandardOutPath</key>
+	<string>{{ gdrive_mirror_log | expanduser }}</string>
+	<key>StandardErrorPath</key>
+	<string>{{ gdrive_mirror_log | expanduser }}</string>
+</dict>
+</plist>

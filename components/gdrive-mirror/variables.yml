@@ -1,0 +1,27 @@
+# Component-local defaults for gdrive-mirror (dotfiles#41).
+
+gdrive_mirror_label: "com.alehatsman.gdrive-mirror"
+
+# Google Drive for desktop mirror-mode My Drive, and which top-level folders
+# of it to mirror. Each lands at <dst>/<dir>/.
+gdrive_mirror_src_root: "~/gdrive"
+gdrive_mirror_dirs:
+  - documents
+  - library
+  - notes
+
+# iCloud Drive root is ~/Library/Mobile Documents/com~apple~CloudDocs.
+# Dedicated folder — not iCloud's Documents/, which is Desktop & Documents sync.
+# Title case to sit with iCloud's own folders (Desktop, Documents, Downloads).
+gdrive_mirror_dst: "~/Library/Mobile Documents/com~apple~CloudDocs/GDrive-Mirror"
+
+# Refuse to run when all sources together have fewer files than this: an unsynced or
+# signed-out Drive must not quarantine the whole mirror into _deleted/.
+gdrive_mirror_min_files: "100"
+
+# Seconds between runs (plus one at login). An unchanged run only compares
+# size+mtime and copies nothing, so hourly is cheap.
+gdrive_mirror_interval: "3600"
+
+gdrive_mirror_rsync: "/opt/homebrew/bin/rsync"
+gdrive_mirror_log: "~/Library/Logs/gdrive-mirror.log"

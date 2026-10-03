@@ -186,6 +186,10 @@
     teleport_tailnet_hostname: mac.tail37c478.ts.net
   tags: [tools, teleport]
 
+# Hourly one-way mirror of Google Drive documents/, library/, notes/ to iCloud Drive (dotfiles#41).
+- import: ../../components/gdrive-mirror/index.yml
+  tags: [tools, gdrive-mirror]
+
 - name: Use zsh component
   use: ../../components/zsh/index.yml
   tags: [core, shell]
