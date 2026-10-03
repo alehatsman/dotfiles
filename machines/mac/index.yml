@@ -190,6 +190,10 @@
 - import: ../../components/gdrive-mirror/index.yml
   tags: [tools, gdrive-mirror]
 
+# cf CLI only — the codefort server runs on main_pc.
+- import: ../../components/codefort-client/index.yml
+  tags: [tools, codefort-client]
+
 - name: Use zsh component
   use: ../../components/zsh/index.yml
   tags: [core, shell]
