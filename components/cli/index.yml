@@ -13,7 +13,7 @@
   pkg:
     manager: pacman
     state: present
-    names: [fzf, ripgrep, fd, bat, lsd, git-delta, zoxide, direnv, jq, just, github-cli, htop, tree, lazygit]
+    names: [fzf, ripgrep, fd, bat, lsd, git-delta, zoxide, direnv, jq, just, github-cli, htop, tree, lazygit, age]
   sudo: true
   when: pacman_available
   timeout: 10m
@@ -23,7 +23,7 @@
   pkg:
     manager: brew
     state: present
-    names: [fzf, ripgrep, fd, bat, lsd, git-delta, zoxide, direnv, jq, just, gh, htop, tree, lazygit]
+    names: [fzf, ripgrep, fd, bat, lsd, git-delta, zoxide, direnv, jq, just, gh, htop, tree, lazygit, age]
   when: brew_available
   timeout: 15m
   tags: [cli, packages]
@@ -34,7 +34,7 @@
   pkg:
     manager: apt
     state: present
-    names: [fzf, ripgrep, fd-find, bat, lsd, git-delta, zoxide, direnv, jq, just, gh, htop, tree]
+    names: [fzf, ripgrep, fd-find, bat, lsd, git-delta, zoxide, direnv, jq, just, gh, htop, tree, age]
   sudo: true
   when: apt_available
   timeout: 10m

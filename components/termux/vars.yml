@@ -23,7 +23,7 @@ ssh_tailnet_relay_enabled: "true"
 # perl: zplug shells out to it (macOS ships it, Termux doesn't).
 # The rest is the shared CLI tool set (cli_bins, components/cli).
 # mosh + termux-services: inbound mosh/ssh over Nord Meshnet (dotfiles#36).
-termux_pkgs: neovim git openssh mosh termux-services tmux zsh perl fzf ripgrep fd bat lsd git-delta zoxide direnv jq just gh htop tree lazygit
+termux_pkgs: neovim git openssh mosh termux-services tmux zsh perl fzf ripgrep fd bat lsd git-delta zoxide direnv jq just gh htop tree lazygit age
 
 # Termux's bash with Termux's environment, script on stdin. run-as starts
 # with umask 0, which leaves everything world-writable and makes zsh's
