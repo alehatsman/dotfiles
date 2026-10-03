@@ -1,3 +1,0 @@
-# Component-local defaults for codefort-client (cf CLI only).
-codefort_client_src_dir: "~/projects/codefort"
-codefort_client_bin: "~/.local/bin/cf"

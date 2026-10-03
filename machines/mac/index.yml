@@ -190,9 +190,11 @@
 - import: ../../components/gdrive-mirror/index.yml
   tags: [tools, gdrive-mirror]
 
-# cf CLI only — the codefort server runs on main_pc.
-- import: ../../components/codefort-client/index.yml
-  tags: [tools, codefort-client]
+# The cf client (components/codefort-client) was retired; remove its binary.
+- name: Remove retired cf client
+  shell: rm -f ~/.local/bin/cf ~/.local/bin/cf.sha
+  unless: "! test -e ~/.local/bin/cf"
+  tags: [tools]
 
 - name: Use zsh component
   use: ../../components/zsh/index.yml
