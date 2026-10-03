@@ -4,5 +4,6 @@
 Host {{ h.name }}
     HostName {{ h.hostname }}{% if h.port is defined %}
     Port {{ h.port }}{% endif %}{% if h.user is defined %}
-    User {{ h.user }}{% endif %}
+    User {{ h.user }}{% endif %}{% if h.proxyjump is defined and ssh_proxyjump_enabled == 'true' %}
+    ProxyJump {{ h.proxyjump }}{% endif %}
 {% endfor %}

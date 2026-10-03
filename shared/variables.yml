@@ -90,11 +90,17 @@ fleet_ssh_keys:
 # hand-written config nobody has reconciled yet. The pixel always gets it.
 # mac and pixel9 are NordVPN Meshnet names (dotfiles#36): the phone's
 # always-on lockdown VPN keeps it off the tailnet.
+# work-mac is tailnet-only (no Nord there): from the pixel it is reached by
+# jumping through mac, which sits on both. `proxyjump` renders only where
+# ssh_proxyjump_enabled is "true" (the pixel); elsewhere the tailnet
+# reaches it directly.
 ssh_hosts:
   - {name: main_pc-wsl, hostname: 192.168.1.68, port: 2222, user: aleh}
   - {name: mac, hostname: mac.nord, user: alehatsman}
   - {name: pixel9, hostname: pixel9.nord, port: 8022}
+  - {name: work-mac, hostname: gj4vg9p1vj, user: aatsman, proxyjump: mac}
 ssh_config_managed: "false"
+ssh_proxyjump_enabled: "false"
 
 # Whether this machine accepts inbound fleet SSH. Default false: opening a
 # workstation to inbound SSH is opt-in, never a side effect of importing a
