@@ -41,6 +41,7 @@
       - graphviz
       - git
       - imagemagick
+      - poppler  # pdftotext/pdftoppm: PDF text extraction + page rendering
       - mosh
       - nmap
       # Not "python" here: it's a brew alias, and `pkg`'s verify compares

@@ -186,6 +186,10 @@
     teleport_tailnet_hostname: mac.tail37c478.ts.net
   tags: [tools, teleport]
 
+# cf CLI only — the codefort server runs on main_pc.
+- import: ../../components/codefort-client/index.yml
+  tags: [tools, codefort-client]
+
 - name: Use zsh component
   use: ../../components/zsh/index.yml
   tags: [core, shell]
