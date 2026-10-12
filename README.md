@@ -52,6 +52,8 @@ just                       # list recipes
 just <machine>             # apply  (x1|main_pc|mini_pc|mac|work_mac|pixel)
 just plan <machine>        # plan, no changes
 just ci                    # validate + render all six machine plans, no system reads
+just fleet-status          # where every fleet box is, and at what commit
+just fleet-sync            # pull + apply on every reachable fleet box
 just hooks                 # install the pre-push validation hook
 just backup                # snapshot rc files → ~/.dotfiles-backup
 just upgrade               # deliberate full system upgrade (never part of apply)
@@ -74,7 +76,7 @@ machines/<m>/      per-host: index.yml (component set), vars.yml
 components/<c>/    unit of config: index.yml + templates/*.j2
 platforms/<p>/     OS-specific: arch, macos, windows
 shared/            variables.yml, bootstrap.yml, guard.yml, core.yml, shell.yml
-scripts/           bootstrap.sh, validate.sh, hooks/pre-push, test-podman.sh
+scripts/           bootstrap.sh, validate.sh, fleet.sh, hooks/pre-push, test-podman.sh
 docs/              bootstrap, fleet-structure, nvim, tmux, keybindings, windows-ssh-setup
 justfile           dev surface (`just`)
 ```
