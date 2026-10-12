@@ -38,17 +38,38 @@ pixel:
 plan m:
     provision plan {{m}}.yml
 
-# Parse + render every machine plan without touching the host.
+# One implementation, shared with the pre-push hook, so the two can never
+# disagree about what "validated" means. The machine list is derived from
+# machines/*/ rather than written down here -- a written list drifts, which
+# is how pixel ended up missing from codefort.yml's CI.
+
+# Parse + render every machine plan without touching the host
 ci:
+    ./scripts/validate.sh
+
+# scripts/bootstrap.sh does this automatically; this recipe is for a checkout
+# that was cloned without running it.
+
+# Install the pre-push validation hook into this checkout
+hooks:
     #!/usr/bin/env bash
     set -euo pipefail
-    for m in main_pc mini_pc x1 mac work_mac pixel; do
-        echo "== $m"
-        provision plan --plan-no-probe "$m.yml"
-    done
+    common_dir=$(git rev-parse --git-common-dir)
+    [[ $common_dir = /* ]] || common_dir="$PWD/$common_dir"
+    mkdir -p "$common_dir/hooks"
+    target="$common_dir/hooks/pre-push"
+    if [[ -e $target && ! -L $target ]]; then
+        echo "$target exists and is not a symlink — leaving it alone" >&2
+        exit 1
+    fi
+    # Relative: <common_dir>/hooks/../../ is the main checkout, so this
+    # survives running `just hooks` from a worktree that later goes away.
+    ln -sfn ../../scripts/hooks/pre-push "$target"
+    echo "pre-push hook installed → $target"
 
-# Deliberate full system upgrade. NOT part of apply — a distro upgrade is
-# a choice, not declared state (docs/migration.md §2).
+# NOT part of apply: a distro upgrade is a choice, not declared state.
+
+# Deliberate full system upgrade
 upgrade:
     #!/usr/bin/env bash
     set -euo pipefail

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# pre-push — refuse to push a tree whose machine plans do not render.
+#
+# This repo has no running CI. codefort.yml cannot execute (its image went
+# with mooncake, see CLAUDE.md) and GitHub Actions is deliberately not used:
+# validation is local. That left `just ci` as the only gate, fired only when
+# someone remembered to type it.
+#
+# Every structural break this fleet has hit -- `unknown key 'download'`,
+# `brew must not run as root`, a dispatcher matching no hostname and exiting
+# 0 -- is caught by scripts/validate.sh in under a second. Cheap enough to
+# spend on every push, so it stops depending on memory.
+#
+# Installed by scripts/bootstrap.sh as a symlink to this file, so edits here
+# take effect with no reinstall. `just hooks` installs it into a checkout
+# that was never bootstrapped.
+#
+# The global dispatcher (components/git/hooks/hook-dispatch) chains
+# core.hooksPath back to $git_dir/hooks/<name>, so this fires normally even
+# though core.hooksPath replaces .git/hooks wholesale.
+#
+# Bypass with `git push --no-verify` -- deliberately, and own the result.
+set -euo pipefail
+
+# git feeds the hook refs on stdin. This check is on the tree, not the refs,
+# so drain it rather than leaving a writer on a full pipe.
+cat >/dev/null || true
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+# A box mid-bootstrap has no provision yet and must still be able to push the
+# fix that gets it one. Skip loudly rather than blocking.
+if ! command -v provision >/dev/null 2>&1; then
+  echo "pre-push: provision not on PATH — skipping plan validation" >&2
+  exit 0
+fi
+
+if [ ! -x "$repo_root/scripts/validate.sh" ]; then
+  echo "pre-push: scripts/validate.sh missing or not executable — skipping" >&2
+  exit 0
+fi
+
+echo "pre-push: validating machine plans..."
+
+if ! "$repo_root/scripts/validate.sh"; then
+  echo >&2
+  echo "pre-push: REFUSED — fix the plans above, or push with --no-verify" >&2
+  exit 1
+fi

@@ -114,6 +114,41 @@ esac
 
 "$PREFIX/provision" --version
 
+# Local validation gate. This repo has no running CI -- codefort.yml cannot
+# execute and GitHub Actions is deliberately unused -- so the pre-push hook
+# is what keeps a broken plan off main. Installed here because bootstrap is
+# the one command every checkout runs.
+#
+# A symlink, not a copy: editing the tracked script takes effect with no
+# reinstall. An existing non-symlink hook is left strictly alone -- never
+# clobber an operator's own hook.
+install_pre_push() {
+    # --git-common-dir, not .git/: inside a worktree .git is a FILE pointing
+    # elsewhere, and the common dir is where hooks actually live. It is also
+    # what components/git/hooks/hook-dispatch resolves, so one install from
+    # any worktree covers every worktree.
+    common_dir="$(cd "$repo_root" && git rev-parse --git-common-dir 2>/dev/null)" || return 0
+    case "$common_dir" in
+        /*) ;;
+        *) common_dir="$repo_root/$common_dir" ;;
+    esac
+    hooks_dir="$common_dir/hooks"
+    mkdir -p "$hooks_dir"
+    target="$hooks_dir/pre-push"
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+        say "note: $target exists and is not a symlink — leaving it alone"
+        return 0
+    fi
+    # Relative, resolving to <main worktree>/scripts/hooks/pre-push: the
+    # hooks dir is always <common_dir>/hooks, so ../../ is the main checkout.
+    # An absolute path would bake in whichever worktree ran bootstrap and
+    # dangle the moment that worktree was removed.
+    ln -sfn ../../scripts/hooks/pre-push "$target"
+    say "pre-push hook installed (bypass with git push --no-verify)"
+}
+
+install_pre_push
+
 if [ $# -eq 0 ]; then
     cat <<EOF
 
