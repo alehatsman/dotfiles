@@ -55,6 +55,13 @@ java_enabled: "false"
 # keepalive — more robust LAN reachability where mirrored flaps (dotfiles #16).
 wsl_networking_mode: "mirrored"
 
+# Node.js major version. The Linux boxes take this from NodeSource
+# (platforms/windows/packages.yml) because Ubuntu noble ships 18, which is EOL
+# and too old to build components/teleport's web UI. The macs get node from
+# brew, which already tracks this major -- the value is written down so the
+# two platforms are visibly meant to match, not coincidentally aligned.
+node_major: "24"
+
 # Ubuntu release codename, used as the apt suite for third-party repos that
 # publish per-release (pkgs.tailscale.com, hashicorp). The whole fleet's WSL
 # guests are Ubuntu-24.04; override per-machine if one moves ahead.
