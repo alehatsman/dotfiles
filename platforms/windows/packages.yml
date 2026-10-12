@@ -148,11 +148,21 @@
   timeout: 10m
   tags: [packages, node]
 
+# `pkg: state: present` is the wrong tool here and was tried first: it asks
+# "is nodejs installed", the distro's 18.19.1 answers yes, and the step
+# reports ok in 100ms having changed nothing. Converging on a VERSION, not on
+# presence, needs apt to actually be told to install -- it then picks
+# NodeSource's 24.x as the highest candidate.
+#
+# The `unless` is what keeps it idempotent: once the installed major is at or
+# above the pin, this never runs again.
 - name: Install Node.js {{ node_major }} from NodeSource
-  pkg:
-    manager: apt
-    name: nodejs
-    state: present
+  shell: apt-get install -y nodejs
+  unless: |
+    set -eu
+    command -v node >/dev/null 2>&1 || exit 1
+    major=$(node --version | sed 's/^v//; s/\..*//')
+    [ "$major" -ge {{ node_major }} ]
   sudo: true
   timeout: 15m
   retry:
@@ -166,8 +176,8 @@
       set -eu
       major=$(node --version | sed 's/^v//; s/\..*//')
       if [ "$major" -lt {{ node_major }} ]; then
-        echo "node $(node --version) is older than {{ node_major }} — \
-      something is still shadowing NodeSource's build" >&2
+        echo "node $(node --version) is older than {{ node_major }} — the \
+      NodeSource install did not take" >&2
         exit 1
       fi
   tags: [packages, node, verify]
