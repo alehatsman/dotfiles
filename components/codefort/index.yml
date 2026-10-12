@@ -85,6 +85,26 @@ steps:
     unless: test -e {{ codefort_src_dir | expanduser }} || test ! -d ~/projects/moongit
     tags: [codefort, migrate]
 
+  # Last resort, and only when there is nothing to adopt: the migration above
+  # has already had its chance to rename a pre-rename checkout into place.
+  #
+  # This component builds from the local working tree on purpose — the server
+  # deploys what you reviewed locally, not whatever is on the remote (see
+  # variables.yml). That stance is about which revision gets built, and it
+  # still holds: the build is sha-gated on the tree's committed HEAD, so after
+  # this clone every later apply deploys exactly what is checked out here.
+  #
+  # Without this step a machine that has never hosted codefort cannot be
+  # provisioned at all — main_pc failed with
+  # `cd: /home/aleh/projects/codefort: No such file or directory`. Same gap
+  # scripts/bootstrap.sh closes for provision itself: something has to put the
+  # source on the box before a plan can build it.
+  - name: "Clone the codefort source tree if the box has none"
+    shell: git clone https://github.com/alehatsman/codefort {{ codefort_src_dir | expanduser }}
+    creates: "{{ codefort_src_dir }}"
+    timeout: 5m
+    tags: [codefort, build]
+
   - name: "Migrate the pre-rename data dir + database (~/.local/share/moongit → {{ codefort_data_dir }})"
     # Whole-dir mv carries repos/ with it; the DB and its -wal/-shm sidecars
     # (which may not exist after a clean stop) are renamed in place after.
