@@ -102,6 +102,26 @@ steps:
       delay: 5s
     tags: [zsh, plugins]
 
+  # zsh-nvm (.zshrc) installs nvm on the first interactive shell, and nvm's
+  # `default` alias then decides which node every new shell gets. A hand-set
+  # `22` shadowed the system node 24 that web tooling needs (EBADENGINE),
+  # dotfiles#44. Declare `system`; per-project .nvmrc still works. Guarded on
+  # nvm.sh so a fresh host's first-run clone into ~/.nvm is not pre-empted.
+  - name: Probe nvm install
+    cmd: [test, -f, "{{ '~/.nvm/nvm.sh' | expanduser }}"]
+    register: nvm_installed
+    changed_when: false
+    failed_when: false
+    tags: [zsh, nvm]
+
+  - name: nvm default node is the system node
+    file:
+      path: ~/.nvm/alias/default
+      state: file
+      content: system
+    when: nvm_installed.rc == 0
+    tags: [zsh, nvm]
+
   # Guard the path BEFORE setting it. os.user will happily point the
   # account at a binary that doesn't exist, and the failure surfaces
   # nowhere near here: sshd rejects the user at preauth with "not
