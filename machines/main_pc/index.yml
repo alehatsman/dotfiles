@@ -19,9 +19,12 @@
 - name: Refuse to apply main_pc's plan on a different known machine
   assert:
     command: |
-      h="{{ hostname }}"
+      # Lowercased: this fleet's work mac carries an MDM-assigned hostname that
+      # is uppercase (GJ4VG9P1VJ). A case-sensitive match never fires on it,
+      # which would let another machine's plan run on the work mac unguarded.
+      h=$(echo "{{ hostname }}" | tr '[:upper:]' '[:lower:]')
       case "$h" in
-        minipc|mac|work-mac|x1)
+        minipc|mac|gj4vg9p1vj|x1)
           echo "refusing: hostname is '$h', not main_pc — wrong machine?" >&2
           exit 1 ;;
       esac

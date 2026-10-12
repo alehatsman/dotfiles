@@ -1,7 +1,7 @@
 ---
 # mini_pc-specific variables (Windows + WSL Ubuntu).
 is_wsl: true
-computer_name: mini_pc
+computer_name: minipc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
 # mirrored networking flaps the WSL guest's LAN exposure on this box; use NAT
