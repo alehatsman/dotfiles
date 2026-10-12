@@ -3,8 +3,13 @@
 # Routes to the correct machine manifest based on the hostname fact.
 #
 # WSL strips underscores from hostnames (RFC 952), so main_pc → mainpc,
-# mini_pc → minipc. Mac, work_mac, and x1 have no underscores in their
-# computer_name (work_mac's is "work-mac", a hyphen) and match directly.
+# mini_pc → minipc. mac and x1 match their computer_name directly.
+#
+# work_mac matches the uppercase MDM-assigned name, not a name of ours:
+# NVIDIA's management owns that box's hostname (machines/work_mac/vars.yml).
+# These comparisons are exact, so the case matters -- 'work-mac' here used
+# to match nothing at all, and a dispatcher that matches nothing skips every
+# import and still exits 0, reporting success while doing nothing.
 #
 # Alternate profile (mini_pc_server.yml) is
 # intentionally excluded — invoke it explicitly by path.
@@ -19,7 +24,7 @@
   when: hostname == 'mac'
 
 - import: ./work_mac.yml
-  when: hostname == 'work-mac'
+  when: hostname == 'GJ4VG9P1VJ'
 
 - import: ./x1.yml
   when: hostname == 'x1'
