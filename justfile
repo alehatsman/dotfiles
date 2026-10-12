@@ -47,6 +47,18 @@ plan m:
 ci:
     ./scripts/validate.sh
 
+# Drive the other boxes over Tailscale. Offline boxes are reported and
+# skipped, never silently dropped. x1 and pixel are not reachable this way --
+# see the roster comment in scripts/fleet.sh.
+
+# Where every fleet box is, and at what commit
+fleet-status:
+    ./scripts/fleet.sh status
+
+# Pull origin/main + apply on every reachable fleet box (or just one)
+fleet-sync machine="":
+    ./scripts/fleet.sh sync {{ machine }}
+
 # scripts/bootstrap.sh does this automatically; this recipe is for a checkout
 # that was cloned without running it.
 
