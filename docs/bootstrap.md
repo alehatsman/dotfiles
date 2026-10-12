@@ -56,14 +56,23 @@ Out:
 
 Exit non-zero on any failure. Safe to re-run.
 
-## The pin
+## The ref
 
-`PROVISION_REF=v0.9.1` — the only tag on the repo, and the version already
-running on main_pc and the work mac. Pinning to a tag, not `main`, so two
-machines bootstrapped a month apart get the same binary.
+`provision_ref: main` in `shared/variables.yml`. Not a tag, not a version.
 
-Bumping the pin is a deliberate commit here, the same posture as the pinned
-tree-sitter/zk/lazygit versions in `components/nvim` and `components/cli`.
+The `v0.9.1` tag (`f61a27c`) predates the `download` and `git` actions that
+`components/nvim`, `components/cli` and `components/tmux` use, so a binary
+built from it cannot parse this repo's own plans — it fails with
+`unknown key \`download\` in a step`. Tracking `main` avoids that.
+
+A version string is not usable as a pin either: `Cargo.toml` still reads
+`0.9.1` on `main`, so a tag build and a `main` build report the same string.
+Anything comparing versions would silently accept the broken one.
+
+Cost of tracking `main`, accepted knowingly: two machines bootstrapped weeks
+apart may get different binaries. `bootstrap.sh` resolves `main` to a commit
+and records it in `~/.local/state/provision/installed-ref`, so what each box
+is actually running is always answerable.
 
 ## Edge cases
 

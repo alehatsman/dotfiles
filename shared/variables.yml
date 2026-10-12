@@ -15,11 +15,16 @@ use_win32yank: false
 # package manager by components/cli; the pixel installs them via termux_pkgs.
 cli_bins: [fzf, rg, fd, bat, lsd, delta, zoxide, direnv, jq, just, gh, htop, tree, lazygit, age]
 
-# The provision version this repo expects. components/provision asserts the
-# running binary matches; scripts/bootstrap.sh builds this ref. Declared once
-# so the two cannot disagree. alehatsman/provision publishes no releases, so
-# this tracks its only tag — bumping it is a deliberate commit.
-provision_version: "0.9.1"
+# The provision ref this repo builds from. scripts/bootstrap.sh resolves it to
+# a commit and stamps what it installed; components/provision checks the binary
+# can actually parse this repo's plans. Declared once so the two agree.
+#
+# `main`, deliberately — NOT the v0.9.1 tag. That tag (f61a27c) predates the
+# `download` and `git` actions that components/nvim, components/cli and
+# components/tmux use, so a binary built from it cannot parse this repo at all.
+# Nor is a version string usable as a pin: Cargo.toml still reads 0.9.1 on
+# main, so a tag build and a main build both report "provision 0.9.1".
+provision_ref: "main"
 
 # Java JDK (components/languages). Off for the personal fleet, which
 # retired Java with Clojure (dotfiles#34): "false" declares the JDK absent.
