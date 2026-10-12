@@ -45,6 +45,15 @@
     teleport_tailnet_hostname: minipc.tail37c478.ts.net
   tags: [tools, teleport]
 
+# carscrape's dashboard (the hub runs here since carscrape S5-8) on the
+# tailnet over HTTPS: *.ts.net is HSTS-preloaded, so browsers refuse plain
+# http://minipc.tail37c478.ts.net:8000. 443 belongs to teleportd, so 8443.
+# --bg persists across tailscaled restarts. dotfiles#46.
+- name: Serve the carscrape dashboard on the tailnet (https :8443)
+  shell: tailscale serve --bg --https=8443 http://127.0.0.1:8000
+  unless: tailscale serve status 2>/dev/null | grep -q '127.0.0.1:8000'
+  tags: [tools, carscrape]
+
 # Inbound fleet access. Gated on fleet_peer_enabled ("true" in ./vars.yml) —
 # see components/fleet-peer/index.yml. Last, deliberately, mirroring main_pc:
 # it should fail after the rest of the machine is provisioned, not before.
