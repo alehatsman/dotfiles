@@ -81,9 +81,12 @@ fleet_ssh_keys:
   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIClzS70tcJPT2CewdKbHkIB6TfNT+1UyhQokNT0PeKZE aleh.atsman@gmail.com"
   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJJDqY94pJ6XXbjNOvY3BZu73DTH1L0c71+zU8Q8sNhK alehatsman@MacBook-Pro.home"
   - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIdOX6HWM6NHsXd2Bu2TSlJcy7Ue/p56dgpm3W1whzHv pixel-termux"
-# TODO(dotfiles#2): mini_pc was offline when this list was collected and
-# work_mac was never queried. Append their id_ed25519.pub and re-apply on
-# every peer — until then neither can reach a fleet-peer machine.
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAXSV2HUKuS5KIuP9BUH1LzzoaSIySXiFM8bEr2dngs3 aatsman@GJ4VG9P1VJ"
+# TODO(dotfiles#2): mini_pc's own id_ed25519.pub is still missing — it was
+# offline when this list was collected, so it can reach a fleet-peer machine
+# only once its key is appended here and every peer is re-applied. The work
+# mac half is done: its key is the aatsman@GJ4VG9P1VJ entry above (the name
+# is MDM-assigned, see machines/work_mac/vars.yml).
 
 # Outbound: ~/.ssh/config Host entries (components/ssh). Rendered only where
 # ssh_config_managed is "true" -- the other machines still carry a

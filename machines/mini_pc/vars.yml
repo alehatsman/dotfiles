@@ -17,3 +17,10 @@ wsl_codefort_port: "8080"
 # Server box — never sleep on AC. Disables standby + hibernate so WSL and
 # its ssh daemon stay reachable 24/7.
 windows_prevent_sleep: true
+
+# components/fleet-peer: render ~/.ssh/authorized_keys from the declared
+# fleet_ssh_keys list, so the rest of the fleet can SSH in. Explicit opt-in,
+# never a side effect of importing a platform. The sshd half of the component
+# is darwin-gated; Linux sshd in this WSL guest already comes from
+# platforms/windows/index.yml, so only authorized_keys fires here.
+fleet_peer_enabled: "true"

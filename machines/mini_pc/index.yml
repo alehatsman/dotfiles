@@ -68,3 +68,9 @@
   props:
     use_win32yank: "true"
   tags: [editor, nvim]
+
+# Inbound fleet access. Gated on fleet_peer_enabled ("true" in ./vars.yml) —
+# see components/fleet-peer/index.yml. Last, deliberately, mirroring main_pc:
+# it should fail after the rest of the machine is provisioned, not before.
+- import: ../../components/fleet-peer/index.yml
+  tags: [wsl, fleet-peer]
