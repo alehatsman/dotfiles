@@ -92,6 +92,15 @@
     attempts: 3
     delay: 10s
 
+# main_pc's docker group membership was added by hand; without it `docker
+# compose` needs sudo and carscrape's tasks/hub.yml fails (dotfiles#45). Takes
+# effect on the next login (a new ssh session); the running user manager
+# keeps its old groups until it restarts.
+- name: User in the docker group
+  shell: usermod -aG docker "{{ username }}"
+  unless: id -nG "{{ username }}" | tr ' ' '\n' | grep -qx docker
+  sudo: true
+
 # ─── Node.js (NodeSource) ─────────────────────────────────────────────────
 # Ubuntu noble's nodejs is 18.19.1 -- EOL since April 2025, and below the
 # `node ^24.0.0 || >=26.0.0` that components/teleport's web UI requires, so a
