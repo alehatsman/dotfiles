@@ -194,6 +194,30 @@
     delay: 10s
   tags: [wsl, tailscale]
 
+# Let the provisioning user drive tailscale without sudo. Without this,
+# `tailscale serve` -- which components/teleport uses to publish teleportd to
+# the tailnet -- fails with:
+#
+#   sending serve config: Access denied: serve config denied
+#
+# The alternative was sudo on the serve step itself, but that step is shared
+# with macOS where it already works unprivileged, and sudo there would write
+# the serve config as the wrong user. Setting the operator once is the fix
+# that makes both platforms take the same path.
+#
+# Runs unconditionally: tailscale exposes no OperatorUser field in
+# `tailscale debug prefs`, so there is nothing cheap to probe. The command is
+# idempotent on tailscale's side, hence changed_when: false -- this reports
+# `ok` forever rather than lying about changing something every apply.
+- name: Let {{ username }} drive tailscale without sudo
+  shell: tailscale set --operator={{ username }}
+  # Pointless before tailscaled is up, and a fresh distro applies before
+  # systemd exists at all -- same gate as the ssh steps above.
+  unless: "[ \"$(ps -p 1 -o comm= 2>/dev/null)\" != systemd ]"
+  changed_when: false
+  sudo: true
+  tags: [wsl, tailscale]
+
 # `tailscale up` (login/authkey) stays manual — that's a secret, not
 # something to script into version control. Same posture as arch/macos.
 # Gated on systemd for the same reason as the SSH step above: the first
