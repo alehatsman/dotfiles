@@ -1,5 +1,5 @@
 # Machine provisioning. Replaces the old `tasks.yml` task runner —
-# task running is a non-goal for provision (docs/migration.md §6).
+# task running is a non-goal for provision.
 #
 # Each apply recipe appends a JSON run log to ~/.local/state/provision/.
 # `--json` puts one object per line on stdout and moves the human output

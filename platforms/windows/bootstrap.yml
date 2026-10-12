@@ -163,7 +163,7 @@
 
 - name: Add firewall rule for SSH
   # exit 3 = already present. `changed` is therefore honest here, which it
-  # never was under the typed action (migration §3.4).
+  # never was under the typed action.
   shell:
     interpreter: powershell
     script: |
@@ -209,7 +209,7 @@
 # Both required under networkingMode=mirrored + firewall=true.
 - name: Add firewall rule for codefort
   # exit 3 = already present. `changed` is therefore honest here, which it
-  # never was under the typed action (migration §3.4).
+  # never was under the typed action.
   shell:
     interpreter: powershell
     script: |
@@ -254,7 +254,7 @@
 # user's registered WSL distros are visible. S4U logon means the task
 # fires even when the user isn't logged in.
 - name: Register Task Scheduler entry to keep WSL SSH alive
-  # exit 3 = task already registered (migration §3.4). {{ username }} on
+  # exit 3 = task already registered. {{ username }} on
   # Windows is the bare account name, no COMPUTERNAME\ prefix — verified on
   # main_pc's host, where these tasks carry UserId `aleh`.
   # New-ScheduledTaskPrincipal takes either form for a local account.

@@ -234,7 +234,7 @@ steps:
 
   # os.systemd wrote the unit, reloaded, enabled and started it in one
   # step, and reload_on_change restarted it when the unit body drifted.
-  # provision splits that into five (migration §3.8). The unit body now
+  # provision splits that into five steps. The unit body now
   # lives in ./units/, so `plan` diffs it — os.systemd never did.
   # os.systemd also created the unit directory; that is explicit now.
   - name: "Ensure the user unit directory exists"
@@ -316,8 +316,8 @@ steps:
 
   # ───────────────── READINESS ───────────────────────────────────────────────
 
-  # 30 attempts x 2s is the 60s timeout wait.http declared (migration
-  # §3.10). `retry` composes with `assert` (spec §6.7), which is how a
+  # 30 attempts x 2s is the 60s timeout the old wait.http declared.
+  # `retry` composes with `assert` (spec §6.7), which is how a
   # readiness gate is written.
   - name: "Wait for codefort to become ready"
     assert:

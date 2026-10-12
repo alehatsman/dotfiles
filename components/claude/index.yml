@@ -75,7 +75,7 @@
 # Adding the marketplace is state: either it is registered or it is not.
 # Updating it refreshes a cache from the network, which is not declared
 # state and has no converged form to compare against — so it runs every
-# time and says plainly that it changed nothing (migration.md §3.9).
+# time and says plainly that it changed nothing.
 - name: "Update the claude-plugins-official marketplace"
   shell: claude plugin marketplace update claude-plugins-official
   changed_when: false

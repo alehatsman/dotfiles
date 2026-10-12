@@ -143,7 +143,7 @@
   tags: [wsl, tailscale]
 
 # pkg.repo did keyring + DEB822 source + apt-get update in one step;
-# provision spells the three out (migration §3.11). The DEB822 `.sources`
+# provision spells the three out. The DEB822 `.sources`
 # form is deliberate — it is what pkg.repo wrote, so the Signed-By
 # conflict described above stays resolved.
 #

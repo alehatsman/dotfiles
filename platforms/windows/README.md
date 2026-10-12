@@ -23,8 +23,7 @@ elevated.
    ```
 
 This list used to be a `log:` step at the end of `bootstrap.yml`. It is
-operator documentation, not machine state, so it lives here instead
-(docs/migration.md §3.9).
+operator documentation, not machine state, so it lives here instead.
 
 4. Add your SSH public key to `~/.ssh/authorized_keys` (WSL side).
 5. `wsl --shutdown`, then verify: `ssh <this-pc-ip> -p <wsl_ssh_port>`.

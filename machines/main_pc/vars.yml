@@ -43,4 +43,6 @@ wsl_codefort_port: "8080"
 # (components/codefort). Agents here can take a slim host-specific
 # ~/.claude/CLAUDE.md that mandates cf issue coordination instead of the
 # shared trooper prompt. Path is resolved relative to components/claude/.
+# NOTE: that file does not exist yet — write it before uncommenting, or the
+# claude component fails rendering a src that is not there.
 # claude_system_prompt_src: "../../machines/main_pc/CLAUDE.md"
