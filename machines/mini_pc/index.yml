@@ -31,6 +31,20 @@
 # zsh, tmux, nvim
 - import: ../../shared/shell.yml
 
+# Headless terminal/session daemon, reached from the phone over Tailscale
+# Serve (https://minipc.tail37c478.ts.net). After shared/shell.yml because
+# the build needs cargo from core's languages component, and node/npm from
+# platforms/windows/packages.yml for the embedded web UI.
+#
+# Unlike mainpc this box had no teleportd at all, so the first apply builds
+# it from source -- slow once, then stamped by commit.
+- name: Use teleport component
+  use: ../../components/teleport/index.yml
+  props:
+    # From `tailscale status` on this box (dotfiles#15).
+    teleport_tailnet_hostname: minipc.tail37c478.ts.net
+  tags: [tools, teleport]
+
 # Inbound fleet access. Gated on fleet_peer_enabled ("true" in ./vars.yml) —
 # see components/fleet-peer/index.yml. Last, deliberately, mirroring main_pc:
 # it should fail after the rest of the machine is provisioned, not before.

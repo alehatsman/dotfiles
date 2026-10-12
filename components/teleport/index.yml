@@ -10,10 +10,16 @@
 # a login-scoped LaunchAgent by hand, the equivalent docs/08-packaging.md
 # calls for.
 #
-# Darwin only for now — the only machine that imports this is work_mac.
+# macOS and Linux. The two differ only in how the daemon is autostarted
+# (LaunchAgent vs systemd user unit) and where teleportd keeps its data;
+# build, config and Tailscale Serve are identical. See docs/teleport-linux.md.
+#
+# On Linux the service outlives logout, because shared/bootstrap.yml enables
+# linger -- the macOS side still has no headless equivalent (issue #40).
+#
 # Built from source via cargo (components/languages must be imported
 # first so rustup/cargo are on PATH), so there is no per-arch binary to
-# track — the same build step works on Intel and Apple Silicon.
+# track — the same build step works on Intel, Apple Silicon and x86_64 Linux.
 
 props:
   teleport_tailnet_hostname:
@@ -48,12 +54,23 @@ steps:
   # $SHELL.
   - vars:
       teleport_path: "{{ home }}/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      # teleportd resolves its own data dir from the platform convention
+      # (directories::BaseDirs::data_local_dir) and is not given --data-dir,
+      # so config.toml has to be written where the daemon will actually look.
+      # Computed here rather than in variables.yml for the same reason as
+      # teleport_path above: vars_file values are data and are never rendered,
+      # so a {{ }} there would stay seven literal characters.
+      #
+      # The Linux value is not a guess -- it is where mainpc's pre-existing
+      # hand-installed teleportd already keeps its state.
+      teleport_data_dir: >-
+        {{ "~/Library/Application Support/teleport" if os == 'darwin'
+           else "~/.local/share/teleport" }}
 
   - name: "Ensure teleport_bin_dir exists"
     file:
       path: "{{ teleport_bin_dir }}"
       state: dir
-    when: os == 'darwin'
     tags: [teleport]
 
   # ───────────────────────── build + install teleportd from source ───────────
@@ -107,7 +124,6 @@ steps:
       test -x "{{ teleport_bin_dir | expanduser }}/teleportd" && \
         [ "$(cat "{{ teleport_bin_dir | expanduser }}/.teleportd.commit" 2>/dev/null)" = "$latest" ]
     register: teleport_install
-    when: os == 'darwin'
     timeout: 20m
     tags: [teleport]
 
@@ -118,7 +134,6 @@ steps:
       src: ./templates/config.toml.j2
       dest: "{{ teleport_data_dir }}/config.toml"
       mode: '0644'
-    when: os == 'darwin'
     tags: [teleport]
 
   - name: "Deploy teleportd presets.toml (login-shell agent presets)"
@@ -132,10 +147,9 @@ steps:
       src: ./templates/presets.toml.j2
       dest: "{{ teleport_data_dir }}/presets.toml"
       mode: '0644'
-    when: os == 'darwin'
     tags: [teleport]
 
-  # ───────────────────────── autostart (LaunchAgent) ──────────────────────────
+  # ─────────────────── autostart, macOS (LaunchAgent) ─────────────────────────
 
   - name: "Ensure ~/Library/LaunchAgents exists"
     file:
@@ -221,6 +235,66 @@ steps:
     when: os == 'darwin'
     tags: [teleport]
 
+  # ─────────────────── autostart, Linux (systemd user unit) ──────────────────
+  #
+  # Deliberately none of the bootout/port-wait machinery the launchd branch
+  # above needs. That dance exists because launchd drops a job asynchronously:
+  # the old teleportd could still hold :{{ teleport_port }} when the new one
+  # starts, and teleportd then falls back to an ephemeral port that
+  # `tailscale serve` never proxies -- running, reachable locally, invisible
+  # to the tailnet. systemd restarts a unit synchronously, so the window does
+  # not exist and the simple shape is also the correct one.
+  #
+  # Same pattern components/codefort already runs on mainpc: deploy the unit,
+  # reload only when it changed, then declare it started and enabled.
+
+  - name: "Ensure the user unit directory exists"
+    file:
+      path: ~/.config/systemd/user
+      state: dir
+      mode: '0755'
+    when: os == 'linux'
+    tags: [teleport]
+
+  # Adopts mainpc's hand-written unit, which this replaces. That one carried
+  # Restart=on-failure (crashes only) and a quoted ExecStart; see the template.
+  - name: "Deploy the teleportd user unit"
+    template:
+      src: ./templates/teleportd.service.j2
+      dest: ~/.config/systemd/user/teleportd.service
+      mode: '0644'
+    register: teleport_unit
+    when: os == 'linux'
+    tags: [teleport]
+
+  - name: "Reload the user systemd manager"
+    cmd: [systemctl, --user, daemon-reload]
+    # `when` decides whether it runs; `changed_when` says what it did. A
+    # reload that only runs after the unit changed did reload the manager.
+    when: os == 'linux' and teleport_unit.changed
+    changed_when: true
+    tags: [teleport]
+
+  - name: "Enable + start teleportd (linux)"
+    service:
+      name: teleportd.service
+      scope: user
+      state: started
+      enabled: true
+    when: os == 'linux'
+    tags: [teleport]
+
+  # Restart on unit change OR on a fresh binary. `state: started` is a state
+  # and will not bounce an already-running daemon, so without this an adopted
+  # unit or a rebuilt teleportd would keep serving the old process.
+  - name: "Restart teleportd when its unit or binary changed"
+    service:
+      name: teleportd.service
+      scope: user
+      state: restarted
+    when: os == 'linux' and (teleport_unit.changed or teleport_install.changed)
+    tags: [teleport]
+
   # ───────────────────────── phone/remote access (Tailscale Serve) ───────────
 
   - name: "Proxy teleportd to the tailnet via Tailscale Serve"
@@ -231,5 +305,25 @@ steps:
     # equivalent yet (see the header comment).
     shell: tailscale serve --bg http://127.0.0.1:{{ teleport_port }}
     unless: tailscale serve status 2>/dev/null | grep -q '127.0.0.1:{{ teleport_port }}'
-    when: os == 'darwin'
     tags: [teleport]
+
+  # ───────────────────────── verify ──────────────────────────────────────────
+
+  # Probes the port, not the service manager. A loaded LaunchAgent or an
+  # active unit says the manager is happy; it does not say the process behind
+  # it is the one answering on {{ teleport_port }}. teleportd silently falls
+  # back to an ephemeral port when its own is taken, and `tailscale serve`
+  # only ever proxies {{ teleport_port }} -- so "active" plus a wrong port is
+  # a daemon that is running and unreachable. That is the failure worth
+  # catching, and only the port can catch it.
+  - name: "Verify teleportd is answering on its expected port"
+    assert:
+      command: |
+        set -eu
+        for _ in $(seq 1 20); do
+          if nc -z -w 2 127.0.0.1 {{ teleport_port }} 2>/dev/null; then exit 0; fi
+          sleep 0.5
+        done
+        echo "teleportd is not listening on 127.0.0.1:{{ teleport_port }}" >&2
+        exit 1
+    tags: [teleport, verify]
