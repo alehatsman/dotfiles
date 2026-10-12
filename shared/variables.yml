@@ -15,6 +15,12 @@ use_win32yank: false
 # package manager by components/cli; the pixel installs them via termux_pkgs.
 cli_bins: [fzf, rg, fd, bat, lsd, delta, zoxide, direnv, jq, just, gh, htop, tree, lazygit, age]
 
+# The provision version this repo expects. components/provision asserts the
+# running binary matches; scripts/bootstrap.sh builds this ref. Declared once
+# so the two cannot disagree. alehatsman/provision publishes no releases, so
+# this tracks its only tag — bumping it is a deliberate commit.
+provision_version: "0.9.1"
+
 # Java JDK (components/languages). Off for the personal fleet, which
 # retired Java with Clojure (dotfiles#34): "false" declares the JDK absent.
 java_enabled: "false"

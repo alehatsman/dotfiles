@@ -28,6 +28,11 @@
 
 - import: ../../shared/bootstrap.yml
 
+# Fail early if the running provision is not the version this repo pins.
+# Verify-only — see components/provision/index.yml and docs/bootstrap.md.
+- import: ../../components/provision/index.yml
+  tags: [core, provision]
+
 - import: ../../platforms/arch/index.yml
   tags: [arch, system, packages]
 

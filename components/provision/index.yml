@@ -1,0 +1,34 @@
+---
+# provision — assert the executing binary is the version this repo pins.
+#
+# Verify-only, deliberately. This component never writes the binary: an apply
+# must not swap out the tool that is executing it. Installing and upgrading
+# are the job of scripts/bootstrap.sh, an explicit choice — the same posture
+# the justfile takes on `just upgrade` (a distro upgrade is a choice, not
+# declared state, docs/migration.md §2).
+#
+# What this buys: drift is loud. mini_pc sat on mooncake-era tooling with no
+# provision at all and nothing noticed, because nothing ever checked. See
+# docs/bootstrap.md.
+#
+# The pin lives in shared/variables.yml as provision_version, so the version
+# is declared in one place and this assert and scripts/bootstrap.sh cannot
+# disagree silently.
+
+- name: provision matches the pinned version
+  assert:
+    command: |
+      set -eu
+      want="{{ provision_version }}"
+      have="$(provision --version 2>/dev/null | awk '{print $2}')" || true
+      if [ -z "$have" ]; then
+        echo "provision not on PATH — run ./scripts/bootstrap.sh" >&2
+        exit 1
+      fi
+      if [ "$have" != "$want" ]; then
+        echo "provision $have installed, repo pins $want —" >&2
+        echo "run ./scripts/bootstrap.sh to converge, or bump" >&2
+        echo "provision_version in shared/variables.yml" >&2
+        exit 1
+      fi
+  tags: [core, provision, verify]

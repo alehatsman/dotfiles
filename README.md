@@ -13,12 +13,16 @@ installed by the [asciinema](components/asciinema) component.
 
 ## Bootstrap a fresh machine
 
-From nothing to provisioned. The only step that can't be automated is
-putting the generated SSH public key on GitHub — the run prints it and
-tells you when.
+From nothing to provisioned. `provision` is not packaged and has no
+releases, so step one builds it from source at the version this repo pins
+(`provision_version` in `shared/variables.yml`). See [docs/bootstrap.md](docs/bootstrap.md).
+
+The only step that can't be automated is putting the generated SSH public
+key on GitHub — the run prints it and tells you when.
 
 ```sh
 git clone https://github.com/alehatsman/dotfiles ~/dotfiles && cd ~/dotfiles
+./scripts/bootstrap.sh                    # builds + installs provision
 export PATH="$HOME/.local/bin:$PATH"      # until components/zsh lands
 provision plan ./<machine>.yml            # preview; works before anything exists
 provision apply ./<machine>.yml --ask-sudo-pass
@@ -37,7 +41,7 @@ Per-platform notes:
 - **macOS** — Homebrew installs itself during the run. First apply is
   ~30 min plus cask downloads.
 - **Arch** — `platforms/arch/bootstrap.sh` does the clone + apply in one
-  shot on first boot (`provision` itself must already be on PATH).
+  shot on first boot; run `scripts/bootstrap.sh` first to get `provision`.
 - **Windows** — run `platforms/windows/bootstrap.yml` from an Admin
   PowerShell first, then the sequence above *inside* WSL.
 
