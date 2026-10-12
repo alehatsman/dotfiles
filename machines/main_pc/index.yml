@@ -67,6 +67,19 @@
   use: ../../components/codefort/index.yml
   tags: [tools, codefort]
 
+# carscrape dev checkout. Collection moved to mini_pc (carscrape S5-8), so the
+# hub, its Postgres, the RDW timer and the runner are declared stopped and
+# disabled here: a boot must never start a second runner or hub. `hub` stays
+# local so a hand-started dev runner can never post to the live hub on mini_pc.
+- name: Use carscrape component
+  use: ../../components/carscrape/index.yml
+  props:
+    dir: "{{ carscrape_dir }}"
+    hub: "http://localhost:8000"
+    hub_active: false
+    runner_active: false
+  tags: [tools, carscrape]
+
 # mooncake + the provision CI-image build were removed with mooncake. This
 # box's codefort-ci / codefort-ci-dev / provision-ci images are no longer
 # built — codefort's own CI runner execs `mooncake step` inside them, which

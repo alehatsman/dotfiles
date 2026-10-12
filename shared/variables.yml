@@ -149,3 +149,8 @@ ssh_tailnet_relay_enabled: "false"
 # platform. Machines that should be reachable set this true in
 # machines/<m>/vars.yml.
 fleet_peer_enabled: "false"
+
+# carscrape checkout (components/carscrape, carscrape S5-3). Same path on every
+# box that runs it, and the default `repo` of that repo's tasks. A plan against
+# a worktree overrides it: `provision plan ./main_pc.yml --var carscrape_dir=…`.
+carscrape_dir: "~/projects/autolab"

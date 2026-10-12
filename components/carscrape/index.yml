@@ -1,0 +1,107 @@
+---
+# carscrape — the car-listing scraper (alehatsman/autolab): its checkout and
+# the repo's own provision tasks, with this machine's props declared here
+# instead of typed as `--prop` by hand (carscrape S5-3, spec
+# docs/specs/s5-3-machines-from-dotfiles.md in that repo).
+#
+# The repo owns what a hub or runner box needs (tasks/setup.yml: uv env,
+# chromium, root .env; tasks/hub.yml: Postgres container, web build, hub unit;
+# tasks/rdw.yml: weekly RDW mirror timer; tasks/runner.yml: runner unit). This
+# component only clones it and `use`s those four with per-machine props, the
+# same split as D17 in provision (a shared step list is checked out by the
+# machine plan, not fetched by provision).
+#
+# Secrets stay out of dotfiles: hub/.env (PG_DSN, TG_TOKEN, TG_CHAT) is created
+# from hub/.env.example once by tasks/hub.yml, never rewritten, and filled from
+# the password manager. The root .env tasks/setup.yml renders holds none.
+#
+# The checkout is cloned once and never pulled from here: on the hub box the
+# runner's self-update pulls main (carscrape S3-13), on a dev box the developer
+# does. A dirty or diverged tree is not dotfiles' business.
+#
+# Needs, from earlier in the machine plan: uv (components/languages), docker +
+# compose and the docker group (platforms/windows/packages.yml), node 24 for the
+# hub's web build, claude logged in (tasks/setup.yml asserts it), a GitHub ssh
+# key (the repo is private), systemd linger (shared/bootstrap.yml).
+
+props:
+  dir:
+    type: string
+    required: true
+    description: The checkout path (`~` allowed). Also the `repo` the hub, rdw and runner units run from.
+  repo_url:
+    type: string
+    default: "git@github.com:alehatsman/autolab.git"
+    description: Clone source. Private repo, so ssh with the box's GitHub key.
+  branch:
+    type: string
+    default: "main"
+    description: Branch cloned. Only read at clone time; this component never pulls.
+  hub:
+    type: string
+    required: true
+    description: tasks/setup.yml `hub` — the URL this box's runner posts to (CARSCRAPE_HUB).
+  public_url:
+    type: string
+    default: ""
+    description: tasks/setup.yml `public_url` — base of hub links in Telegram; empty = `hub`.
+  headless:
+    type: bool
+    default: true
+    description: tasks/setup.yml `headless` — Playwright headless.
+  tg_enabled:
+    type: bool
+    default: false
+    description: tasks/setup.yml `tg_enabled` — hub Telegram sends; false = log only.
+  hub_active:
+    type: bool
+    required: true
+    description: tasks/hub.yml and tasks/rdw.yml `active` — false stops and disables the hub, its Postgres and the RDW timer.
+  runner_active:
+    type: bool
+    required: true
+    description: tasks/runner.yml `active` — false stops and disables the runner.
+
+steps:
+  - name: "Clone carscrape into {{ props.dir }}"
+    shell: git clone --branch {{ props.branch | quote }} {{ props.repo_url | quote }} {{ props.dir | expanduser | quote }}
+    creates: "{{ props.dir }}"
+    timeout: 5m
+    tags: [carscrape]
+
+  # `validate` reads every `use` target, so on a box without the checkout these
+  # would fail the whole plan before the clone above could run. Gated on the
+  # file instead: the first apply on a fresh box clones, the next one converges.
+  - name: carscrape machine prep (uv env, chromium, .env, hooks)
+    use: "{{ props.dir }}/tasks/setup.yml"
+    when: (props.dir ~ "/tasks/setup.yml") is exists
+    props:
+      hub: "{{ props.hub }}"
+      public_url: "{{ props.public_url }}"
+      headless: "{{ props.headless }}"
+      tg_enabled: "{{ props.tg_enabled }}"
+    tags: [carscrape]
+
+  - name: carscrape hub (Postgres, web build, unit)
+    use: "{{ props.dir }}/tasks/hub.yml"
+    when: (props.dir ~ "/tasks/hub.yml") is exists
+    props:
+      active: "{{ props.hub_active }}"
+      repo: "{{ props.dir | expanduser }}"
+    tags: [carscrape]
+
+  - name: carscrape weekly RDW mirror
+    use: "{{ props.dir }}/tasks/rdw.yml"
+    when: (props.dir ~ "/tasks/rdw.yml") is exists
+    props:
+      active: "{{ props.hub_active }}"
+      repo: "{{ props.dir | expanduser }}"
+    tags: [carscrape]
+
+  - name: carscrape runner
+    use: "{{ props.dir }}/tasks/runner.yml"
+    when: (props.dir ~ "/tasks/runner.yml") is exists
+    props:
+      active: "{{ props.runner_active }}"
+      repo: "{{ props.dir | expanduser }}"
+    tags: [carscrape]

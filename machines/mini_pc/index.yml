@@ -54,6 +54,23 @@
   unless: tailscale serve status 2>/dev/null | grep -q '127.0.0.1:8000'
   tags: [tools, carscrape]
 
+# carscrape hub box (since carscrape S5-8): hub, Postgres, RDW timer and runner
+# all active. The runner posts to the local hub; Telegram digest links use the
+# tailnet HTTPS URL served above. Telegram stays off until the user says go
+# (carscrape S2-20). These props replace the hand-run `--prop`s of the S5-8
+# cutover (carscrape S5-3).
+- name: Use carscrape component
+  use: ../../components/carscrape/index.yml
+  props:
+    dir: "{{ carscrape_dir }}"
+    hub: "http://localhost:8000"
+    public_url: "https://minipc.tail37c478.ts.net:8443"
+    headless: true
+    tg_enabled: false
+    hub_active: true
+    runner_active: true
+  tags: [tools, carscrape]
+
 # Inbound fleet access. Gated on fleet_peer_enabled ("true" in ./vars.yml) —
 # see components/fleet-peer/index.yml. Last, deliberately, mirroring main_pc:
 # it should fail after the rest of the machine is provisioned, not before.
