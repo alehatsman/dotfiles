@@ -1,7 +1,13 @@
 ---
 # work-mac — NVIDIA work macOS workstation.
 is_wsl: false
-computer_name: work-mac
+# The MDM-assigned name, not a name of ours. This box's hostname is set by
+# NVIDIA's management, not by this repo: declaring "work-mac" here made the
+# "Set computer name" step rename the machine on every apply and never
+# converge, because the assigned name comes back. Same root cause as the
+# teleport tailnet-hostname note in index.yml (dotfiles#14/#15). Declare what
+# MDM actually assigns, so the step reports ok instead of changing the box.
+computer_name: GJ4VG9P1VJ
 
 EMAIL: aatsman@nvidia.com
 
