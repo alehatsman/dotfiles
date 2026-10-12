@@ -72,3 +72,15 @@
   sudo: true
   when: os == "darwin"
   tags: [core, sudo]
+
+# Fail early if the running provision cannot parse this repo's own plans.
+# Verify-only: it never writes the binary (an apply must not swap out the
+# tool executing it). Installing and upgrading are scripts/bootstrap.sh's
+# job. Checks CAPABILITY, not version — see components/provision/index.yml
+# and docs/bootstrap.md for why a version string cannot distinguish them.
+#
+# Lives here rather than in each machine index: it was the same two lines
+# repeated five times, and it belongs with the rest of the up-front setup
+# every machine wants.
+- import: ../components/provision/index.yml
+  tags: [core, provision]

@@ -1,0 +1,38 @@
+---
+# The components every machine in the fleet runs.
+#
+# Imported after the machine's platform (packages must exist first) and
+# before anything machine-specific. Previously this block was copy-pasted
+# into all five machine indexes, so adding a component to the fleet was five
+# edits with nothing checking you made all five — which is how
+# components/cli and components/gdrive-mirror ended up missing from the
+# README's component list.
+#
+# What is NOT here, deliberately: anything a machine can reasonably not
+# want. hyprland (x1), alacritty (GUI boxes), teleport (the two macs),
+# codefort and asciinema (main_pc), gdrive-mirror (mac), usql (work_mac),
+# fleet-peer (opt-in via fleet_peer_enabled). Those stay at their call sites.
+#
+# The interactive shell layer (zsh, tmux, nvim) is shared/shell.yml, not
+# this file: several machines insert their own steps between the two blocks,
+# and provision runs steps in order, so the split preserves that ordering.
+
+# Palette must come first — every later component's templates read
+# palette.* / editor.* from the variant selected by `palette_variant`.
+- import: ../components/palette/index.yml
+  tags: [core, palette]
+
+- import: ../components/claude/index.yml
+  tags: [core, claude]
+
+- import: ../components/codex/index.yml
+  tags: [core, codex]
+
+- import: ../components/git/index.yml
+  tags: [core, git]
+
+- import: ../components/cli/index.yml
+  tags: [core, cli]
+
+- import: ../components/languages/index.yml
+  tags: [dev, languages]
