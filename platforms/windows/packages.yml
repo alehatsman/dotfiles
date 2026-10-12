@@ -65,13 +65,15 @@
       - yamllint
       - unzip
       - neovim
-      - nodejs
       # No `yarn`: on Debian the name is a virtual package cmdtest provides,
       # so `apt-get install -y yarn` exits 0 having installed nothing and the
       # step never converges. Real yarn comes from corepack, which ships with
       # nodejs. It is a genuine pacman and brew package, so the other two
       # platform lists keep it.
-      - npm
+      #
+      # No `nodejs`/`npm` either -- they come from NodeSource below. Ubuntu
+      # noble ships 18.19.1, which went EOL in April 2025 and is too old to
+      # build components/teleport's web UI (it requires node ^24 || >=26).
       - zsh
       - golang-go
       - build-essential
@@ -85,6 +87,90 @@
   retry:
     attempts: 3
     delay: 10s
+
+# ─── Node.js (NodeSource) ─────────────────────────────────────────────────
+# Ubuntu noble's nodejs is 18.19.1 -- EOL since April 2025, and below the
+# `node ^24.0.0 || >=26.0.0` that components/teleport's web UI requires, so a
+# teleportd build fails outright with EBADENGINE on these boxes.
+#
+# The macs already run node 24 via brew, so this brings the Linux side to the
+# same major rather than introducing a new split.
+#
+# Same three-step shape as the Tailscale repo in index.yml: keyring, DEB822
+# source, then an update gated on the source actually changing. DEB822 on
+# purpose -- a second source naming the same repo with a different Signed-By
+# is what apt rejects outright, and that bug has already been paid for once
+# here.
+#
+# NodeSource publishes a single `nodistro` suite for every Ubuntu/Debian
+# release, so this does not take ubuntu_codename.
+
+- name: Fetch the NodeSource apt keyring
+  shell: |
+    set -euo pipefail
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+  creates: /etc/apt/keyrings/nodesource.gpg
+  sudo: true
+  tags: [packages, node]
+
+- name: Register the NodeSource apt source
+  file:
+    path: /etc/apt/sources.list.d/nodesource.sources
+    state: file
+    content: |
+      Types: deb
+      URIs: https://deb.nodesource.com/node_{{ node_major }}.x
+      Suites: nodistro
+      Components: main
+      Signed-By: /etc/apt/keyrings/nodesource.gpg
+    mode: '0644'
+  sudo: true
+  register: nodesource_repo
+  tags: [packages, node]
+
+- name: Refresh apt after the NodeSource source changed
+  cmd: [apt-get, update]
+  when: nodesource_repo.changed
+  changed_when: true
+  sudo: true
+  tags: [packages, node]
+
+# The distro `npm` package depends on the distro nodejs and would drag 18
+# back in. NodeSource's nodejs bundles npm, so the separate package is both
+# unnecessary and actively harmful here.
+- name: Remove the distro npm package
+  pkg:
+    manager: apt
+    name: npm
+    state: absent
+  sudo: true
+  timeout: 10m
+  tags: [packages, node]
+
+- name: Install Node.js {{ node_major }} from NodeSource
+  pkg:
+    manager: apt
+    name: nodejs
+    state: present
+  sudo: true
+  timeout: 15m
+  retry:
+    attempts: 3
+    delay: 10s
+  tags: [packages, node]
+
+- name: Verify node is new enough for the web builds this repo does
+  assert:
+    command: |
+      set -eu
+      major=$(node --version | sed 's/^v//; s/\..*//')
+      if [ "$major" -lt {{ node_major }} ]; then
+        echo "node $(node --version) is older than {{ node_major }} — \
+      something is still shadowing NodeSource's build" >&2
+        exit 1
+      fi
+  tags: [packages, node, verify]
 
 # Retired with Clojure, the databases and the misc leftovers (dotfiles#34).
 # No autoremove: dropping auto-installed deps is an upgrade-class choice.
