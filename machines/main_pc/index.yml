@@ -8,27 +8,10 @@
 #   2. Inside WSL Ubuntu, via the root entry (NOPASSWD sudo, no -K):
 #        provision apply ./main_pc.yml
 #
-# vars.load chain mirrors main_pc.yml. Order:
-# shared defaults first, machine overrides second, inline identity block
-# last so is_wsl/wsl_distro/wsl_ssh_port always win regardless of source.
-# Refuse to run if the live hostname belongs to a different known machine
-# (cross-provisioning guard, issue #3 — we've hit main_pc/x1 mixups before).
-# Exclusion list, not a strict match: a genuinely fresh box's hostname is
-# neither 'mainpc' nor any of these, so first-time bootstrap is never
-# blocked — only a hostname already claimed by another machine trips it.
-- name: Refuse to apply main_pc's plan on a different known machine
-  assert:
-    command: |
-      # Lowercased: this fleet's work mac carries an MDM-assigned hostname that
-      # is uppercase (GJ4VG9P1VJ). A case-sensitive match never fires on it,
-      # which would let another machine's plan run on the work mac unguarded.
-      h=$(echo "{{ hostname }}" | tr '[:upper:]' '[:lower:]')
-      case "$h" in
-        minipc|mac|gj4vg9p1vj|x1)
-          echo "refusing: hostname is '$h', not main_pc — wrong machine?" >&2
-          exit 1 ;;
-      esac
-  tags: [safety]
+# vars_file lines come first because shared/guard.yml reads `computer_name`
+# from them. Order: shared defaults, machine overrides, then the inline
+# identity block last so is_wsl/wsl_distro/wsl_ssh_port win regardless of
+# source.
 
 - vars_file: ../../shared/variables.yml
 - vars_file: ./vars.yml
@@ -38,55 +21,26 @@
     wsl_distro: "Ubuntu-24.04"
     wsl_ssh_port: "2222"
 
-- import: ../../shared/bootstrap.yml
+# Refuse to run if the live hostname belongs to a different known machine
+# (issue #3 — we've hit main_pc/x1 mixups before). See shared/guard.yml.
+- import: ../../shared/guard.yml
 
-# Fail early if the running provision is not the version this repo pins.
-# Verify-only — see components/provision/index.yml and docs/bootstrap.md.
-- import: ../../components/provision/index.yml
-  tags: [core, provision]
+# SSH identity, passwordless sudo, systemd linger, provision capability check.
+- import: ../../shared/bootstrap.yml
 
 - import: ../../platforms/windows/index.yml
   tags: [wsl, windows]
 
-# Cross-platform components
-# Palette must come first — every later component's templates read
-# palette.* / editor.* from the variant selected by `palette_variant`.
-- import: ../../components/palette/index.yml
-  tags: [core, palette]
-
-- import: ../../components/claude/index.yml
-  tags: [core, claude]
-
-- import: ../../components/codex/index.yml
-  tags: [core, codex]
-
-- import: ../../components/git/index.yml
-  tags: [core, git]
-
-- import: ../../components/cli/index.yml
-  tags: [core, cli]
-
-- import: ../../components/languages/index.yml
-  tags: [dev, languages]
+# palette, claude, codex, git, cli, languages
+- import: ../../shared/core.yml
 
 # Recording tools for capturing a real `apply`/`plan` run as a README
 # gif (dotfiles#93). After languages — agg installs via cargo.
 - import: ../../components/asciinema/index.yml
   tags: [tools, asciinema]
 
-- name: Use zsh component
-  use: ../../components/zsh/index.yml
-  tags: [core, shell]
-
-
-- import: ../../components/tmux/index.yml
-  tags: [tools, tmux]
-
-- name: Use nvim component
-  use: ../../components/nvim/index.yml
-  props:
-    use_win32yank: "true"
-  tags: [editor, nvim]
+# zsh, tmux, nvim
+- import: ../../shared/shell.yml
 
 # Private self-hosted git host. Builds from ~/projects/codefort and runs
 # codefortd as a user systemd service (API + git + web UI on one port).

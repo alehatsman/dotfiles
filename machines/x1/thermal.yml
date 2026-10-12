@@ -84,7 +84,7 @@
 # Split from the step above: `state: restarted` is not a state, it is an
 # event, so asked for unconditionally it reported `changed` on every single
 # apply and told the operator nothing. The config files are the state; a
-# restart is what those changing should cause (migration.md §3.8).
+# restart is what those changing should cause.
 - name: Apply TLP config
   service:
     name: tlp
@@ -163,7 +163,7 @@
   tags: [thermal, rapl]
 
 # os.systemd wrote the unit and managed the service in one step; provision
-# splits that into the file, the reload, and the service (migration §3.8).
+# splits that into the file, the reload, and the service.
 # The unit bodies live in ./units/ so `plan` diffs them.
 - name: Deploy intel-rapl-cap.service unit
   template:

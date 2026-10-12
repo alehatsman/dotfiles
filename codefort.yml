@@ -5,9 +5,9 @@
 # throwaway container off `image:`.
 #
 # Two-stage gate:
-#   validate — `provision validate ./<machine>.yml` on all five machine
+#   validate — `provision validate ./<machine>.yml` on all six machine
 #              configs. Pure YAML/schema check; no system state needed.
-#   plan     — `provision plan --plan-no-probe ./<machine>.yml` on all five.
+#   plan     — `provision plan --plan-no-probe ./<machine>.yml` on all six.
 #              Static template expansion: catches undefined vars, bad imports,
 #              template render errors. --plan-no-probe skips the unless:/when:
 #              checks that need the real target machine.
@@ -43,6 +43,7 @@ jobs:
       - run: provision validate ./x1.yml
       - run: provision validate ./mac.yml
       - run: provision validate ./work_mac.yml
+      - run: provision validate ./pixel.yml
 
   plan:
     image: provision-ci:latest
@@ -53,3 +54,4 @@ jobs:
       - run: provision plan --plan-no-probe ./x1.yml
       - run: provision plan --plan-no-probe ./mac.yml
       - run: provision plan --plan-no-probe ./work_mac.yml
+      - run: provision plan --plan-no-probe ./pixel.yml

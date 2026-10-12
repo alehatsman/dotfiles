@@ -1,26 +1,11 @@
 ---
 # mini_pc — second Windows 11 box, provisioned via WSL2 Ubuntu.
 # Same structure as main_pc; only vars values differ.
-
-# Refuse to run if the live hostname belongs to a different known machine
-# (cross-provisioning guard, issue #3). Exclusion list, not a strict match:
-# a genuinely fresh box's hostname is neither 'minipc' nor any of these, so
-# first-time bootstrap is never blocked — only a hostname already claimed
-# by another machine trips it. Covers mini_pc.yml and mini_pc_server.yml
-# alike, since both import this file.
-- name: Refuse to apply mini_pc's plan on a different known machine
-  assert:
-    command: |
-      # Lowercased: this fleet's work mac carries an MDM-assigned hostname that
-      # is uppercase (GJ4VG9P1VJ). A case-sensitive match never fires on it,
-      # which would let another machine's plan run on the work mac unguarded.
-      h=$(echo "{{ hostname }}" | tr '[:upper:]' '[:lower:]')
-      case "$h" in
-        mainpc|mac|gj4vg9p1vj|x1)
-          echo "refusing: hostname is '$h', not mini_pc — wrong machine?" >&2
-          exit 1 ;;
-      esac
-  tags: [safety]
+#
+# vars_file lines come first because shared/guard.yml reads `computer_name`
+# from them. Order of the rest is load-bearing: platform packages before the
+# components that call them, core before shell (shared/core.yml explains the
+# split), access control last.
 
 - vars_file: ../../shared/variables.yml
 - vars_file: ./vars.yml
@@ -30,49 +15,21 @@
     wsl_distro: "Ubuntu-24.04"
     wsl_ssh_port: "2222"
 
-- import: ../../shared/bootstrap.yml
+# Refuse to run if the live hostname belongs to a different known machine
+# (issue #3). Parameterized — see shared/guard.yml.
+- import: ../../shared/guard.yml
 
-# Fail early if the running provision is not the version this repo pins.
-# Verify-only — see components/provision/index.yml and docs/bootstrap.md.
-- import: ../../components/provision/index.yml
-  tags: [core, provision]
+# SSH identity, passwordless sudo, systemd linger, provision capability check.
+- import: ../../shared/bootstrap.yml
 
 - import: ../../platforms/windows/index.yml
   tags: [wsl, windows]
 
-# Cross-platform components
-# Palette must come first — every later component's templates read
-# palette.* / editor.* from the variant selected by `palette_variant`.
-- import: ../../components/palette/index.yml
-  tags: [core, palette]
+# palette, claude, codex, git, cli, languages
+- import: ../../shared/core.yml
 
-- import: ../../components/claude/index.yml
-  tags: [core, claude]
-
-- import: ../../components/codex/index.yml
-  tags: [core, codex]
-
-- import: ../../components/git/index.yml
-  tags: [core, git]
-
-- import: ../../components/cli/index.yml
-  tags: [core, cli]
-
-- import: ../../components/languages/index.yml
-  tags: [dev, languages]
-
-- name: Use zsh component
-  use: ../../components/zsh/index.yml
-  tags: [core, shell]
-
-- import: ../../components/tmux/index.yml
-  tags: [tools, tmux]
-
-- name: Use nvim component
-  use: ../../components/nvim/index.yml
-  props:
-    use_win32yank: "true"
-  tags: [editor, nvim]
+# zsh, tmux, nvim
+- import: ../../shared/shell.yml
 
 # Inbound fleet access. Gated on fleet_peer_enabled ("true" in ./vars.yml) —
 # see components/fleet-peer/index.yml. Last, deliberately, mirroring main_pc:

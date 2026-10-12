@@ -1,6 +1,6 @@
 ---
 # The blanket `apt-get upgrade` that used to run here is gone
-# (migration §2, decided 2026-09-08): a full distro upgrade is a choice,
+# (decided 2026-09-08): a full distro upgrade is a choice,
 # not declared state, and it made every apply slow and irreproducible.
 # Upgrade deliberately instead.
 #
@@ -36,7 +36,7 @@
     apt-get update
   # add-apt-repository is idempotent, but it and the apt-get update after
   # it cost ~20s every apply and reported `unknown` forever. The source
-  # file it writes is the state worth checking (migration.md §3.3).
+  # file it writes is the state worth checking.
   unless: ls /etc/apt/sources.list.d | grep -q neovim-ppa
   sudo: true
   timeout: 5m

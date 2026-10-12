@@ -1,24 +1,8 @@
 ---
-# x1 — ThinkPad X1 Carbon Gen 13, Arch Linux, Hyprland Wayland.
-
-# Refuse to run if the live hostname belongs to a different known machine
-# (cross-provisioning guard, issue #3). Exclusion list, not a strict match:
-# a genuinely fresh box's hostname is neither 'x1' nor any of these, so
-# first-time bootstrap (before "Set computer name" below has run) is never
-# blocked — only a hostname already claimed by another machine trips it.
-- name: Refuse to apply x1's plan on a different known machine
-  assert:
-    command: |
-      # Lowercased: this fleet's work mac carries an MDM-assigned hostname that
-      # is uppercase (GJ4VG9P1VJ). A case-sensitive match never fires on it,
-      # which would let another machine's plan run on the work mac unguarded.
-      h=$(echo "{{ hostname }}" | tr '[:upper:]' '[:lower:]')
-      case "$h" in
-        mainpc|minipc|mac|gj4vg9p1vj)
-          echo "refusing: hostname is '$h', not x1 — wrong machine?" >&2
-          exit 1 ;;
-      esac
-  tags: [safety]
+# x1 — Arch laptop, Hyprland.
+#
+# vars_file lines come first because shared/guard.yml reads `computer_name`
+# from them.
 
 - vars_file: ../../shared/variables.yml
 - vars_file: ./vars.yml
@@ -26,12 +10,12 @@
 - vars:
     is_wsl: false
 
-- import: ../../shared/bootstrap.yml
+# Refuse to run if the live hostname belongs to a different known machine
+# (issue #3). Parameterized — see shared/guard.yml.
+- import: ../../shared/guard.yml
 
-# Fail early if the running provision is not the version this repo pins.
-# Verify-only — see components/provision/index.yml and docs/bootstrap.md.
-- import: ../../components/provision/index.yml
-  tags: [core, provision]
+# SSH identity, passwordless sudo, systemd linger, provision capability check.
+- import: ../../shared/bootstrap.yml
 
 - import: ../../platforms/arch/index.yml
   tags: [arch, system, packages]
@@ -49,39 +33,11 @@
 - import: ./thermal.yml
   tags: [thermal]
 
-# Cross-platform components
-# Palette must come first — every later component's templates read
-# palette.* / editor.* from the variant selected by `palette_variant`.
-- import: ../../components/palette/index.yml
-  tags: [core, palette]
+# palette, claude, codex, git, cli, languages
+- import: ../../shared/core.yml
 
-- import: ../../components/claude/index.yml
-  tags: [core, claude]
-
-- import: ../../components/codex/index.yml
-  tags: [core, codex]
-
-- import: ../../components/git/index.yml
-  tags: [core, git]
-
-- import: ../../components/cli/index.yml
-  tags: [core, cli]
-
-- import: ../../components/languages/index.yml
-  tags: [dev, languages]
-
-- name: Use zsh component
-  use: ../../components/zsh/index.yml
-  tags: [core, shell]
-
-- import: ../../components/tmux/index.yml
-  tags: [tools, tmux]
-
-- name: Use nvim component
-  use: ../../components/nvim/index.yml
-  props:
-    use_win32yank: "false"
-  tags: [editor, nvim]
+# zsh, tmux, nvim
+- import: ../../shared/shell.yml
 
 # Desktop — Hyprland install + config (component is now self-contained).
 - import: ../../components/hyprland/index.yml

@@ -1,0 +1,28 @@
+---
+# The interactive shell and editor layer, common to every machine.
+#
+# Split from shared/core.yml rather than appended to it because several
+# machines run their own steps between the two blocks — work_mac installs
+# usql and teleport there, mac adds teleport and gdrive-mirror, main_pc adds
+# asciinema. provision runs steps in order, so keeping two import points
+# preserves that ordering exactly instead of silently moving those steps
+# after nvim.
+#
+# nvim's `use_win32yank` prop is driven by the variable of the same name
+# (shared/variables.yml, overridden to "true" in the WSL machines' vars.yml)
+# so this file needs no per-machine branch. It was previously passed as a
+# literal at five call sites: "true" on the two WSL boxes, "false" on the
+# other three.
+
+- name: Use zsh component
+  use: ../components/zsh/index.yml
+  tags: [core, shell]
+
+- import: ../components/tmux/index.yml
+  tags: [tools, tmux]
+
+- name: Use nvim component
+  use: ../components/nvim/index.yml
+  props:
+    use_win32yank: "{{ use_win32yank }}"
+  tags: [editor, nvim]

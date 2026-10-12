@@ -1,0 +1,43 @@
+---
+# Cross-machine guard (issue #3) — one copy, parameterized.
+#
+# Imported by every machine's index.yml AFTER its vars_file lines, because it
+# reads `computer_name` (the machine's own declared identity) and
+# `known_hostnames` (the fleet roster, shared/variables.yml).
+#
+# This used to be five hand-maintained `case` statements, one per machine,
+# each listing the other five hostnames. That shape failed open: every copy
+# named `work-mac`, a name that box stopped answering to when MDM took its
+# hostname, so the work mac went unguarded and nothing reported it. Fixing it
+# meant editing five files; adding a seventh machine would mean five more.
+#
+# A machine already declares who it is. Comparing the live hostname to THAT
+# needs no list of peers, so there is nothing to forget to update.
+#
+# Exclusion semantics are preserved exactly: a hostname that belongs to no
+# known machine passes, so first-time bootstrap on a fresh box — whose name
+# has never been set — is never blocked. Only a box answering to ANOTHER
+# machine's name is refused.
+- name: Refuse to apply {{ computer_name }}'s plan on a different known machine
+  assert:
+    command: |
+      set -eu
+      # Both sides lowercased. The work mac's MDM-assigned name is uppercase
+      # (GJ4VG9P1VJ), and a case-sensitive compare is precisely how the
+      # previous guard failed open against it.
+      h=$(echo "{{ hostname }}" | tr '[:upper:]' '[:lower:]')
+      want=$(echo "{{ computer_name }}" | tr '[:upper:]' '[:lower:]')
+
+      # This box is the machine the plan is for. Nothing to refuse.
+      [ "$h" = "$want" ] && exit 0
+
+      # Not this machine. Refuse only if the name belongs to a known peer;
+      # an unrecognised name is a fresh box, which must stay bootstrappable.
+      for known in {{ known_hostnames | join(' ') }}; do
+        if [ "$h" = "$known" ]; then
+          echo "refusing: hostname is '$h', not '$want' — wrong machine?" >&2
+          exit 1
+        fi
+      done
+      exit 0
+  tags: [safety]

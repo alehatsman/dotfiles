@@ -4,6 +4,12 @@ is_wsl: true
 computer_name: minipc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
+
+# nvim's win32yank clipboard bridge (shared/shell.yml passes this through as
+# a component prop). WSL2-only, so the shared default is "false" and the two
+# WSL boxes opt in here. Previously a literal at the nvim call site in this
+# file's index.yml.
+use_win32yank: "true"
 # Mirrored, same value as the shared default (shared/variables.yml). Stated
 # explicitly because the firewall rules in platforms/windows/bootstrap.yml
 # only make sense under this mode: mirrored puts the guest's ports on the

@@ -5,6 +5,12 @@ computer_name: mainpc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
 
+# nvim's win32yank clipboard bridge (shared/shell.yml passes this through as
+# a component prop). WSL2-only, so the shared default is "false" and the two
+# WSL boxes opt in here. Previously a literal at the nvim call site in this
+# file's index.yml.
+use_win32yank: "true"
+
 # Always-on server box: it hosts codefort and builds every CI image, so the
 # host must never sleep or hibernate and the WSL VM must never be torn down
 # with it. Turns on the AC power steps and the WSL-Session-Keepalive task in
@@ -37,4 +43,6 @@ wsl_codefort_port: "8080"
 # (components/codefort). Agents here can take a slim host-specific
 # ~/.claude/CLAUDE.md that mandates cf issue coordination instead of the
 # shared trooper prompt. Path is resolved relative to components/claude/.
+# NOTE: that file does not exist yet — write it before uncommenting, or the
+# claude component fails rendering a src that is not there.
 # claude_system_prompt_src: "../../machines/main_pc/CLAUDE.md"

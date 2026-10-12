@@ -14,15 +14,15 @@ installed by the [asciinema](components/asciinema) component.
 ## Bootstrap a fresh machine
 
 From nothing to provisioned. `provision` is not packaged and has no
-releases, so step one builds it from source at the version this repo pins
-(`provision_version` in `shared/variables.yml`). See [docs/bootstrap.md](docs/bootstrap.md).
+releases, so step one builds it from source at the ref this repo tracks
+(`provision_ref` in `shared/variables.yml`). See [docs/bootstrap.md](docs/bootstrap.md).
 
 The only step that can't be automated is putting the generated SSH public
 key on GitHub — the run prints it and tells you when.
 
 ```sh
 git clone https://github.com/alehatsman/dotfiles ~/dotfiles && cd ~/dotfiles
-./scripts/bootstrap.sh                    # builds + installs provision
+./scripts/bootstrap.sh                    # builds provision, installs the pre-push hook
 export PATH="$HOME/.local/bin:$PATH"      # until components/zsh lands
 provision plan ./<machine>.yml            # preview; works before anything exists
 provision apply ./<machine>.yml --ask-sudo-pass
@@ -51,7 +51,8 @@ Per-platform notes:
 just                       # list recipes
 just <machine>             # apply  (x1|main_pc|mini_pc|mac|work_mac|pixel)
 just plan <machine>        # plan, no changes
-just ci                    # parse + render all five plans, no system reads
+just ci                    # validate + render all six machine plans, no system reads
+just hooks                 # install the pre-push validation hook
 just backup                # snapshot rc files → ~/.dotfiles-backup
 just upgrade               # deliberate full system upgrade (never part of apply)
 ```
@@ -72,9 +73,9 @@ terminal.
 machines/<m>/      per-host: index.yml (component set), vars.yml
 components/<c>/    unit of config: index.yml + templates/*.j2
 platforms/<p>/     OS-specific: arch, macos, windows
-shared/            variables.yml, bootstrap.yml
-scripts/           test-podman.sh
-docs/              nvim, tmux, keybindings, windows-ssh-setup
+shared/            variables.yml, bootstrap.yml, guard.yml, core.yml, shell.yml
+scripts/           bootstrap.sh, validate.sh, hooks/pre-push, test-podman.sh
+docs/              bootstrap, fleet-structure, nvim, tmux, keybindings, windows-ssh-setup
 justfile           dev surface (`just`)
 ```
 
@@ -94,20 +95,27 @@ PowerShell before applying inside WSL.
 
 ## Components
 
-`alacritty · asciinema · claude · codefort · codex · fleet-peer · git ·
-hyprland · languages · nvim · palette · ssh · teleport · termux · tmux ·
-usql · zsh`
+`alacritty · asciinema · claude · cli · codefort · codex · fleet-peer ·
+gdrive-mirror · git · hyprland · languages · nvim · palette · provision ·
+ssh · teleport · termux · tmux · usql · zsh`
 
 Each is self-contained: `index.yml` declares steps, `templates/*.j2` render
-into place. Add a component → reference it from a machine's `index.yml`.
+into place.
+
+The set every machine gets lives in `shared/core.yml` (palette, claude,
+codex, git, cli, languages) and `shared/shell.yml` (zsh, tmux, nvim) — add a
+component there to give it to the whole fleet, or reference it from a single
+machine's `index.yml` to give it to one.
 
 ## Rules of engagement
 
 - All config flows through dotfiles + provision. No drift. That includes
   removals: an app nobody declared gets declared or goes `state: absent`.
 - Templates are Jinja2; pass literal `{{ }}` via `{% verbatim %}`.
-- Track work as codefort issues (`cf`): claim before coding, close when
-  merged. codefort down or `cf` missing → GitHub issues on this repo. Worktrees for non-trivial changes. Never auto-push. See
-  [CLAUDE.md](CLAUDE.md).
+- Validation is local, never GitHub Actions. `scripts/hooks/pre-push`
+  refuses a push whose machine plans do not render; `just ci` runs the same
+  check by hand. Bypass with `--no-verify` and own it.
+- Track work as GitHub issues on `alehatsman/dotfiles`. Worktrees for
+  non-trivial changes. Never auto-push. See [CLAUDE.md](CLAUDE.md).
 
 [MIT](LICENSE)

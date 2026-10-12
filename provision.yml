@@ -11,8 +11,9 @@
 # to match nothing at all, and a dispatcher that matches nothing skips every
 # import and still exits 0, reporting success while doing nothing.
 #
-# Alternate profile (mini_pc_server.yml) is
-# intentionally excluded — invoke it explicitly by path.
+# pixel is intentionally excluded: it is a target reached over adb, not a
+# host that runs a plan, so no hostname here could ever match it. Invoke
+# ./pixel.yml explicitly by path, from whichever mac the phone is plugged into.
 
 - import: ./main_pc.yml
   when: hostname == 'mainpc'

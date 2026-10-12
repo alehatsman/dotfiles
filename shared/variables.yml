@@ -8,7 +8,26 @@
 # need to set it here.
 FULLNAME: "Aleh Atsman"
 EMAIL: aleh.atsman@gmail.com
-use_win32yank: false
+
+# nvim's win32yank clipboard bridge (components/nvim prop, wired in
+# shared/shell.yml). A string, not a bool: the component declares the prop
+# as `type: string` with default "false". Overridden to "true" in the WSL
+# machines' vars.yml — it is WSL2-only.
+use_win32yank: "false"
+
+# The fleet roster, lowercased — every hostname that belongs to a machine in
+# this repo. shared/guard.yml reads it to decide whether a hostname that is
+# not this machine's belongs to a *known peer* (refuse) or to an unrecognised
+# fresh box (allow, so first-time bootstrap still works).
+#
+# Declared once. The per-machine `case` statements this replaced were
+# maintained by hand in five files and drifted: all five named `work-mac`
+# long after MDM renamed that box, leaving it unguarded.
+#
+# Adding a machine: add its hostname here and set `computer_name` in its
+# vars.yml. pixel is absent on purpose — it is a target reached over adb,
+# never a host that runs a plan.
+known_hostnames: [x1, mac, gj4vg9p1vj, mainpc, minipc]
 
 # The shared CLI tool set (components/cli, dotfiles#35): binaries every dev
 # machine must resolve, because the shared configs call them. Installed per

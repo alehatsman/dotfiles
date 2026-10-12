@@ -127,7 +127,7 @@ steps:
     tags: [zsh, shell]
 
   # macOS keeps the login shell in Directory Services, not /etc/passwd,
-  # so the idempotence guard differs by platform (migration §3.5).
+  # so the idempotence guard differs by platform.
   - name: Set zsh as default shell (linux)
     shell: chsh -s "{{ zsh_shell_path }}" "{{ username }}"
     unless: 'test "$(getent passwd {{ username }} | cut -d: -f7)" = "{{ zsh_shell_path }}"'
