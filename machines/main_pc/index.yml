@@ -96,10 +96,13 @@
 # built — codefort's own CI runner execs `mooncake step` inside them, which
 # needs a fix in the codefort repo (out of scope here). See CLAUDE.md.
 
-# Inbound fleet access. Gated on fleet_peer_enabled (false in ./vars.yml
-# until dotfiles#2's authorized_keys reconciliation is done) — see
-# components/fleet-peer/index.yml. Last, deliberately: it asserts on a
-# live agentd, so it should fail after the rest of the machine is
-# provisioned rather than before.
+# Inbound fleet access. Gated on fleet_peer_enabled ("true" in ./vars.yml) —
+# see components/fleet-peer/index.yml. On this WSL box only the
+# authorized_keys half runs: the sshd half is darwin-gated, and Linux sshd
+# here comes from platforms/windows/index.yml.
+#
+# Kept last. The live-agentd assert that originally forced this position went
+# with mooncake (see CLAUDE.md), but rendering access control after the rest
+# of the machine is provisioned is still the order we want.
 - import: ../../components/fleet-peer/index.yml
   tags: [wsl, fleet-peer]

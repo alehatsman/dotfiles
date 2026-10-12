@@ -312,8 +312,7 @@
 # session-based shutdown: WSL exits when the last wsl.exe session closes,
 # regardless of timeout. On always-on server boxes (windows_prevent_sleep)
 # a persistent boot task holds a session open so all services stay reachable.
-# Same shape as WSL-Network-Keepalive (NAT mode) but unconditional on
-# networking mode — mirrored-networking boxes need this too.
+# Unconditional on networking mode — mirrored-networking boxes need this too.
 - name: Register WSL session keepalive task (always-on)
   # ExecutionTimeLimit 0 = no limit; the task is meant to run forever.
   shell:

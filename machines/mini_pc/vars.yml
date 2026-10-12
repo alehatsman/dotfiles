@@ -4,9 +4,16 @@ is_wsl: true
 computer_name: minipc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
-# mirrored networking flaps the WSL guest's LAN exposure on this box; use NAT
-# + netsh portproxy + a persistent-session keepalive instead (dotfiles #16).
-# Enables the portproxy/keepalive steps in platforms/windows/bootstrap.yml.
+# Mirrored, same value as the shared default (shared/variables.yml). Stated
+# explicitly because the firewall rules in platforms/windows/bootstrap.yml
+# only make sense under this mode: mirrored puts the guest's ports on the
+# host NIC, which is why both a Windows and a Hyper-V rule are needed.
+#
+# dotfiles#16 once ran this box on NAT + netsh portproxy, because mirrored
+# flapped the guest's LAN exposure. That workaround is gone: the repo has no
+# portproxy steps at all, and the keepalive tasks in bootstrap.yml are not
+# gated on networking mode. Under mirrored, host and guest share one network
+# namespace -- a stray Windows-side listener on a guest port collides with it.
 wsl_networking_mode: "mirrored"
 # codefort server port. mini_pc isn't the codefort host (main_pc is), but
 # the shared platforms/windows/bootstrap.yml opens this port uniformly on
