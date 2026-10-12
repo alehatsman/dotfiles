@@ -42,6 +42,23 @@
 # zsh, tmux, nvim
 - import: ../../shared/shell.yml
 
+# Headless terminal/session daemon, reached from the phone over Tailscale
+# Serve (https://mainpc.tail37c478.ts.net). After shared/shell.yml because
+# the build needs cargo from core's languages component, and node/npm from
+# platforms/windows/packages.yml for the embedded web UI.
+#
+# This box was already running a hand-installed teleportd with a hand-written
+# systemd unit -- working, but declared nowhere. This import adopts it; see
+# docs/teleport-linux.md.
+- name: Use teleport component
+  use: ../../components/teleport/index.yml
+  props:
+    # From `tailscale status` on this box. Tailscale pins this at device
+    # registration and it does not follow OS hostname renames, so it is
+    # genuinely per-machine (dotfiles#15).
+    teleport_tailnet_hostname: mainpc.tail37c478.ts.net
+  tags: [tools, teleport]
+
 # Private self-hosted git host. Builds from ~/projects/codefort and runs
 # codefortd as a user systemd service (API + git + web UI on one port).
 # This box is the main server.

@@ -23,10 +23,10 @@ teleport_port: "7337"
 teleport_log_dir: "~/Library/Logs"
 teleport_launch_agent_label: "com.alehatsman.teleportd"
 
-# teleportd's own default data dir on macOS (directories::BaseDirs::data_local_dir,
-# daemon/src/main.rs's resolve_data_dir) — not overridden via --data-dir, so
-# this is where config.toml must be written for the daemon to pick it up.
-teleport_data_dir: "~/Library/Application Support/teleport"
+# teleport_data_dir is NOT set here. It differs per OS (macOS
+# ~/Library/Application Support/teleport, Linux ~/.local/share/teleport) and
+# vars_file values are data that never get rendered, so a Jinja conditional
+# here would stay literal. It is computed in index.yml's `vars:` step instead.
 
 # teleport_tailnet_hostname moved to components/teleport/index.yml's props
 # block (dotfiles#15) — it's genuinely per-machine, so it's set explicitly

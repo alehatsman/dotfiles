@@ -1,0 +1,28 @@
+# Managed by provision — components/teleport/templates/teleportd.service.j2.
+# Edits here are overwritten on the next apply.
+#
+# The Linux counterpart to teleportd.plist.j2. Unlike the macOS LaunchAgent,
+# this survives logout: shared/bootstrap.yml runs `loginctl enable-linger`
+# on every Linux host, so the user manager keeps running without a session.
+# That is the gap issue #40 tracks on the macOS side.
+
+[Unit]
+Description=teleportd — local headless terminal/session daemon
+Documentation={{ teleport_repo_url }}
+# teleportd binds loopback only, but tailscale serve proxies it, so there is
+# no point starting before the network is actually up.
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart={{ teleport_bin_dir | expanduser }}/teleportd
+
+# Restart=always, not on-failure: a clean exit or a signal-kill should still
+# come back. This is the same reasoning as the ssh.service drop-in in
+# platforms/windows/index.yml -- on-failure covers crashes and nothing else,
+# and these boxes are administered remotely through the thing being restarted.
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
