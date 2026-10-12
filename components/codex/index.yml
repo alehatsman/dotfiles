@@ -1,4 +1,18 @@
 ---
+# npm's default global prefix on Debian/Ubuntu is /usr/local, which is
+# root-owned -- so `npm install -g` below died with
+# `EACCES: permission denied, mkdir '/usr/local/lib/node_modules'` on mini_pc.
+# Point the prefix at ~/.local instead, which is already on PATH
+# (components/zsh) and needs no sudo. Installing npm packages as root is the
+# alternative, and it leaves root-owned files in a user tree.
+#
+# Skipped where the prefix is already writable -- Homebrew's node on macOS
+# owns its own prefix, so the macs never need this.
+- name: "Point npm's global prefix at ~/.local"
+  shell: npm config set prefix "$HOME/.local"
+  unless: test -w "$(npm config get prefix 2>/dev/null)/lib" 2>/dev/null
+  tags: [codex]
+
 - name: "Install codex if not present"
   # OpenAI Codex CLI ships on npm; npm is provisioned on every platform
   # (arch nodejs/npm, mac node, windows nodejs/npm) so this stays portable.

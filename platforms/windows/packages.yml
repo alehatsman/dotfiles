@@ -3,9 +3,15 @@
 # (migration §2, decided 2026-09-08): a full distro upgrade is a choice,
 # not declared state, and it made every apply slow and irreproducible.
 # Upgrade deliberately instead.
+#
+# `manager: apt` is explicit on every pkg step below. Without it provision
+# picks whatever manager the HOST has, so rendering this WSL-only file on a
+# mac resolved to brew and failed validation with `brew must not run as
+# root` -- which is what broke `just ci` from a mac.
 
 - name: Install bootstrap packages (needed before add-apt-repository / pkg.repo)
   pkg:
+    manager: apt
     state: present
     names:
       - gnupg
@@ -40,6 +46,7 @@
 
 - name: Install Ubuntu apt apps
   pkg:
+    manager: apt
     state: present
     names:
       - gnupg

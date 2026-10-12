@@ -33,12 +33,23 @@
   # isayes ships its own provision task for build+install (cargo build
   # --release, then copy to ~/.local/bin/isayes) — reuse it rather than
   # duplicating the build steps here.
+  #
+  # `cargo build --release` first, and that is not redundant with the build
+  # step inside tasks/install.yml. That task's own header says it cannot
+  # bootstrap from a clean checkout: provision validates a whole plan before
+  # running any of it, so the final `file` step's src (target/release/isayes)
+  # is checked for existence before the build step that creates it has run.
+  # We clone fresh every time, which is exactly the unsupported path — it
+  # failed on main_pc with "file src not found: target/release/isayes".
+  # Building once up front satisfies the validator; install.yml's own build
+  # step then no-ops on the warm target dir.
   shell: |
     set -euo pipefail
     tmpdir=$(mktemp -d)
     trap 'rm -rf "$tmpdir"' EXIT
     git clone https://github.com/alehatsman/isayes "$tmpdir/isayes"
     cd "$tmpdir/isayes"
+    cargo build --release
     provision apply tasks/install.yml
   creates: ~/.local/bin/isayes
   tags: [claude]

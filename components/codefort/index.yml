@@ -47,10 +47,13 @@ steps:
     tags: [codefort, build]
 
   - name: "Ensure git is installed"
-    pkg:
-      name: git
-      state: present
-    sudo: true
+    # An assert, matching the Go and Node guards above: git comes from
+    # components/cli (and platforms/windows/packages.yml), both of which run
+    # before this component. Installing it here needed a `pkg` + `sudo` with
+    # no declared manager, which resolved to brew when this plan was rendered
+    # from a mac and failed validation.
+    assert:
+      command: command -v git
     tags: [codefort, build]
 
   # ───────────────── MIGRATION (moongit → codefort, one-time) ────────────────

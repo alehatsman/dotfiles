@@ -20,6 +20,7 @@
 # packages/ubuntu_packages.yml.
 - name: Install openssh-server
   pkg:
+    manager: apt
     name: openssh-server
     state: present
   sudo: true
@@ -183,6 +184,7 @@
 
 - name: Install tailscale
   pkg:
+    manager: apt
     name: tailscale
     state: present
   sudo: true
@@ -230,6 +232,7 @@
 # machines without an NVIDIA GPU.
 - name: Install nvtop (if NVIDIA GPU present)
   pkg:
+    manager: apt
     name: nvtop
     state: present
   sudo: true
