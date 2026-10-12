@@ -80,6 +80,10 @@
       - hexyl
       - wl-clipboard
       - zstd
+      # docker.io was installed by hand on main_pc; declared here with the
+      # compose v2 plugin so `docker compose` works for carscrape (dotfiles#42).
+      - docker.io
+      - docker-compose-v2
   sudo: true
   timeout: 20m
   retry:

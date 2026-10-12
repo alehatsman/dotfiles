@@ -28,6 +28,42 @@
   when: pacman_available
   tags: [dev, python]
 
+# uv (dotfiles#42): Python project manager; carscrape and every uv-based
+# repo need it on PATH. apt has no package, so the apt path is a pinned
+# release, checksum-verified fetch, `creates`-gated unpack — same pattern as
+# lazygit in components/cli. brew and pacman ship it.
+- name: Fetch the uv release (apt)
+  download:
+    url: https://github.com/astral-sh/uv/releases/download/0.13.0/uv-x86_64-unknown-linux-gnu.tar.gz
+    dest: ~/.cache/dotfiles/uv-0.13.0-x86_64-unknown-linux-gnu.tar.gz
+    sha256: 1468ebd5a5541121837c5a2817b9972ba6090fa6caa3d142620850a47fb75154
+  when: apt_available and arch == "x86_64"
+  tags: [dev, python, uv]
+
+- name: Install uv (apt, release binary)
+  shell: |
+    set -euo pipefail
+    mkdir -p "$HOME/.local/bin"
+    tar -xzf "$HOME/.cache/dotfiles/uv-0.13.0-x86_64-unknown-linux-gnu.tar.gz" -C "$HOME/.local/bin" \
+      --strip-components=1 uv-x86_64-unknown-linux-gnu/uv uv-x86_64-unknown-linux-gnu/uvx
+  creates: ~/.local/bin/uv
+  when: apt_available and arch == "x86_64"
+  tags: [dev, python, uv]
+
+- name: Install uv (brew)
+  pkg:
+    name: uv
+    manager: brew
+  when: brew_available
+  tags: [dev, python, uv]
+
+- name: Install uv (pacman)
+  pkg:
+    name: uv
+  sudo: true
+  when: pacman_available
+  tags: [dev, python, uv]
+
 # Rust via rustup. `--no-modify-path` keeps shell init untouched —
 # the cargo bin dir is added by zsh config (~/.config/zsh/env.zsh, sourced by
 # .zshenv, sources ~/.cargo/env).
