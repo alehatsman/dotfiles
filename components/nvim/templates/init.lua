@@ -607,7 +607,6 @@ vim.call('sign_define', 'DiagnosticSignHint',  { text = "•", texthl = "Diagnos
 -- which jumps directly on a single result, same as the old handler-override
 -- plugins did, and shows a picker on multiple)
 vim.keymap.set('n', '<c-]>', '<cmd>FzfLua lsp_definitions<CR>')
-vim.keymap.set('n', '<c-k>', '<cmd>lua vim.lsp.buf.signature_help()<CR>')
 vim.keymap.set('n', 'K', '<cmd>lua vim.lsp.buf.hover()<CR>')
 vim.keymap.set('n', '<c-space>', '<cmd>FzfLua lsp_code_actions<CR>')
 vim.keymap.set('n', '<leader>rn', '<cmd>lua vim.lsp.buf.rename()<CR>')
@@ -824,7 +823,6 @@ wk.add({
 wk.add({
   -- LSP
   { "<c-]>", desc = "Go to definition" },
-  { "<c-k>", desc = "Signature help" },
   { "K", desc = "Hover documentation" },
   { "<c-space>", desc = "Code actions" },
 
@@ -835,6 +833,7 @@ wk.add({
   -- Window navigation
   { "<c-h>", desc = "Window left" },
   { "<c-j>", desc = "Window down" },
+  { "<c-k>", desc = "Window up" },
   { "<c-l>", desc = "Window right" },
   { "<c-w>o", desc = "Only this window" },
   { "<leader>wv", desc = "Split vertical" },
