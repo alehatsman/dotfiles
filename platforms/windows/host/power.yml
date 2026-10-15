@@ -1,0 +1,54 @@
+---
+# Power policy. Server boxes (windows_prevent_sleep) never sleep so WSL and
+# its daemons stay reachable; laptops keep a normal AC sleep timeout.
+
+# Fast Startup ("hybrid shutdown") hibernates the kernel on shutdown
+# instead of doing a clean boot next time. It's a known source of WSL2
+# instability — the virtual switch state survives across "boots" and
+# WSL ends up in a weird partial-init state. Disabling it makes Windows
+# do a real cold boot every time, which is what WSL expects.
+# HiberbootEnabled=0 disables Fast Startup but keeps hibernate (S4)
+# available for manual use.
+- name: Disable Windows Fast Startup (HiberbootEnabled=0) for stable WSL boot
+  shell:
+    interpreter: powershell
+    script: |
+      Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' `
+        -Name HiberbootEnabled -Value 0 -Type DWord
+  unless: |
+    $cur = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -ErrorAction SilentlyContinue).HiberbootEnabled
+    if ($cur -eq 0) { exit 0 } else { exit 1 }
+
+# Hibernate is read from HibernateEnabled in the registry, not from
+# `powercfg /availablesleepstates`: that output has no "Hibernate: Available"
+# line to match, so the old check read "already off" on every box.
+- name: Disable sleep and hibernate on AC power
+  shell:
+    interpreter: powershell
+    script: |
+      powercfg /change standby-timeout-ac 0
+      powercfg /change hibernate-timeout-ac 0
+      powercfg /hibernate off
+  unless: |
+    function AcIndex($setting) {
+      powercfg /query SCHEME_CURRENT SUB_SLEEP $setting |
+        Select-String "Current AC Power Setting Index" |
+        ForEach-Object { [Convert]::ToInt32(($_ -split '\s+')[-1], 16) }
+    }
+    $hib = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Power' -Name HibernateEnabled -ErrorAction SilentlyContinue).HibernateEnabled
+    if ((AcIndex STANDBYIDLE) -eq 0 -and (AcIndex HIBERNATEIDLE) -eq 0 -and $hib -eq 0) { exit 0 } else { exit 1 }
+  when: windows_prevent_sleep
+  tags: [always-on]
+
+# Inverse of the above: restore AC sleep timeout on non-server boxes so the
+# machine can sleep normally.
+- name: Restore AC sleep timeout
+  shell:
+    interpreter: powershell
+    script: powercfg /change standby-timeout-ac {{ windows_sleep_timeout_ac }}
+  unless: |
+    $acSleep = (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE |
+                Select-String "Current AC Power Setting Index" |
+                ForEach-Object { [Convert]::ToInt32(($_ -split '\s+')[-1], 16) })
+    if ($acSleep -eq {{ windows_sleep_timeout_ac }} * 60) { exit 0 } else { exit 1 }
+  when: not windows_prevent_sleep

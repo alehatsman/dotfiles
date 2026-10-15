@@ -42,8 +42,9 @@ Per-platform notes:
   ~30 min plus cask downloads.
 - **Arch** — `platforms/arch/bootstrap.sh` does the clone + apply in one
   shot on first boot; run `scripts/bootstrap.sh` first to get `provision`.
-- **Windows** — run `platforms/windows/bootstrap.yml` from an Admin
-  PowerShell first, then the sequence above *inside* WSL.
+- **Windows** — `scripts\bootstrap.ps1 -Machine <m>` from an Admin
+  PowerShell first (builds `provision.exe`, applies `./<m>.host.yml`), then
+  the sequence above *inside* WSL. See `platforms/windows/README.md`.
 
 ## Deploy
 
@@ -92,8 +93,9 @@ justfile           dev surface (`just`)
 | work_mac| macOS (NVIDIA work box) | Homebrew bootstraps itself     |
 | pixel   | Pixel 9a, GrapheneOS    | applied from the Mac over adb; manual steps in `machines/pixel/index.yml` |
 
-main_pc/mini_pc: run `platforms/windows/bootstrap.yml` from an Admin
-PowerShell before applying inside WSL.
+main_pc/mini_pc: the Windows host has its own entry, `./<m>.host.yml`,
+applied with `provision.exe` from an Admin PowerShell before applying inside
+WSL.
 
 ## Components
 

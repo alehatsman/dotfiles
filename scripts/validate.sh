@@ -12,8 +12,7 @@
 #               undefined vars, bad imports, unknown action keys.
 #
 # Both run on any host for any machine, so a mac checks mainpc's config.
-# Windows machines get a second check: the host plan
-# (platforms/windows/bootstrap.yml) with that machine's vars.
+# Windows machines get a second check: the host plan, ./<m>.host.yml.
 #
 # The machine list is DERIVED from machines/*/, not written down. A list
 # written down is a list that drifts: pixel was missing from codefort.yml's
@@ -112,15 +111,19 @@ for m in "${machines[@]}"; do
   check "$m" "./$m.yml"
 done
 
-# The Windows HOST plan. A Windows machine's root entry is its WSL guest;
-# the host side is platforms/windows/bootstrap.yml run with that machine's
-# vars, and nothing checked it — it sat failing `validate` with six ungated
-# shell steps. Which machines are Windows is derived, same as the list
-# above: the ones whose index imports platforms/windows.
+# Windows HOST plans: ./<m>.host.yml. A Windows machine's ./<m>.yml is its
+# WSL guest; the host side went unchecked until this stage and sat failing
+# `validate` with six ungated shell steps. A machine whose index imports
+# platforms/windows without a host root is a defect, same rule as above.
 for m in "${machines[@]}"; do
-  if grep -q 'platforms/windows/' "machines/$m/index.yml" 2>/dev/null; then
-    check "$m (host)" platforms/windows/bootstrap.yml --vars-file "machines/$m/vars.yml"
+  if grep -q 'platforms/windows/' "machines/$m/index.yml" 2>/dev/null && [ ! -f "$m.host.yml" ]; then
+    echo "validate: $m is a Windows machine but $m.host.yml does not exist" >&2
+    exit 1
   fi
+done
+for f in *.host.yml; do
+  [ -e "$f" ] || continue
+  check "${f%.yml}" "./$f"
 done
 
 if [ ${#failed[@]} -gt 0 ]; then

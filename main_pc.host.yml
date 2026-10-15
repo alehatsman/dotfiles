@@ -1,0 +1,10 @@
+---
+# main_pc — Windows 11 HOST side. The WSL guest is ./main_pc.yml.
+#
+# Plan:   provision plan  .\main_pc.host.yml
+# Apply:  provision apply .\main_pc.host.yml      (Administrator PowerShell)
+# Fresh box: scripts\bootstrap.ps1 -Machine main_pc (see platforms/windows/README.md)
+
+- vars_file: ./shared/variables.yml
+- vars_file: ./machines/main_pc/vars.yml
+- import: ./platforms/windows/host/index.yml

@@ -1,9 +1,13 @@
-# Bootstrap a Windows host: get git, ~/dotfiles, ~/projects and provision.exe
-# onto a machine that has none of them. The Windows twin of bootstrap.sh.
+# Bootstrap a Windows host: get git, ~/dotfiles and provision.exe onto a
+# machine that has none of them, then hand off to ./<machine>.host.yml.
+# The Windows twin of bootstrap.sh.
 #
-# Everything after this script is declared in platforms/windows/bootstrap.yml.
-# This script is only the part that cannot be: a plan needs provision.exe to
-# run and a checkout to read, and on a fresh box there is neither.
+# Only what no plan can do lives here: a plan needs provision.exe to run and
+# a checkout to read, and an apply must not swap out the binary running it
+# (components/provision). Everything else -- packages, ~/projects, PATH,
+# gitconfig, WSL, power, firewall -- is declared under platforms/windows/host/.
+# Git and WinLibs are installed here only when missing; the plan declares
+# both, so it owns them from the first apply on.
 #
 #   .\scripts\bootstrap.ps1                          install, print next step
 #   .\scripts\bootstrap.ps1 -Machine mini_pc -Plan   install, then live plan
@@ -57,8 +61,7 @@ $RustHost = 'x86_64-pc-windows-gnu'
 
 # --- Git ---------------------------------------------------------------------
 # Installed here, not left to the plan, because nothing else can happen
-# without it. platforms/windows/host-packages.yml declares it too, so the
-# plan owns it from the first apply on.
+# without it.
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     Die 'winget not found -- install "App Installer" from the Microsoft Store'
 }
@@ -86,9 +89,6 @@ if (-not $repoRoot) {
         Invoke-Checked 'git clone dotfiles' { git clone -q $DotfilesRepo $repoRoot }
     }
 }
-# Repos live in ~/projects. Declared in bootstrap.yml as well; made here so
-# the layout exists even before the first apply.
-New-Item -ItemType Directory -Force (Join-Path $HOME 'projects') | Out-Null
 
 # --- provision ref -----------------------------------------------------------
 # Read the same line bootstrap.sh reads, so the two platforms build one ref.
@@ -200,14 +200,8 @@ if ($needInstall) {
     }
 }
 
-# ~\.local\bin on the user PATH, persistently: provision.exe is called from a
-# fresh shell after this one is gone.
-$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-if (($userPath -split ';') -notcontains $Prefix) {
-    Say "adding $Prefix to the user PATH (new shells pick it up)"
-    $newPath = if ($userPath) { $userPath.TrimEnd(';') + ';' + $Prefix } else { $Prefix }
-    [Environment]::SetEnvironmentVariable('Path', $newPath, 'User')
-}
+# This process only. The persistent user PATH entry is declared in
+# platforms/windows/host/home.yml.
 if (($env:Path -split ';') -notcontains $Prefix) { $env:Path = "$Prefix;$env:Path" }
 
 Invoke-Checked 'provision --version' { & $exe --version }
@@ -216,31 +210,31 @@ if (-not $Machine) {
     Write-Host @"
 
 Next (from $repoRoot):
-    provision plan  platforms\windows\bootstrap.yml --vars-file machines\<machine>\vars.yml
-    provision apply platforms\windows\bootstrap.yml --vars-file machines\<machine>\vars.yml   # Administrator
+    provision plan  .\<machine>.host.yml
+    provision apply .\<machine>.host.yml   # Administrator
 "@
     exit 0
 }
 
-$vars = Join-Path $repoRoot "machines\$Machine\vars.yml"
-if (-not (Test-Path $vars)) { Die "no such machine: $vars" }
+$entry = "$Machine.host.yml"
+if (-not (Test-Path (Join-Path $repoRoot $entry))) { Die "no such host plan: $repoRoot\$entry" }
 
 Push-Location $repoRoot
 try {
     if ($Plan) {
-        # Probes the host, changes nothing. Most probes read state any user
+        # Probes the host, changes nothing. The probes read state any user
         # can read, so plan does not demand elevation.
-        Say "planning platforms\windows\bootstrap.yml for $Machine"
-        & $exe plan platforms\windows\bootstrap.yml --vars-file $vars
+        Say "planning $entry"
+        & $exe plan ".\$entry"
     } else {
-        # Elevation on Windows is per-process (UAC): the plan has no `sudo:`,
-        # so the shell itself must already be Administrator.
+        # Elevation on Windows is per-process (UAC): provision refuses `sudo:`
+        # there, so the shell itself must already be Administrator.
         $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
         if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
             Die 'apply needs an Administrator PowerShell (or pass -Plan for a dry run)'
         }
-        Say "applying platforms\windows\bootstrap.yml for $Machine"
-        & $exe apply platforms\windows\bootstrap.yml --vars-file $vars
+        Say "applying $entry"
+        & $exe apply ".\$entry"
     }
     exit $LASTEXITCODE
 } finally { Pop-Location }

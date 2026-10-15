@@ -11,7 +11,7 @@ wsl_ssh_port: "2222"
 # file's index.yml.
 use_win32yank: "true"
 # Mirrored, same value as the shared default (shared/variables.yml). Stated
-# explicitly because the firewall rules in platforms/windows/bootstrap.yml
+# explicitly because the firewall rules in platforms/windows/host/network.yml
 # only make sense under this mode: mirrored puts the guest's ports on the
 # host NIC, which is why both a Windows and a Hyper-V rule are needed.
 #
@@ -22,7 +22,7 @@ use_win32yank: "true"
 # namespace -- a stray Windows-side listener on a guest port collides with it.
 wsl_networking_mode: "mirrored"
 # codefort server port. mini_pc isn't the codefort host (main_pc is), but
-# the shared platforms/windows/bootstrap.yml opens this port uniformly on
+# the shared platforms/windows/host/network.yml opens this port uniformly on
 # every Windows box, so the var must be defined or the firewall step fails
 # rendering "{{ wsl_codefort_port }}". codefortd binds *:8080 inside WSL.
 wsl_codefort_port: "8080"

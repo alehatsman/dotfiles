@@ -2,7 +2,8 @@
 # WSL-side provisioning. Runs INSIDE the WSL Ubuntu distro.
 #
 # Host-side bits (.wslconfig, firewall rule, scheduled task) are owned by
-# platforms/windows/bootstrap.yml — those run on the Windows host, not here.
+# platforms/windows/host/ (entry: ./<m>.host.yml) — those run on the Windows
+# host, not here.
 
 - import: ./packages.yml
   tags: [wsl, packages]

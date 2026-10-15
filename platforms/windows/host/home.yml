@@ -1,0 +1,44 @@
+---
+# The machine's identity and the user's home: computer name, ~/projects,
+# ~/.local/bin on PATH, ~/.gitconfig.
+
+# COMPUTERNAME is upper-case NetBIOS; the declared name is lower-case. -ieq.
+- name: Set computer name
+  shell:
+    interpreter: powershell
+    script: |
+      Write-Host "Renaming computer $env:COMPUTERNAME to {{ computer_name }} (takes effect after reboot)"
+      Rename-Computer -NewName "{{ computer_name }}" -Force
+  unless: if ($env:COMPUTERNAME -ieq "{{ computer_name }}") { exit 0 } else { exit 1 }
+  tags: [identity]
+
+# Repos live in ~/projects, the same layout as every other box.
+- name: Projects directory
+  file:
+    path: ~/projects
+    state: dir
+
+# scripts/bootstrap.ps1 installs provision.exe here, as bootstrap.sh does on
+# unix. The user PATH lives in the registry; a new shell picks it up.
+- name: ~/.local/bin on the user PATH
+  shell:
+    interpreter: powershell
+    script: |
+      $dir = Join-Path $HOME '.local\bin'
+      $cur = [Environment]::GetEnvironmentVariable('Path', 'User')
+      $new = if ($cur) { $cur.TrimEnd(';') + ';' + $dir } else { $dir }
+      [Environment]::SetEnvironmentVariable('Path', $new, 'User')
+  unless: |
+    $dir = Join-Path $HOME '.local\bin'
+    if (([Environment]::GetEnvironmentVariable('Path', 'User') -split ';') -contains $dir) { exit 0 } else { exit 1 }
+
+# A host gitconfig of its own, not components/git's: that one sets delta as
+# pager, nvim as editor and a bash hook dispatcher, none of which exist on
+# the host. Development happens in the WSL guest; the host needs an identity
+# and sane line endings for the checkouts it does hold (~/dotfiles,
+# ~/projects).
+- name: Deploy the host ~/.gitconfig
+  template:
+    src: ../templates/gitconfig.j2
+    dest: ~/.gitconfig
+  tags: [git]

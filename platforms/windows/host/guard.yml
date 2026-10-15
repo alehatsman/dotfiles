@@ -1,0 +1,24 @@
+---
+# Cross-machine guard for the Windows host — shared/guard.yml's semantics in
+# PowerShell, because that one is POSIX sh and the host has no sh to run it.
+#
+# Refuse only when the live hostname belongs to ANOTHER known machine. A name
+# that is no known machine passes, so a fresh box — whose name home.yml has
+# not set yet — stays bootstrappable.
+#
+# `facts.hostname`, not `hostname`: the bare name can be shadowed by a var,
+# and a guard that a var can satisfy guards nothing (provision spec §5).
+- name: Refuse to apply {{ computer_name }}'s host plan on a different known machine
+  assert:
+    command: |
+      $h = "{{ facts.hostname }}".ToLower()
+      $want = "{{ computer_name }}".ToLower()
+      if ($h -eq $want) { exit 0 }
+      foreach ($known in @({% for k in known_hostnames %}'{{ k }}'{% if not loop.last %}, {% endif %}{% endfor %})) {
+        if ($h -eq $known) {
+          [Console]::Error.WriteLine("refusing: hostname is '$h', not '$want' -- wrong machine?")
+          exit 1
+        }
+      }
+      exit 0
+  tags: [safety]

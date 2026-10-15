@@ -41,8 +41,8 @@ Out:
 
 - Publishing releases on `alehatsman/provision`. That is the better long-term
   fix and belongs in that repo, not this one. Tracked separately.
-- Windows host bootstrap (`platforms/windows/bootstrap.yml`) — unchanged; it
-  runs before WSL exists and is a different problem.
+- The Windows host. It runs before WSL exists and has its own twin of this
+  script, `scripts/bootstrap.ps1` — see `platforms/windows/README.md`.
 - Any change to how machines are applied once `provision` is present.
 
 ## Interfaces

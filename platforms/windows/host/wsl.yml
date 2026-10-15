@@ -1,0 +1,34 @@
+---
+# WSL itself, from the host side: the default version, the distro, and
+# ~/.wslconfig. What runs inside the distro is platforms/windows/index.yml.
+#
+# No Tailscale here, deliberately (dotfiles#90). The WSL guest owns the
+# tailnet node on these boxes — see the Tailscale block in
+# platforms/windows/index.yml. A winget install on the host lived here until
+# then, on the premise that networkingMode=mirrored made the host's TUN
+# visible to WSL; the live boxes do the opposite, and running both would
+# stand up a second daemon on a machine that already has one.
+
+# Stored per user under Lxss. Unset means the store WSL's own default; set it
+# explicitly once so the declared state is readable.
+- name: Set WSL default version to 2
+  shell: wsl --set-default-version 2
+  unless: |
+    $v = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -Name DefaultVersion -ErrorAction SilentlyContinue).DefaultVersion
+    if ($v -eq 2) { exit 0 } else { exit 1 }
+
+# wsl --list output is UTF-16 with embedded NULs — strip them before
+# matching so PowerShell's -match works against ASCII.
+- name: Install Ubuntu in WSL (if no Ubuntu* distro is present)
+  shell:
+    interpreter: powershell
+    script: wsl --install -d {{ wsl_distro }}
+  unless: |
+    $distros = (wsl --list --quiet 2>$null) -replace "`0", ""
+    if ($distros -match "Ubuntu") { exit 0 } else { exit 1 }
+
+# `home` is a provision fact: on the Windows host, the user profile directory.
+- name: Deploy .wslconfig to the Windows user home
+  template:
+    src: ../templates/wslconfig.j2
+    dest: "{{ home }}/.wslconfig"

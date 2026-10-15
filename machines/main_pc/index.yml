@@ -3,8 +3,7 @@
 #
 # Two-step provisioning:
 #   1. Windows host (from an Administrator PowerShell):
-#        provision.exe apply platforms\windows\bootstrap.yml \
-#                           -v shared/variables.yml -v machines/main_pc/vars.yml
+#        provision.exe apply .\main_pc.host.yml
 #   2. Inside WSL Ubuntu, via the root entry (NOPASSWD sudo, no -K):
 #        provision apply ./main_pc.yml
 #
