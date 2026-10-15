@@ -27,6 +27,9 @@ wsl_networking_mode: "mirrored"
 # rendering "{{ wsl_codefort_port }}". codefortd binds *:8080 inside WSL.
 wsl_codefort_port: "8080"
 
+# Host-side winget packages on top of the shared list (shared/variables.yml).
+windows_winget_packages_extra: [NordSecurity.NordVPN]
+
 # Server box — never sleep on AC. Disables standby + hibernate so WSL and
 # its ssh daemon stay reachable 24/7.
 windows_prevent_sleep: true

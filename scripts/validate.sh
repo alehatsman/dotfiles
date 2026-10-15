@@ -12,6 +12,8 @@
 #               undefined vars, bad imports, unknown action keys.
 #
 # Both run on any host for any machine, so a mac checks mainpc's config.
+# Windows machines get a second check: the host plan
+# (platforms/windows/bootstrap.yml) with that machine's vars.
 #
 # The machine list is DERIVED from machines/*/, not written down. A list
 # written down is a list that drifts: pixel was missing from codefort.yml's
@@ -54,39 +56,81 @@ if [ ${#machines[@]} -eq 0 ]; then
 fi
 
 failed=()
+checked=0
 
-# The dispatcher first: a break here means no machine is reachable at all,
-# which is worth reporting before six per-machine results scroll past it.
-printf '== %-10s validate ' 'dispatcher'
-if out="$(provision validate ./provision.yml 2>&1)"; then
-  echo 'ok'
-else
-  printf 'FAILED\n%s\n' "$out" >&2
-  failed+=('provision.yml')
-fi
-
-for m in "${machines[@]}"; do
-  printf '== %-10s validate ' "$m"
-  if out="$(provision validate "./$m.yml" 2>&1)"; then
+# check <label> <plan> [provision args...] — both stages for one plan.
+check() {
+  local label="$1"; shift
+  checked=$((checked + 1))
+  printf '== %-16s validate ' "$label"
+  if out="$(provision validate "$@" 2>&1)"; then
     printf 'ok   plan '
   else
     printf 'FAILED\n%s\n' "$out" >&2
-    failed+=("$m")
-    continue
+    failed+=("$label")
+    return 0
   fi
-  if out="$(provision plan --plan-no-probe "./$m.yml" 2>&1)"; then
+  if out="$(provision plan --plan-no-probe "$@" 2>&1)"; then
     echo 'ok'
   else
     printf 'FAILED\n%s\n' "$out" >&2
-    failed+=("$m")
+    failed+=("$label")
+  fi
+}
+
+# provision run ON Windows judges `sudo:` and `service` against the reading
+# host, even with `--var os=linux`, so no Linux or mac plan validates there
+# (provision 9c046ef). Those are reported as skipped, never silently dropped;
+# WSL, Linux or a mac still covers them.
+on_windows=false
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) on_windows=true ;; esac
+skipped=()
+
+# The dispatcher first: a break here means no machine is reachable at all,
+# which is worth reporting before six per-machine results scroll past it.
+# Validate only, as before: it has no plan of its own to render.
+if $on_windows; then
+  printf '== %-16s skipped (not validatable from Windows; run from WSL)\n' 'dispatcher'
+  skipped+=('provision.yml')
+else
+  checked=$((checked + 1))
+  printf '== %-16s validate ' 'dispatcher'
+  if out="$(provision validate ./provision.yml 2>&1)"; then
+    echo 'ok'
+  else
+    printf 'FAILED\n%s\n' "$out" >&2
+    failed+=('provision.yml')
+  fi
+fi
+
+for m in "${machines[@]}"; do
+  if $on_windows; then
+    printf '== %-16s skipped (not validatable from Windows; run from WSL)\n' "$m"
+    skipped+=("$m")
+    continue
+  fi
+  check "$m" "./$m.yml"
+done
+
+# The Windows HOST plan. A Windows machine's root entry is its WSL guest;
+# the host side is platforms/windows/bootstrap.yml run with that machine's
+# vars, and nothing checked it — it sat failing `validate` with six ungated
+# shell steps. Which machines are Windows is derived, same as the list
+# above: the ones whose index imports platforms/windows.
+for m in "${machines[@]}"; do
+  if grep -q 'platforms/windows/' "machines/$m/index.yml" 2>/dev/null; then
+    check "$m (host)" platforms/windows/bootstrap.yml --vars-file "machines/$m/vars.yml"
   fi
 done
 
 if [ ${#failed[@]} -gt 0 ]; then
   echo >&2
-  echo "validate: ${#failed[@]} of ${#machines[@]} machine plans failed: ${failed[*]}" >&2
+  echo "validate: ${#failed[@]} of $checked plans failed: ${failed[*]}" >&2
   exit 1
 fi
 
 echo
-echo "validate: all ${#machines[@]} machine plans render clean"
+echo "validate: all $checked plans render clean"
+if [ ${#skipped[@]} -gt 0 ]; then
+  echo "validate: ${#skipped[@]} skipped on Windows: ${skipped[*]}"
+fi

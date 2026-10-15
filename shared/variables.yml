@@ -80,6 +80,13 @@ windows_prevent_sleep: false
 # AC sleep timeout in minutes for non-server boxes (windows_prevent_sleep: false).
 windows_sleep_timeout_ac: 30
 
+# Windows host packages, by winget id (platforms/windows/host-packages.yml).
+# Git is here because scripts/bootstrap.ps1 needs it before any plan can run;
+# declaring it hands ownership to the plan from the first apply on. Per-box
+# additions go in machines/<m>/vars.yml as windows_winget_packages_extra.
+windows_winget_packages: [Git.Git]
+windows_winget_packages_extra: []
+
 # ─── claude — global system prompt (~/.claude/CLAUDE.md) ──────────────────
 # Source file the claude component deploys as the user-global system prompt.
 # Path is resolved relative to components/claude/. Default is the shared

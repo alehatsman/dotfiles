@@ -1,7 +1,9 @@
 ---
-# Windows host bootstrap — replaces the old bootstrap.ps1.
+# Windows host bootstrap — the host-side state of every Windows box.
 #
-# Run from an Administrator PowerShell on a fresh Windows 11 box:
+# scripts/bootstrap.ps1 gets git, ~/dotfiles and provision.exe onto a fresh
+# box (the part no plan can do) and then runs this file. To run it directly,
+# from an Administrator PowerShell:
 #   provision.exe apply platforms\windows\bootstrap.yml `
 #       --vars-file machines\<machine>\vars.yml
 #
@@ -11,41 +13,61 @@
 # `sudo:` here and there was no `run_as_admin:` worth keeping — run the
 # whole file from an Administrator PowerShell.
 #
-# Idempotency: each step's inner PowerShell does its own "if not present"
-# check and exits 3 when there is nothing to do, so `changed` is honest.
+# Idempotency, two shapes:
+#   - `unless:` — a PowerShell probe that exits 0 when the state already
+#     holds. Preferred: `plan` runs the probe, so a live plan on the host
+#     reports `skip` or `would run` per step, which is real drift detection.
+#   - exit 3 — the step's own script checks, exits 3 when there is nothing to
+#     do, and `changed_when`/`failed_when` read the code. Honest under
+#     `apply`, but `plan` can only say `would run`. The firewall and
+#     scheduled-task steps below still use it.
+#
+# Validated from any host by scripts/validate.sh (with --plan-no-probe, so no
+# probe runs off-Windows); planned live on the host by
+# `scripts\bootstrap.ps1 -Machine <m> -Plan`.
 
 # The repo's shared defaults — windows_prevent_sleep, wsl_networking_mode,
 # windows_sleep_timeout_ac and friends. Loading them here makes the plan
 # self-contained, so the only file to pass is the machine's own vars.
 - vars_file: ../../shared/variables.yml
 
+# Git first: scripts/bootstrap.ps1 installed it by hand because nothing could
+# run without it, and this hands ownership to the plan.
+- import: ./host-packages.yml
+
+# Repos live in ~/projects, the same layout as every other box.
+- name: Projects directory
+  file:
+    path: ~/projects
+    state: dir
+  tags: [windows, home]
+
+# COMPUTERNAME is upper-case NetBIOS; the declared name is lower-case. -ieq.
 - name: Set computer name
   shell:
     interpreter: powershell
     script: |
-      if ($env:COMPUTERNAME -eq "{{ computer_name }}") {
-        Write-Host "Computer name already set to {{ computer_name }}"
-      } else {
-        Write-Host "Renaming computer to {{ computer_name }} (takes effect after reboot)"
-        Rename-Computer -NewName "{{ computer_name }}" -Force
-      }
+      Write-Host "Renaming computer $env:COMPUTERNAME to {{ computer_name }} (takes effect after reboot)"
+      Rename-Computer -NewName "{{ computer_name }}" -Force
+  unless: if ($env:COMPUTERNAME -ieq "{{ computer_name }}") { exit 0 } else { exit 1 }
 
+# Stored per user under Lxss. Unset means the store WSL's own default; set it
+# explicitly once so the declared state is readable.
 - name: Set WSL default version to 2
   shell: wsl --set-default-version 2
+  unless: |
+    $v = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -Name DefaultVersion -ErrorAction SilentlyContinue).DefaultVersion
+    if ($v -eq 2) { exit 0 } else { exit 1 }
 
 - name: Install Ubuntu in WSL (if no Ubuntu* distro is present)
   shell:
     interpreter: powershell
-    script: |
-      # wsl --list output is UTF-16 with embedded NULs — strip them before
-      # matching so PowerShell's -match works against ASCII.
-      $distros = (wsl --list --quiet 2>$null) -replace "`0", ""
-      if ($distros -match "Ubuntu") {
-        Write-Host "Ubuntu* distro already installed — skipping wsl --install"
-      } else {
-        Write-Host "Installing {{ wsl_distro }}..."
-        wsl --install -d {{ wsl_distro }}
-      }
+    script: wsl --install -d {{ wsl_distro }}
+  # wsl --list output is UTF-16 with embedded NULs — strip them before
+  # matching so PowerShell's -match works against ASCII.
+  unless: |
+    $distros = (wsl --list --quiet 2>$null) -replace "`0", ""
+    if ($distros -match "Ubuntu") { exit 0 } else { exit 1 }
 
 # No Tailscale step here, deliberately (dotfiles#90). The WSL guest owns the
 # tailnet node on these boxes — see the Tailscale block in
@@ -65,69 +87,48 @@
   shell:
     interpreter: powershell
     script: |
-      $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power'
-      $cur = (Get-ItemProperty -Path $key -Name HiberbootEnabled -ErrorAction SilentlyContinue).HiberbootEnabled
-      if ($cur -eq 0) {
-        Write-Host "Fast Startup already disabled"
-      } else {
-        Write-Host "Disabling Fast Startup (was: $cur)"
-        Set-ItemProperty -Path $key -Name HiberbootEnabled -Value 0 -Type DWord
-      }
+      Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' `
+        -Name HiberbootEnabled -Value 0 -Type DWord
+  unless: |
+    $cur = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Power' -Name HiberbootEnabled -ErrorAction SilentlyContinue).HiberbootEnabled
+    if ($cur -eq 0) { exit 0 } else { exit 1 }
 
 # Disable sleep and hibernate on AC power so WSL daemons (ssh) stay
 # reachable 24/7. Only runs when windows_prevent_sleep
 # is true (server boxes); laptops keep their own policy.
+#
+# Hibernate is read from HibernateEnabled in the registry, not from
+# `powercfg /availablesleepstates`: that output has no "Hibernate: Available"
+# line to match, so the old check read "already off" on every box.
 - name: Disable sleep and hibernate on AC power
   shell:
     interpreter: powershell
     script: |
-      # Never sleep on AC
-      $acSleep = (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE |
-                  Select-String "Current AC Power Setting Index" |
-                  ForEach-Object { ($_ -split '\s+')[-1] })
-      if ($acSleep -eq '0x00000000') {
-        Write-Host "AC sleep already disabled"
-      } else {
-        Write-Host "Disabling AC sleep (was $acSleep)"
-        powercfg /change standby-timeout-ac 0
-      }
-      # Never hibernate on AC
-      $acHib = (powercfg /query SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE |
-                Select-String "Current AC Power Setting Index" |
-                ForEach-Object { ($_ -split '\s+')[-1] })
-      if ($acHib -eq '0x00000000') {
-        Write-Host "AC hibernate already disabled"
-      } else {
-        Write-Host "Disabling AC hibernate (was $acHib)"
-        powercfg /change hibernate-timeout-ac 0
-      }
-      # Disable hibernate file entirely (frees disk; machine stays on AC)
-      $hibEnabled = (powercfg /availablesleepstates 2>$null) -match "Hibernate:\s+Available"
-      if (-not $hibEnabled) {
-        Write-Host "Hibernate already off"
-      } else {
-        Write-Host "Disabling hibernate"
-        powercfg /hibernate off
-      }
+      powercfg /change standby-timeout-ac 0
+      powercfg /change hibernate-timeout-ac 0
+      powercfg /hibernate off
+  unless: |
+    function AcIndex($setting) {
+      powercfg /query SCHEME_CURRENT SUB_SLEEP $setting |
+        Select-String "Current AC Power Setting Index" |
+        ForEach-Object { [Convert]::ToInt32(($_ -split '\s+')[-1], 16) }
+    }
+    $hib = (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Power' -Name HibernateEnabled -ErrorAction SilentlyContinue).HibernateEnabled
+    if ((AcIndex STANDBYIDLE) -eq 0 -and (AcIndex HIBERNATEIDLE) -eq 0 -and $hib -eq 0) { exit 0 } else { exit 1 }
   when: windows_prevent_sleep
   tags: [power, always-on]
 
 # Inverse of the above: restore AC sleep timeout on non-server boxes so the
-# machine can sleep normally. Idempotent — skips if already at target value.
+# machine can sleep normally.
 - name: Restore AC sleep timeout
   shell:
     interpreter: powershell
-    script: |
-      $target = {{ windows_sleep_timeout_ac }}
-      $acSleep = (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE |
-                  Select-String "Current AC Power Setting Index" |
-                  ForEach-Object { [Convert]::ToInt32(($_ -split '\s+')[-1], 16) })
-      if ($acSleep -eq $target * 60) {
-        Write-Host "AC sleep timeout already at $target min"
-      } else {
-        Write-Host "Setting AC sleep timeout to $target min (was $($acSleep / 60) min)"
-        powercfg /change standby-timeout-ac $target
-      }
+    script: powercfg /change standby-timeout-ac {{ windows_sleep_timeout_ac }}
+  unless: |
+    $acSleep = (powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE |
+                Select-String "Current AC Power Setting Index" |
+                ForEach-Object { [Convert]::ToInt32(($_ -split '\s+')[-1], 16) })
+    if ($acSleep -eq {{ windows_sleep_timeout_ac }} * 60) { exit 0 } else { exit 1 }
   when: not windows_prevent_sleep
   tags: [power]
 
@@ -136,23 +137,21 @@
 # to powershell.exe so SSH lands directly in PowerShell — friendlier for
 # both interactive recovery and automation over the :22 channel when
 # WSL is down.
+#
+# Skipped while the OpenSSH key is absent: the server is installed by hand
+# (docs/windows-ssh-setup.md), and a DefaultShell for a server that is not
+# there would only confuse the one installed later.
 - name: Set Windows OpenSSH default shell to PowerShell
   shell:
     interpreter: powershell
     script: |
-      $key = 'HKLM:\SOFTWARE\OpenSSH'
-      $want = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-      if (-not (Test-Path $key)) {
-        Write-Host "OpenSSH registry key missing — install Windows OpenSSH server first; skipping"
-      } else {
-        $cur = (Get-ItemProperty -Path $key -Name DefaultShell -ErrorAction SilentlyContinue).DefaultShell
-        if ($cur -eq $want) {
-          Write-Host "OpenSSH DefaultShell already set to PowerShell"
-        } else {
-          Write-Host "Setting OpenSSH DefaultShell (was: '$cur')"
-          New-ItemProperty -Path $key -Name DefaultShell -Value $want -PropertyType String -Force | Out-Null
-        }
-      }
+      New-ItemProperty -Path 'HKLM:\SOFTWARE\OpenSSH' -Name DefaultShell `
+        -Value 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' -PropertyType String -Force | Out-Null
+  unless: |
+    $key = 'HKLM:\SOFTWARE\OpenSSH'
+    if (-not (Test-Path $key)) { exit 0 }
+    $cur = (Get-ItemProperty -Path $key -Name DefaultShell -ErrorAction SilentlyContinue).DefaultShell
+    if ($cur -eq 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe') { exit 0 } else { exit 1 }
 
 - name: Deploy .wslconfig to the Windows user home
   # `home` is a provision fact, so this no longer needs an operator-supplied
