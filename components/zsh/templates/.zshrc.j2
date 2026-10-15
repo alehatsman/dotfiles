@@ -794,3 +794,30 @@ ce() {
 
   isayes "$@"
 }
+
+# Launch `ce` inside a teleport session, then attach this terminal to it
+# (dotfiles#50). Use this instead of bare `ce` for anything you might walk
+# away from.
+#
+# The point is who owns the PTY. Run `ce` directly and the session belongs to
+# the terminal emulator: close the tab and the agent dies, and it is never
+# reachable from the phone, because teleportd only ever owns PTYs it spawned
+# itself — there is no adoption path for an already-running process. Going
+# through `teleport new` makes the daemon the parent from byte zero, so the
+# session outlives this terminal and shows up in the web UI over Tailscale
+# (components/teleport).
+#
+# `zsh -ic` rather than teleport's own `claude` preset: the preset execs the
+# bare `claude` binary, which would skip the codefort identity and isayes that
+# `ce` above exists to supply. Interactive, so ~/.zshrc is sourced and `ce` is
+# actually defined; `'ce "$@"' tc "$@"` is zsh's positional-args form for
+# `-c`, so `tc --resume` reaches isayes intact.
+#
+# `~.` at the start of a line detaches without killing the session; plain exit
+# of the agent ends it as usual.
+tc() {
+  local id
+  id=$(teleport new --cmd zsh -- -ic 'ce "$@"' tc "$@") || return
+  print -u2 -- "teleport session: $id"
+  teleport attach "$id"
+}
