@@ -14,6 +14,8 @@ Failures: classify first — caused-by-change / pre-existing / environment / dep
 
 Default: judgment call with blast radius → ask, don't pick.
 
+Code search: structural questions (where defined, who calls, what implements, what imports) → codeintel first. Load `mcp__codeintel__code_query` via ToolSearch, call `{"schema":true}`, then query. Grep/Read only for text search, or when it reports `no-index`. Subagents: say so in the prompt.
+
 Host environment: every change to a machine — install, remove, config, setting — goes through ~/dotfiles + provision. Declare it, apply it. No ad-hoc brew/apt/pip/npm installs or hand edits to managed files; if a change can't be declared yet, say so and file an issue.
 
 Issues: gh issue create/close on the repo's GitHub remote.
