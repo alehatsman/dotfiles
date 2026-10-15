@@ -1,0 +1,6 @@
+# LF in every checkout, Windows included. Git for Windows installs with
+# core.autocrlf=true system-wide, which checks out CRLF: bash then reads
+# `set -euo pipefail\r` and every script, hook and shell template here
+# breaks — scripts/validate.sh first, which is the Windows test path.
+# PowerShell and provision read LF fine, so there is no file that wants CRLF.
+* text=auto eol=lf
