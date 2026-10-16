@@ -2,6 +2,10 @@
 # main_pc-specific variables (Windows + WSL Ubuntu).
 is_wsl: true
 computer_name: mainpc
+# The Windows host's own name (platforms/windows/host/home.yml). Kept equal
+# to computer_name, which is what the host plan converged on before the two
+# were split; mini_pc is the box where they differ.
+windows_computer_name: mainpc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
 

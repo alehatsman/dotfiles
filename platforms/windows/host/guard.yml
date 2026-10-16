@@ -8,11 +8,14 @@
 #
 # `facts.hostname`, not `hostname`: the bare name can be shadowed by a var,
 # and a guard that a var can satisfy guards nothing (provision spec §5).
-- name: Refuse to apply {{ computer_name }}'s host plan on a different known machine
+#
+# Compared against windows_computer_name, the host's own name; the fleet
+# roster (known_hostnames) is still what decides "another known machine".
+- name: Refuse to apply {{ windows_computer_name }}'s host plan on a different known machine
   assert:
     command: |
       $h = "{{ facts.hostname }}".ToLower()
-      $want = "{{ computer_name }}".ToLower()
+      $want = "{{ windows_computer_name }}".ToLower()
       if ($h -eq $want) { exit 0 }
       foreach ($known in @({% for k in known_hostnames %}'{{ k }}'{% if not loop.last %}, {% endif %}{% endfor %})) {
         if ($h -eq $known) {

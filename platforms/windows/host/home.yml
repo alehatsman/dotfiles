@@ -2,14 +2,17 @@
 # The machine's identity and the user's home: computer name, ~/projects,
 # ~/.local/bin on PATH, ~/.gitconfig.
 
-# COMPUTERNAME is upper-case NetBIOS; the declared name is lower-case. -ieq.
+# windows_computer_name, not computer_name: the latter is the fleet identity
+# the WSL guest answers to, and the two differ where the host kept its
+# install-time name (machines/mini_pc/vars.yml). COMPUTERNAME is upper-case
+# NetBIOS, so compare with -ieq.
 - name: Set computer name
   shell:
     interpreter: powershell
     script: |
-      Write-Host "Renaming computer $env:COMPUTERNAME to {{ computer_name }} (takes effect after reboot)"
-      Rename-Computer -NewName "{{ computer_name }}" -Force
-  unless: if ($env:COMPUTERNAME -ieq "{{ computer_name }}") { exit 0 } else { exit 1 }
+      Write-Host "Renaming computer $env:COMPUTERNAME to {{ windows_computer_name }} (takes effect after reboot)"
+      Rename-Computer -NewName "{{ windows_computer_name }}" -Force
+  unless: if ($env:COMPUTERNAME -ieq "{{ windows_computer_name }}") { exit 0 } else { exit 1 }
   tags: [identity]
 
 # Repos live in ~/projects, the same layout as every other box.

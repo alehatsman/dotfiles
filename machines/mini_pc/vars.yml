@@ -2,6 +2,12 @@
 # mini_pc-specific variables (Windows + WSL Ubuntu).
 is_wsl: true
 computer_name: minipc
+# The Windows host's own name, which is NOT the fleet identity above:
+# computer_name is what the WSL guest answers to (`hostname` there is
+# minipc) and what guards, provision.yml and fleet.sh key on. The host keeps
+# the name it was installed with; platforms/windows/host/home.yml converges
+# on this one.
+windows_computer_name: MINI_PC
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
 
