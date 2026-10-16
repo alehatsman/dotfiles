@@ -32,6 +32,16 @@ props:
       drifts independently per box. Must be set explicitly in each importing
       machine's `use: … / props:` block (dotfiles#15); the default here is
       just whichever box last needed fixing, not a shared value.
+  teleport_use_anchor:
+    type: bool
+    default: false
+    description: >-
+      Whether teleportd runs its sessions in anchord instead of its own
+      in-process PTY layer. Off by default: a box that sets this MUST also
+      import components/anchord, or teleportd starts fine (the client
+      connects lazily) and then fails every session it is asked to create.
+      The payoff is that teleportd can be restarted -- shipped -- without
+      killing live sessions (anchor#7).
 
 steps:
   - vars_file: ./variables.yml
@@ -129,11 +139,18 @@ steps:
 
   # ───────────────────────── config ───────────────────────────────────────────
 
+  # Registered because teleportd reads config.toml exactly once, at startup
+  # (Config::load in daemon/src/config.rs). Without this the file could change
+  # on disk and the running daemon would keep serving the old values until
+  # something unrelated -- a new binary, a vanished job -- happened to bounce
+  # it. A config change nothing acts on is not configuration, so this feeds
+  # the bootout/bootstrap gate below.
   - name: "Deploy teleportd config.toml (tailnet origin/host allowlist)"
     template:
       src: ./templates/config.toml.j2
       dest: "{{ teleport_data_dir }}/config.toml"
       mode: '0644'
+    register: teleport_config
     tags: [teleport]
 
   - name: "Deploy teleportd presets.toml (login-shell agent presets)"
@@ -222,7 +239,8 @@ steps:
       launchctl bootstrap "gui/$uid" "$plist"
     when: >-
       os == 'darwin' and
-      (teleport_plist.changed or teleport_install.changed or teleport_loaded.rc != 0)
+      (teleport_plist.changed or teleport_install.changed or
+       teleport_config.changed or teleport_loaded.rc != 0)
     changed_when: true
     tags: [teleport]
 
@@ -284,15 +302,20 @@ steps:
     when: os == 'linux'
     tags: [teleport]
 
-  # Restart on unit change OR on a fresh binary. `state: started` is a state
-  # and will not bounce an already-running daemon, so without this an adopted
-  # unit or a rebuilt teleportd would keep serving the old process.
-  - name: "Restart teleportd when its unit or binary changed"
+  # Restart on unit change, a fresh binary, OR new config. `state: started` is
+  # a state and will not bounce an already-running daemon, so without this an
+  # adopted unit, a rebuilt teleportd, or an edited config.toml would keep
+  # serving the old process. config.toml is read once at startup, so it
+  # belongs in this gate for the same reason the macOS side carries it.
+  - name: "Restart teleportd when its unit, binary or config changed"
     service:
       name: teleportd.service
       scope: user
       state: restarted
-    when: os == 'linux' and (teleport_unit.changed or teleport_install.changed)
+    when: >-
+      os == 'linux' and
+      (teleport_unit.changed or teleport_install.changed or
+       teleport_config.changed)
     tags: [teleport]
 
   # ───────────────────────── phone/remote access (Tailscale Serve) ───────────

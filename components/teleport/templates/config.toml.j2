@@ -9,3 +9,16 @@
 # the built-in default (true) — loopback is not a user boundary.
 allowed_origins = ["https://{{ props.teleport_tailnet_hostname }}"]
 allowed_hosts   = ["{{ props.teleport_tailnet_hostname }}"]
+
+{% if props.teleport_use_anchor %}
+# Sessions live in anchord, not in teleportd's own PTY layer, so restarting
+# teleportd no longer takes the agents down with it (anchor#7). Requires
+# components/anchord on this machine: the client connects lazily, so a
+# teleportd that starts without anchord present comes up healthy and then
+# fails every session it is asked to create.
+#
+# anchor_socket is deliberately unset -- teleportd then resolves the same
+# path anchord and the anchor CLI resolve. Pinning it here would be a second
+# source of truth that drifts the moment either side changes.
+use_anchor = true
+{% endif %}

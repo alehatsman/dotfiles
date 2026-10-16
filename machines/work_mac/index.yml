@@ -110,6 +110,10 @@
     # name instead of "work-mac" (dotfiles#14/#15). Update this if the
     # hostname/tailnet registration is ever fixed to follow "work-mac" again.
     teleport_tailnet_hostname: gj4vg9p1vj.tail37c478.ts.net
+    # The anchord import below is what makes this safe to turn on here, and
+    # this box is where it has to be proven: the agents running on it are the
+    # sessions a teleportd restart used to kill (anchor#7).
+    teleport_use_anchor: true
   tags: [tools, teleport]
 
 # anchord owns the PTYs teleportd drives, so teleportd can be restarted --
