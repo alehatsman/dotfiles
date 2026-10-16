@@ -1,0 +1,14 @@
+[Unit]
+Description=anchord — owns long-running PTY sessions across client restarts
+Documentation={{ anchor_repo_url }}/blob/main/docs/07-lifecycle.md
+
+[Service]
+Type=simple
+ExecStart="{{ anchor_bin_dir | expanduser }}/anchord"
+# Revives the service, never the sessions a dead anchord was holding —
+# anchor docs/07-lifecycle.md is explicit that restart buys continuity of the
+# service and not of the PTYs.
+Restart=always
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,38 @@
+---
+# Component-local defaults for anchord (alehatsman/anchor) — the local daemon
+# that owns long-running PTY sessions so the clients watching them can come
+# and go.
+#
+# anchord is deliberately *not* started by any client (anchor
+# docs/07-lifecycle.md: "No client ever spawns anchord"). A daemon started as
+# a child of teleportd would die with it, which is the exact property anchor
+# exists to provide. The OS's per-user service manager owns it instead, which
+# is what this component declares.
+
+# Built from source, tracking main — anchor ships no tagged release yet, so
+# there is no tarball to pin a sha256 to. The install step resolves main's
+# HEAD commit and rebuilds only when that commit has moved, the same shape
+# components/teleport uses.
+anchor_repo_url: "https://github.com/alehatsman/anchor"
+
+anchor_bin_dir: "~/.local/bin"
+
+# MUST match `LABEL` in anchor's src/service.rs (currently
+# "dev.anchor.anchord"). `anchor service status` and `anchor service
+# uninstall` both look up this exact label, so a divergence here produces a
+# running daemon that the binary's own tooling reports as "not installed".
+# If that const changes, this changes with it.
+anchor_launch_agent_label: "dev.anchor.anchord"
+anchor_systemd_unit: "anchord.service"
+
+# anchord resolves its own paths from the environment and is given no
+# --socket argument, because a unit that pinned one would silently diverge
+# from the path clients resolve (anchor docs/07-lifecycle.md). Recorded here
+# only so the liveness probe below knows where to look:
+#
+#   socket: $XDG_RUNTIME_DIR/anchor.sock, falling back to
+#           $XDG_DATA_HOME/anchor/anchor.sock, then ~/.local/share/anchor/
+#
+# Under launchd there is no XDG_RUNTIME_DIR, so macOS lands on the fallback.
+# systemd user units do set it, so Linux lands on /run/user/<uid>.
+anchor_socket_macos: "~/.local/share/anchor/anchor.sock"

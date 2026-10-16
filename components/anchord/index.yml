@@ -1,0 +1,177 @@
+---
+# anchord — alehatsman/anchor's local session daemon.
+#
+# anchor owns long-running PTY processes so the clients watching them can be
+# restarted without taking the processes down. That property is not a
+# consequence of its protocol; it is a consequence of who owns anchord's
+# process — which makes it this component's job, not teleport's.
+#
+# WHY THIS EXISTS WHEN `anchor service install` ALREADY DOES IT
+#
+# anchor ships `anchor service install`, which writes the same LaunchAgent
+# this component writes. That command is right for anchor's users and wrong
+# for this machine: every change to this box is declared here and applied by
+# provision, so a daemon installed by a binary invoking launchctl is a host
+# change this repo cannot see, reproduce, or remove. The teleportd
+# LaunchAgent next door is managed the same way, for the same reason.
+#
+# The cost is duplication: the plist and the unit are rendered from templates
+# here *and* from `render()` in anchor's src/service.rs. They can drift. That
+# is the accepted trade for keeping the machine declarative, and it is why
+# anchor_launch_agent_label carries a comment tying it to the LABEL const.
+#
+# RELATIONSHIP TO TELEPORT
+#
+# Installing anchord does NOT route teleport through it. teleportd reads
+# `use_anchor` (default false, teleport/daemon/src/config.rs) at startup, so
+# until that flag is flipped AND teleportd is restarted, anchord simply runs
+# beside it, owning nothing. The two cannot collide: anchord binds a unix
+# socket under the user's data dir, teleportd binds 127.0.0.1:7337.
+#
+# That makes this component safe to apply on its own, which is deliberate —
+# the flip and the restart are a separate, louder decision (anchor#7).
+
+props:
+  anchor_enabled:
+    type: bool
+    default: true
+    description: >-
+      Whether this machine runs anchord at all. Present so a box can import
+      the component for its binaries without autostarting the daemon.
+
+steps:
+  - vars_file: ./variables.yml
+
+  - name: "Ensure anchor_bin_dir exists"
+    file:
+      path: "{{ anchor_bin_dir }}"
+      state: dir
+    tags: [anchord]
+
+  # ───────────────────────── build + install from source ──────────────────────
+
+  # Same shape as components/teleport: anchor publishes no tagged release, so
+  # there is no tarball to pin. Rebuilds are gated on main's resolved HEAD
+  # commit recorded in a stamp file — not on `creates:`, which only asks
+  # "does *an* anchord exist" and stays true forever after the first apply
+  # (dotfiles#10).
+  #
+  # One `cargo install` for both binaries: anchor is a single crate with two
+  # [[bin]] targets (anchord, anchor), unlike teleport's separate cli/ and
+  # daemon/ projects.
+  - name: "Build and install anchord (+ anchor CLI) from source"
+    shell: |
+      set -euo pipefail
+      tmp=$(mktemp -d)
+      trap 'rm -rf "$tmp"' EXIT
+      git clone --depth 1 "{{ anchor_repo_url }}.git" "$tmp/src"
+      commit=$(git -C "$tmp/src" rev-parse HEAD)
+      cargo install --locked --path "$tmp/src" --bins --root "$tmp/out"
+      install -m 0755 "$tmp/out/bin/anchord" "{{ anchor_bin_dir | expanduser }}/anchord"
+      install -m 0755 "$tmp/out/bin/anchor"  "{{ anchor_bin_dir | expanduser }}/anchor"
+      printf '%s\n' "$commit" > "{{ anchor_bin_dir | expanduser }}/.anchord.commit"
+    unless: |
+      set -euo pipefail
+      latest=$(git ls-remote "{{ anchor_repo_url }}.git" refs/heads/main | cut -f1)
+      test -x "{{ anchor_bin_dir | expanduser }}/anchord" && \
+        [ "$(cat "{{ anchor_bin_dir | expanduser }}/.anchord.commit" 2>/dev/null)" = "$latest" ]
+    register: anchord_install
+    timeout: 20m
+    tags: [anchord]
+
+  # ─────────────────── autostart, macOS (LaunchAgent) ─────────────────────────
+
+  - name: "Ensure ~/Library/LaunchAgents exists"
+    file:
+      path: ~/Library/LaunchAgents
+      state: dir
+    when: os == 'darwin' and props.anchor_enabled
+    tags: [anchord]
+
+  - name: "Deploy the anchord LaunchAgent"
+    template:
+      src: ./templates/anchord.plist.j2
+      dest: "~/Library/LaunchAgents/{{ anchor_launch_agent_label }}.plist"
+      mode: '0644'
+    register: anchord_plist
+    when: os == 'darwin' and props.anchor_enabled
+    tags: [anchord]
+
+  # Liveness is probed by talking to the daemon, not by asking launchd whether
+  # a job exists — a loaded entry says nothing about whether the process
+  # behind it is answering. `anchor ls` resolves the socket path exactly as
+  # any other client does, so this probe fails in precisely the cases a client
+  # would fail, which is the only definition of "up" that matters here.
+  - name: "Check whether anchord is answering on its socket"
+    shell: "{{ anchor_bin_dir | expanduser }}/anchor ls >/dev/null 2>&1"
+    register: anchord_live
+    changed_when: false
+    failed_when: false
+    when: os == 'darwin' and props.anchor_enabled
+    tags: [anchord]
+
+  # `|| true` on bootout: a first-ever install has nothing loaded.
+  #
+  # No port to wait on, unlike teleportd — anchord binds a unix socket, and a
+  # stale socket file is not a conflict: the next daemon probes it and
+  # replaces it when nothing answers (anchor docs/04-protocol.md). So this
+  # bootout/bootstrap needs none of the port-release wait that step carries.
+  - name: "(Re)bootstrap the anchord LaunchAgent"
+    shell: |
+      set -euo pipefail
+      uid=$(id -u)
+      label="{{ anchor_launch_agent_label }}"
+      plist="{{ ('~/Library/LaunchAgents/' + anchor_launch_agent_label + '.plist') | expanduser }}"
+      launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+      launchctl bootstrap "gui/$uid" "$plist"
+    when: >-
+      os == 'darwin' and props.anchor_enabled and
+      (anchord_plist.changed or anchord_install.changed or anchord_live.rc != 0)
+    changed_when: true
+    tags: [anchord]
+
+  # Asserted as a state after the bootstrap above, the same way
+  # components/teleport does it: RunAtLoad means bootstrap already started
+  # the job, so this is a cheap claim about where the machine should end up
+  # rather than a second way to start it.
+  - name: "Enable + start anchord (launchd)"
+    service:
+      name: "{{ anchor_launch_agent_label }}"
+      scope: user
+      enabled: true
+      state: started
+    when: os == 'darwin' and props.anchor_enabled
+    tags: [anchord]
+
+  # ─────────────────── autostart, Linux (systemd user unit) ───────────────────
+
+  - name: "Ensure ~/.config/systemd/user exists"
+    file:
+      path: ~/.config/systemd/user
+      state: dir
+    when: os == 'linux' and props.anchor_enabled
+    tags: [anchord]
+
+  - name: "Deploy the anchord systemd user unit"
+    template:
+      src: ./templates/anchord.service.j2
+      dest: "~/.config/systemd/user/{{ anchor_systemd_unit }}"
+      mode: '0644'
+    register: anchord_unit
+    when: os == 'linux' and props.anchor_enabled
+    tags: [anchord]
+
+  - name: "Reload systemd user units"
+    shell: systemctl --user daemon-reload
+    when: os == 'linux' and props.anchor_enabled and (anchord_unit.changed or anchord_install.changed)
+    changed_when: true
+    tags: [anchord]
+
+  - name: "Enable + start anchord"
+    service:
+      name: "{{ anchor_systemd_unit }}"
+      scope: user
+      enabled: true
+      state: started
+    when: os == 'linux' and props.anchor_enabled
+    tags: [anchord]
