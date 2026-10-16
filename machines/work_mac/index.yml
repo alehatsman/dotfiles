@@ -112,6 +112,15 @@
     teleport_tailnet_hostname: gj4vg9p1vj.tail37c478.ts.net
   tags: [tools, teleport]
 
+# anchord owns the PTYs teleportd drives, so teleportd can be restarted --
+# shipped, in practice -- without killing live agent sessions. Listed after
+# teleport deliberately: config.toml above turns the flag on, and a teleportd
+# that starts with use_anchor=true before anchord is installed finds nothing
+# to connect to (anchor#7).
+- name: Use anchord component
+  use: ../../components/anchord/index.yml
+  tags: [tools, anchord]
+
 # zsh, tmux, nvim
 - import: ../../shared/shell.yml
 
