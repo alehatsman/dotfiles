@@ -15,7 +15,8 @@
       "Read",
       "Edit",
       "Glob",
-      "Grep"
+      "Grep",
+      "Bash(tmux:*)"
     ],
     "defaultMode": "auto",
     "skipDangerousModePermissionPrompt": true
@@ -31,5 +32,50 @@
       "effortLevel": "medium"
     }
   },
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "model": "opus[1m]",
+  "effortLevel": "xhigh",
+  "skipWorkflowUsageWarning": true,
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tally attention on || true"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tally attention on || true"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tally attention off || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tally attention off || true"
+          }
+        ]
+      }
+    ]
+  }
 }
