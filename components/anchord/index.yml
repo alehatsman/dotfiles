@@ -112,10 +112,22 @@ steps:
 
   # `|| true` on bootout: a first-ever install has nothing loaded.
   #
-  # No port to wait on, unlike teleportd — anchord binds a unix socket, and a
-  # stale socket file is not a conflict: the next daemon probes it and
-  # replaces it when nothing answers (anchor docs/04-protocol.md). So this
-  # bootout/bootstrap needs none of the port-release wait that step carries.
+  # There is no *port* to wait on, unlike teleportd — anchord binds a unix
+  # socket, and a stale socket file is not a conflict: the next daemon probes
+  # it and replaces it when nothing answers (anchor docs/04-protocol.md).
+  #
+  # But the wait teleportd carries was never really about the port. launchd
+  # needs a beat to finish dropping a job after bootout, and bootstrapping
+  # into that window fails with `5: Input/output error` — which this step did,
+  # in production, leaving anchord booted out and never booted back in. The
+  # daemon was down until the next apply. A `set -e` script that takes a
+  # service down and then fails to bring it up is worse than one that never
+  # ran, so the bootstrap retries until launchd accepts it.
+  #
+  # Retry rather than a fixed sleep: the settle time is launchd's business and
+  # not a constant anyone here can name. Bounded, because a bootstrap that is
+  # failing for some *other* reason must still surface as a failure rather
+  # than spin — the last attempt runs bare so its stderr reaches the operator.
   - name: "(Re)bootstrap the anchord LaunchAgent"
     shell: |
       set -euo pipefail
@@ -123,6 +135,14 @@ steps:
       label="{{ anchor_launch_agent_label }}"
       plist="{{ ('~/Library/LaunchAgents/' + anchor_launch_agent_label + '.plist') | expanduser }}"
       launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+      for _ in $(seq 1 20); do
+        if launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null; then
+          exit 0
+        fi
+        sleep 0.25
+      done
+      # Out of retries: run it once more without swallowing stderr, so the
+      # real reason is what the operator sees.
       launchctl bootstrap "gui/$uid" "$plist"
     when: >-
       os == 'darwin' and props.anchor_enabled and
