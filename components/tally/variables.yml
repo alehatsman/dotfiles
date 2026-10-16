@@ -27,3 +27,18 @@ tally_launch_agent_label: "dev.tally.tallyd"
 # because `anchor ls` can be asked; tallyd deliberately has no socket to ask
 # (docs/08-lifecycle.md rejects one), so the log IS the interface.
 tally_log_dir: "~/.local/state/tally"
+
+# launchd gives an agent PATH=/usr/bin:/bin:/usr/sbin:/sbin and nothing else,
+# which is a problem tallyd cannot solve from inside itself: it shells out to
+# `tmux` to drive the jump, and tmux lives in Homebrew's prefix. Running
+# tallyd by hand works and running it as an agent does not -- the failure only
+# appears under the service manager, which is the worst place to find it.
+#
+# It compounds, too. If tallyd is the one to START the tmux server, that
+# server inherits this PATH, and then every view window fails to find
+# `anchor` as well. One variable fixes both, because the view windows are
+# children of whichever tmux ends up running.
+# Everything tallyd needs to exec, minus its own bin dir -- the template
+# prepends that, because a vars file is not rendered recursively and a
+# "{{ ... }}" written here reaches the plist verbatim. (It did, once.)
+tally_extra_path: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"

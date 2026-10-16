@@ -26,6 +26,16 @@
     <true/>
     <key>ProcessType</key>
     <string>Interactive</string>
+    <!-- Without this, PATH is /usr/bin:/bin:/usr/sbin:/sbin and tallyd
+         cannot find tmux, so the jump fails under launchd while working
+         perfectly when run by hand. A tmux server that tallyd starts
+         inherits this too, which is what lets its view windows find
+         `anchor`. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>{{ tally_bin_dir | expanduser }}:{{ tally_extra_path }}</string>
+    </dict>
     <!-- CoreMIDI needs the GUI session. A LaunchAgent in gui/<uid> has it;
          a LaunchDaemon would not see the Launchpad at all. -->
     <key>StandardOutPath</key>
