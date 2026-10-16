@@ -15,6 +15,16 @@
     dest: /etc/wsl.conf
   sudo: true
 
+# components/zsh/templates/env.zsh.j2 exports LANG=en_US.UTF-8, but a fresh
+# WSL Ubuntu ships only C.utf8. With LANG naming a missing locale, zsh falls
+# back to C, counts the prompt's multibyte ➜ as 3 columns, and draws the
+# cursor in the wrong place. Ubuntu's locale-gen takes the name directly.
+- name: Generate en_US.UTF-8 locale
+  cmd: [locale-gen, en_US.UTF-8]
+  unless: locale -a | grep -qx en_US.utf8
+  changed_when: true
+  sudo: true
+
 # Just the WSL-only piece — the SSH server that lets the Windows host reach
 # this guest. Everything else common (git, tmux, htop, ...) comes from
 # packages/ubuntu_packages.yml.
