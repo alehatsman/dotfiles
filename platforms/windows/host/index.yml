@@ -36,6 +36,9 @@
 - import: ./wsl.yml
   tags: [windows, wsl]
 
+- import: ./terminal.yml
+  tags: [windows, terminal]
+
 - import: ./power.yml
   tags: [windows, power]
 
