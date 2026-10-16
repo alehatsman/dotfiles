@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ tally_launch_agent_label }}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{ tally_bin_dir | expanduser }}/tallyd</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <!-- KeepAlive because a dead tallyd is a silent failure: the pads freeze
+         on their last frame and then quietly go stale, with nothing on the
+         surface saying so. Restarting is cheap and total — startup re-enters
+         programmer mode and repaints all 81 LEDs from `anchor list`, so a
+         restarted tallyd is indistinguishable from one that never died
+         (tally docs/08-lifecycle.md).
+
+         The one exit worth NOT retrying is the single-instance lock, and
+         launchd's default ThrottleInterval of 10s is what keeps that from
+         becoming a hot loop. A second instance is only possible if someone
+         starts one by hand, in which case the running one is unharmed and
+         the log says why the other gave up. -->
+    <key>KeepAlive</key>
+    <true/>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <!-- CoreMIDI needs the GUI session. A LaunchAgent in gui/<uid> has it;
+         a LaunchDaemon would not see the Launchpad at all. -->
+    <key>StandardOutPath</key>
+    <string>{{ tally_log_dir | expanduser }}/tallyd.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{ tally_log_dir | expanduser }}/tallyd.log</string>
+    <!-- No socket or device argument: tallyd resolves anchord's socket by the
+         same XDG rule a client does, and finds the Launchpad by port-name
+         substring. Pinning either here would diverge the moment the other
+         side changed. -->
+</dict>
+</plist>

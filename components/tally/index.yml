@@ -1,0 +1,154 @@
+---
+# tallyd — alehatsman/tally's Launchpad daemon.
+#
+# A Novation Launchpad Mini MK3 as the front panel for anchor sessions: 64
+# pads, each showing whether an agent is alive, wants you, or failed. It is
+# a client of anchord and nothing else.
+#
+# WHY THIS IS A COMPONENT AND NOT A `tally service install`
+#
+# anchor ships `anchor service install` because anchor is distributed to
+# people who do not have provision, and components/anchord then has to
+# duplicate that plist to keep the machine declarative. tally avoids the
+# duplication by never growing the subcommand: it is not distributed to
+# anybody, so this component is the only thing that installs it (tally
+# docs/07-seams.md). There is no second renderer to drift against.
+#
+# RELATIONSHIP TO ANCHORD
+#
+# tallyd needs anchord to show anything, and tolerates its absence: an
+# unreachable anchord lights the logo dark red and leaves the grid alone,
+# because "nothing is running" and "I cannot tell" are different facts. So
+# this component has no ordering requirement on components/anchord — but it
+# is listed after it, because a tallyd that comes up first spends its early
+# ticks truthfully reporting that it cannot see a daemon.
+#
+# It also tolerates the Launchpad being unplugged, and picks it up whenever
+# it appears. Neither a missing daemon nor a missing device is a startup
+# failure.
+
+props:
+  tally_enabled:
+    type: bool
+    default: true
+    description: >-
+      Whether this machine runs tallyd. Present so a box can import the
+      component for the binary without autostarting the daemon — though in
+      practice only the machine with the Launchpad on its desk wants it.
+
+steps:
+  - vars_file: ./variables.yml
+
+  - name: "Ensure tally_bin_dir exists"
+    file:
+      path: "{{ tally_bin_dir }}"
+      state: dir
+    tags: [tally]
+
+  - name: "Ensure tally_log_dir exists"
+    file:
+      path: "{{ tally_log_dir }}"
+      state: dir
+    tags: [tally]
+
+  # ───────────────────────── build + install from source ──────────────────────
+
+  # Gated on main's resolved HEAD recorded in a stamp file, not on `creates:`
+  # — which only asks "does *a* tallyd exist" and stays true forever after the
+  # first apply (dotfiles#10). Same shape as components/anchord.
+  - name: "Build and install tallyd from source"
+    shell: |
+      set -euo pipefail
+      tmp=$(mktemp -d)
+      trap 'rm -rf "$tmp"' EXIT
+      git clone --depth 1 "{{ tally_repo_url }}.git" "$tmp/src"
+      commit=$(git -C "$tmp/src" rev-parse HEAD)
+      cargo install --locked --path "$tmp/src" --bins --root "$tmp/out"
+      install -m 0755 "$tmp/out/bin/tallyd" "{{ tally_bin_dir | expanduser }}/tallyd"
+      printf '%s\n' "$commit" > "{{ tally_bin_dir | expanduser }}/.tallyd.commit"
+    unless: |
+      set -euo pipefail
+      latest=$(git ls-remote "{{ tally_repo_url }}.git" refs/heads/main | cut -f1)
+      test -x "{{ tally_bin_dir | expanduser }}/tallyd" && \
+        [ "$(cat "{{ tally_bin_dir | expanduser }}/.tallyd.commit" 2>/dev/null)" = "$latest" ]
+    register: tallyd_install
+    timeout: 20m
+    tags: [tally]
+
+  # ─────────────────── autostart, macOS (LaunchAgent) ─────────────────────────
+  #
+  # macOS only, and deliberately. `midir` speaks ALSA on Linux, so the code
+  # would probably run — but the Launchpad is on one desk, nothing here can
+  # test the Linux path, and a unit nobody has ever started is a claim this
+  # repo cannot make. Add it when there is a second device in a second room.
+
+  - name: "Ensure ~/Library/LaunchAgents exists"
+    file:
+      path: ~/Library/LaunchAgents
+      state: dir
+    when: os == 'darwin' and props.tally_enabled
+    tags: [tally]
+
+  - name: "Deploy the tallyd LaunchAgent"
+    template:
+      src: ./templates/tallyd.plist.j2
+      dest: "~/Library/LaunchAgents/{{ tally_launch_agent_label }}.plist"
+      mode: '0644'
+    register: tallyd_plist
+    when: os == 'darwin' and props.tally_enabled
+    tags: [tally]
+
+  # components/anchord probes liveness by talking to the daemon, which is the
+  # right answer when there is something to talk to. tallyd has no socket and
+  # will not grow one (tally docs/08-lifecycle.md rejects it: everything a
+  # client would ask for is already readable from anchord or the config file).
+  #
+  # So this asks the OS whether the process exists, which is a weaker claim —
+  # it says the binary is running, not that it is driving anything. It is
+  # enough for the only decision it feeds: whether the bootstrap below needs
+  # to run. A tallyd that is up but wedged is a thing the log says, not the
+  # service manager.
+  - name: "Check whether tallyd is running"
+    shell: "pgrep -f '{{ tally_bin_dir | expanduser }}/tallyd' >/dev/null 2>&1"
+    register: tallyd_live
+    changed_when: false
+    failed_when: false
+    when: os == 'darwin' and props.tally_enabled
+    tags: [tally]
+
+  # The retry is lifted wholesale from components/anchord, including its
+  # reason: launchd needs a beat to finish dropping a job after bootout, and
+  # bootstrapping into that window fails with `5: Input/output error`. That
+  # is about launchd dropping the job, not about what the job binds — which
+  # is why it applies here even though tallyd binds nothing at all.
+  #
+  # The last attempt runs bare so a genuine failure surfaces with its own
+  # stderr rather than spinning.
+  - name: "(Re)bootstrap the tallyd LaunchAgent"
+    shell: |
+      set -euo pipefail
+      uid=$(id -u)
+      label="{{ tally_launch_agent_label }}"
+      plist="{{ ('~/Library/LaunchAgents/' + tally_launch_agent_label + '.plist') | expanduser }}"
+      launchctl bootout "gui/$uid/$label" 2>/dev/null || true
+      for _ in $(seq 1 20); do
+        if launchctl bootstrap "gui/$uid" "$plist" 2>/dev/null; then
+          exit 0
+        fi
+        sleep 0.25
+      done
+      launchctl bootstrap "gui/$uid" "$plist"
+    when: >-
+      os == 'darwin' and props.tally_enabled and
+      (tallyd_plist.changed or tallyd_install.changed or tallyd_live.rc != 0)
+    changed_when: true
+    tags: [tally]
+
+  - name: "Enable + start tallyd (launchd)"
+    service:
+      name: "{{ tally_launch_agent_label }}"
+      scope: user
+      enabled: true
+      state: started
+    when: os == 'darwin' and props.tally_enabled
+    tags: [tally]

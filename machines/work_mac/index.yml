@@ -125,6 +125,14 @@
   use: ../../components/anchord/index.yml
   tags: [tools, anchord]
 
+# tallyd drives the Launchpad on this desk as a front panel for the agent
+# sessions anchord owns. Listed after anchord because it is a client of it --
+# though it tolerates anchord being absent, and says so on the surface rather
+# than failing to start.
+- name: Use tally component
+  use: ../../components/tally/index.yml
+  tags: [tools, tally]
+
 # zsh, tmux, nvim
 - import: ../../shared/shell.yml
 

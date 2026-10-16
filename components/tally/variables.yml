@@ -1,0 +1,29 @@
+---
+# Component-local defaults for tallyd (alehatsman/tally) — the daemon that
+# drives a Novation Launchpad Mini MK3 as a front panel for anchor sessions.
+#
+# tallyd is the most disposable process on this machine, by design: it holds
+# no state that cannot be rebuilt from `anchor list` plus a config file
+# (tally docs/08-lifecycle.md). Killing it affects nothing except the lights.
+# That is exactly why it belongs to the service manager rather than to a
+# login shell — nobody should have to remember to start it.
+
+# Built from source, tracking main. tally ships no tagged release, so there
+# is no tarball to pin a sha256 to; the install step resolves main's HEAD and
+# rebuilds only when that commit moves. Same shape as components/anchord.
+tally_repo_url: "https://github.com/alehatsman/tally"
+
+tally_bin_dir: "~/.local/bin"
+
+# Unlike anchord, this label matches no constant in the binary. tally has no
+# `service install` subcommand and will not grow one — it is not distributed
+# to anyone, so the only thing that installs it is this component (tally
+# docs/07-seams.md). There is nothing to drift against.
+tally_launch_agent_label: "dev.tally.tallyd"
+
+# tallyd's diagnostics go to stderr and are the only way to answer "why is my
+# grid dark" — which Launchpad port it found, whether anchord is reachable,
+# whether the device stopped answering. anchord gets away with no log paths
+# because `anchor ls` can be asked; tallyd deliberately has no socket to ask
+# (docs/08-lifecycle.md rejects one), so the log IS the interface.
+tally_log_dir: "~/.local/state/tally"
