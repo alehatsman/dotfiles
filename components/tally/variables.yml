@@ -42,3 +42,31 @@ tally_log_dir: "~/.local/state/tally"
 # prepends that, because a vars file is not rendered recursively and a
 # "{{ ... }}" written here reaches the plist verbatim. (It did, once.)
 tally_extra_path: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+# The window tallyd opens when a jump has nowhere to land (tally#10).
+#
+# tallyd opens this itself rather than anything starting it at login, and
+# that stays true deliberately: a terminal that appears at boot is one more
+# window to close every morning, and the fallback only fires when a pad is
+# pressed with no client attached — which is exactly when you want it. What
+# was wrong was not the laziness, it was that the command existed only
+# inside a Rust function. Declared here, it is the same lazy window and this
+# file is the place its look is chosen.
+#
+# tally reads TALLY_TERMINAL_CMD, splits it on spaces and appends
+# `tmux -L tally attach -t tally`, so this must END at `-e` and no value may
+# contain a space (tally src/jump.rs, terminal_command).
+#
+# Why the overrides: the shared Alacritty config is 80x40, sized for a
+# single shell. This window holds a row session whose columns are full-width
+# tabs, so it wants room for one agent at a time, not a quarter of one.
+# `--class tally` is what a window manager rule would key on; nothing keys on
+# it yet, and it costs nothing to make the window nameable before something
+# does.
+tally_terminal_cmd: >-
+  open -na Alacritty --args
+  --class tally
+  --title tally
+  --option window.dimensions.columns=200
+  --option window.dimensions.lines=50
+  -e

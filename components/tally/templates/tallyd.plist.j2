@@ -35,6 +35,13 @@
     <dict>
         <key>PATH</key>
         <string>{{ tally_bin_dir | expanduser }}:{{ tally_extra_path }}</string>
+        <!-- The window tallyd opens when a jump finds no client to land on.
+             Without this the command lives only in src/jump.rs and nothing
+             in dotfiles says this machine has a tally terminal (tally#10).
+             Still opened lazily by the daemon, not at login -- see
+             components/tally/variables.yml for why that is the choice. -->
+        <key>TALLY_TERMINAL_CMD</key>
+        <string>{{ tally_terminal_cmd }}</string>
     </dict>
     <!-- CoreMIDI needs the GUI session. A LaunchAgent in gui/<uid> has it;
          a LaunchDaemon would not see the Launchpad at all. -->
