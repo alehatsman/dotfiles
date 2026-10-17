@@ -94,10 +94,33 @@ steps:
       test -x "$bin/tallyd" && \
         test -x "$bin/tally" && \
         [ "$(cat "$bin/.tallyd.commit" 2>/dev/null)" = "$latest" ] && \
-        test -f "$bin/.tallyd.sums" && \
-        ( cd "$bin" && shasum -a 256 -c .tallyd.sums --status )
+        ( ! test -f "$bin/.tallyd.sums" || \
+          ( cd "$bin" && shasum -a 256 -c .tallyd.sums --status ) )
     register: tallyd_install
     timeout: 20m
+    tags: [tally]
+
+  # Backfill for a machine installed before digests existed.
+  #
+  # A missing `.tallyd.sums` used to fail the gate above, which rebuilt from
+  # source and — because the install step feeds the service's restart
+  # condition — bounced the daemon. For tallyd that orphans every live PTY.
+  # Paying a restart to write a checksum file is the wrong trade, especially
+  # when the stamp already says the source is current.
+  #
+  # So: record the baseline from what is installed, once. This is the one
+  # moment the digests are *assumed* rather than *produced* — there is no
+  # evidence either way for a binary that predates the file. Every check
+  # after it is real, and a genuine upgrade overwrites this baseline with
+  # digests the build actually made.
+  - name: "Record tallyd binary digests if they were never recorded"
+    shell: |
+      set -euo pipefail
+      cd "{{ tally_bin_dir | expanduser }}"
+      shasum -a 256 tallyd tally > .tallyd.sums
+    unless: |
+      bin="{{ tally_bin_dir | expanduser }}"
+      test -f "$bin/.tallyd.sums" || ! test -x "$bin/tallyd" || ! test -x "$bin/tally"
     tags: [tally]
 
   # ─────────────────── autostart, macOS (LaunchAgent) ─────────────────────────
