@@ -43,7 +43,21 @@
   props:
     # From `tailscale status` on this box (dotfiles#15).
     teleport_tailnet_hostname: minipc.tail37c478.ts.net
+    # Safe only because the anchord import below exists on this box.
+    # Flipping this without it gives a teleportd that starts healthy — the
+    # anchor client connects lazily — and then fails every session it is
+    # asked to create (anchor#7).
+    teleport_use_anchor: true
   tags: [tools, teleport]
+
+# anchord owns the PTYs teleportd drives, so teleportd can be restarted —
+# shipped, in practice — without killing live agent sessions. Listed after
+# teleport deliberately: config.toml above turns the flag on, and a teleportd
+# that starts with use_anchor=true before anchord is installed finds nothing
+# to connect to (anchor#7).
+- name: Use anchord component
+  use: ../../components/anchord/index.yml
+  tags: [tools, anchord]
 
 # carscrape's dashboard (the hub runs here since carscrape S5-8) on the
 # tailnet over HTTPS: *.ts.net is HSTS-preloaded, so browsers refuse plain

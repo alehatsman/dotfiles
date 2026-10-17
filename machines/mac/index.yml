@@ -160,7 +160,21 @@
     # now, so unverified against a fresh `tailscale status --self`. Update
     # if teleportd starts rejecting the real Origin/Host on this box again.
     teleport_tailnet_hostname: mac.tail37c478.ts.net
+    # Safe only because the anchord import below exists on this box.
+    # Flipping this without it gives a teleportd that starts healthy — the
+    # anchor client connects lazily — and then fails every session it is
+    # asked to create (anchor#7).
+    teleport_use_anchor: true
   tags: [tools, teleport]
+
+# anchord owns the PTYs teleportd drives, so teleportd can be restarted —
+# shipped, in practice — without killing live agent sessions. Listed after
+# teleport deliberately: config.toml above turns the flag on, and a teleportd
+# that starts with use_anchor=true before anchord is installed finds nothing
+# to connect to (anchor#7).
+- name: Use anchord component
+  use: ../../components/anchord/index.yml
+  tags: [tools, anchord]
 
 # Hourly one-way mirror of Google Drive documents/, library/, notes/ to iCloud Drive (dotfiles#41).
 - import: ../../components/gdrive-mirror/index.yml
