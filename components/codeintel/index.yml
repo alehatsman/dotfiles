@@ -1,0 +1,70 @@
+---
+# codeintel — alehatsman/codeintel, a Datalog code-intelligence indexer that
+# also speaks MCP (`codeintel mcp`, one tool).
+#
+# This component puts the binary on PATH and stops there. Registering the MCP
+# server with Claude Code lives in components/claude, next to the codefort
+# registration — upstream's own tasks/install.yml states that agent
+# registration is the agent's configuration and deliberately not that
+# repository's job, and this repo agrees with the split: the binary is machine
+# state, the registration is agent state, and only one of them is useful
+# without the other.
+#
+# Built from source via cargo, so components/languages must be imported first.
+# Cross-platform: nothing below is darwin-only.
+#
+# Force a rebuild:
+#   rm ~/.local/bin/.codeintel.commit && provision apply ./work_mac.yml --tags codeintel
+
+- vars_file: ./variables.yml
+
+- name: "Ensure cargo is on PATH (for building codeintel)"
+  # Provided by components/languages — fail-fast guard so the build step below
+  # does not error out cryptically inside a temp clone.
+  assert:
+    command: command -v cargo
+  tags: [codeintel, build]
+
+- name: "Ensure codeintel_bin_dir exists"
+  file:
+    path: "{{ codeintel_bin_dir }}"
+    state: dir
+  tags: [codeintel]
+
+# Gated on the resolved upstream commit, not `creates:` on the binary path.
+# `creates` only asks "does *a* codeintel exist", which is permanently true
+# after the first apply even once main has moved on (dotfiles#10) — the machine
+# would pin itself to whatever it first built and never say so.
+#
+# The build itself is `provision apply tasks/install.yml` rather than a copy of
+# `cargo build` here, for the reason components/claude already installs isayes
+# that way: upstream owns its build flags. That task builds
+# `--locked --release -p codeintel` (the workspace has four members and one
+# binary) and copies the result to ~/.local/bin/codeintel, which is
+# codeintel_bin_dir's default and why no prop is passed.
+#
+# The stamp is written last, after the install task has returned 0, so a failed
+# build leaves the old commit recorded and the gate still open.
+- name: "Build and install codeintel from source"
+  shell: |
+    set -euo pipefail
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' EXIT
+    git clone --depth 1 "{{ codeintel_repo_url }}.git" "$tmp/src"
+    commit=$(git -C "$tmp/src" rev-parse HEAD)
+    ( cd "$tmp/src" && provision apply tasks/install.yml )
+    printf '%s\n' "$commit" > "{{ codeintel_commit_stamp | expanduser }}"
+  unless: |
+    set -euo pipefail
+    latest=$(git ls-remote "{{ codeintel_repo_url }}.git" refs/heads/main | cut -f1)
+    test -x "{{ codeintel_bin_dir | expanduser }}/codeintel" && \
+      [ "$(cat "{{ codeintel_commit_stamp | expanduser }}" 2>/dev/null)" = "$latest" ]
+  # Nine tree-sitter grammars are C, compiled from source on a cold build —
+  # upstream's own task allows 30m for exactly this.
+  timeout: 35m
+  tags: [codeintel, build]
+
+- name: "Verify codeintel installation"
+  assert:
+    command: "{{ codeintel_bin_dir | expanduser }}/codeintel --version"
+  tags: [codeintel, verify]

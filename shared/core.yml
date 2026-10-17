@@ -36,3 +36,15 @@
 
 - import: ../components/languages/index.yml
   tags: [dev, languages]
+
+# After languages: the build needs cargo on PATH. components/claude registers
+# `codeintel mcp` on every machine, so the binary belongs on every machine
+# too — a registration whose command does not exist is an entry that fails
+# only when an agent first calls it.
+#
+# Here rather than in each machine index: when this was written the machines
+# imported languages themselves, and codeintel followed it in all four. They
+# import shared/core.yml now, so one import covers the fleet and cannot drift
+# a machine at a time.
+- import: ../components/codeintel/index.yml
+  tags: [dev, codeintel]
