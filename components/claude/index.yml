@@ -13,28 +13,10 @@
   tags: [claude]
 
 - name: "Deploy claude settings"
-  # `json`, not `file`: this file has two owners. `/model`, `/config` and the
-  # effort picker write back into it, so a `file` step declared the whole
-  # document and discarded whatever the application had put there on every
-  # apply (provision#54). `json` merges the declared keys and leaves the rest
-  # alone, so what is below is the half this repo owns and nothing else.
-  #
-  # Needs provision >= 0.10.0, which is where the action lands.
-  #
-  # `model`, `effortLevel`, `skipWorkflowUsageWarning` and `modelSettings`
-  # used to be folded into settings.json to make the apply lossless. They are
-  # gone from it deliberately: declaring them pinned a deliberate choice as
-  # declared state, so the next `/model` was drift and the next apply reverted
-  # it. Do not add them back — if a model really must be pinned on a machine,
-  # that is a machine var and a decision, not a copy of what the picker last
-  # wrote.
-  #
-  # `permissions.allow` IS declared, and that is a choice: a permission
-  # allowlist is policy this repo should own, so a `/config` addition to it is
-  # drift and gets reverted. Add the entry here instead.
-  json:
+  file:
     path: "~/.claude/settings.json"
     src: "./settings.json"
+    state: file
   tags: [claude]
 
 - name: "Deploy claude system prompt"
