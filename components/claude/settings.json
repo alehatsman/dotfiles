@@ -16,7 +16,9 @@
       "Edit",
       "Glob",
       "Grep",
-      "Bash(tmux:*)"
+      "Bash(tmux:*)",
+      "Bash(launchctl list:*)",
+      "Bash(launchctl print:*)"
     ],
     "defaultMode": "auto",
     "skipDangerousModePermissionPrompt": true
