@@ -59,6 +59,22 @@ steps:
   # One `cargo install` for both binaries: anchor is a single crate with two
   # [[bin]] targets (anchord, anchor), unlike teleport's separate cli/ and
   # daemon/ projects.
+  #
+  # The commit alone is not enough, and the gap is not theoretical: a binary
+  # copied into the bin dir by hand leaves the stamp untouched, so provision
+  # reports a converged machine while something it never built is the thing
+  # running. That happened to components/tally on 2026-10-17, during an
+  # incident, and this component had the identical hole. So the stamp answers
+  # "is this the right SOURCE" and `.anchord.sums` answers "are these still
+  # the binaries that source produced". Drift in either one rebuilds.
+  #
+  # Digests, not mtimes: `install` and `cp` both set mtime to now, so a
+  # timestamp would rank a hand-copied binary as the fresher one.
+  #
+  # The `-x` test covers BOTH binaries now. It only ever checked `anchord`,
+  # so a deleted or non-executable `anchor` CLI — the half every client and
+  # every tally view shells out to — left the gate satisfied and the machine
+  # broken.
   - name: "Build and install anchord (+ anchor CLI) from source"
     shell: |
       set -euo pipefail
@@ -70,11 +86,19 @@ steps:
       install -m 0755 "$tmp/out/bin/anchord" "{{ anchor_bin_dir | expanduser }}/anchord"
       install -m 0755 "$tmp/out/bin/anchor"  "{{ anchor_bin_dir | expanduser }}/anchor"
       printf '%s\n' "$commit" > "{{ anchor_bin_dir | expanduser }}/.anchord.commit"
+      # What the commit does not say: whether these are still the binaries
+      # that commit produced. Recorded relative to the bin dir so the check
+      # below can `cd` there and not care where it is mounted.
+      ( cd "{{ anchor_bin_dir | expanduser }}" && shasum -a 256 anchord anchor > .anchord.sums )
     unless: |
       set -euo pipefail
+      bin="{{ anchor_bin_dir | expanduser }}"
       latest=$(git ls-remote "{{ anchor_repo_url }}.git" refs/heads/main | cut -f1)
-      test -x "{{ anchor_bin_dir | expanduser }}/anchord" && \
-        [ "$(cat "{{ anchor_bin_dir | expanduser }}/.anchord.commit" 2>/dev/null)" = "$latest" ]
+      test -x "$bin/anchord" && \
+        test -x "$bin/anchor" && \
+        [ "$(cat "$bin/.anchord.commit" 2>/dev/null)" = "$latest" ] && \
+        test -f "$bin/.anchord.sums" && \
+        ( cd "$bin" && shasum -a 256 -c .anchord.sums --status )
     register: anchord_install
     timeout: 20m
     tags: [anchord]
