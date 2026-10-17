@@ -104,9 +104,21 @@ steps:
   #
   # A missing `.tallyd.sums` used to fail the gate above, which rebuilt from
   # source and — because the install step feeds the service's restart
-  # condition — bounced the daemon. For tallyd that orphans every live PTY.
-  # Paying a restart to write a checksum file is the wrong trade, especially
-  # when the stamp already says the source is current.
+  # condition — bounced the daemon.
+  #
+  # What that costs here is smaller than the sentence this block was copied
+  # from says. This is components/anchord's reasoning with the name swapped,
+  # and anchord's version ends "that orphans every live PTY" — true of
+  # anchord, which owns the sessions, and false of tallyd, which owns
+  # nothing but the lights (tally docs/08-lifecycle.md: "killing it affects
+  # nothing except the lights"). A tallyd restart costs a dark grid for a
+  # tick, a forgotten hold if your thumb happened to be down, and a `cargo
+  # build` nobody asked for.
+  #
+  # Still the wrong trade — a rebuild and a blink to write a checksum file
+  # is worth avoiding, especially when the stamp already says the source is
+  # current — but it is not an incident, and a future reader deciding how
+  # careful to be around this step should get the real number.
   #
   # So: record the baseline from what is installed, once. This is the one
   # moment the digests are *assumed* rather than *produced* — there is no
