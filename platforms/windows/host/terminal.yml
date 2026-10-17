@@ -1,0 +1,43 @@
+# Windows Terminal: the Monokai scheme from components/palette, used by
+# every profile. Slots follow components/alacritty (Monokai has no blue, so
+# blue is cyan), so the WSL shell looks the same here as in alacritty.
+#
+# The scheme ships as a fragment, a file Windows Terminal merges in at
+# startup: dotfiles owns it, while settings.json stays Terminal's (its
+# settings UI rewrites that file). A fragment can't win over another
+# fragment, though, and the Microsoft.WSL one gives the WSL profile the
+# "Ubuntu" scheme. So the default scheme goes into settings.json's
+# profiles.defaults, which outranks every fragment. One key, patched in
+# place; the rest of settings.json is left to Terminal.
+
+- import: ../../../components/palette/index.yml
+
+- name: Windows Terminal fragments directory
+  file:
+    path: ~/AppData/Local/Microsoft/Windows Terminal/Fragments/dotfiles
+    state: dir
+
+- name: Deploy the Monokai scheme fragment
+  template:
+    src: ../templates/terminal-monokai.json.j2
+    dest: ~/AppData/Local/Microsoft/Windows Terminal/Fragments/dotfiles/monokai.json
+
+# Terminal writes settings.json on first launch; before that there is
+# nothing to patch. Depth 32: PS 5.1 ConvertTo-Json flattens below 2.
+- name: Monokai as the default Windows Terminal scheme
+  shell:
+    interpreter: powershell
+    script: |
+      $path = Join-Path $env:LOCALAPPDATA 'Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json'
+      $s = Get-Content -Raw $path | ConvertFrom-Json
+      if (-not $s.profiles.defaults) {
+        $s.profiles | Add-Member -Force -NotePropertyName defaults -NotePropertyValue ([pscustomobject]@{})
+      }
+      $s.profiles.defaults | Add-Member -Force -NotePropertyName colorScheme -NotePropertyValue 'Monokai'
+      $json = $s | ConvertTo-Json -Depth 32
+      [IO.File]::WriteAllText($path, $json, (New-Object Text.UTF8Encoding $false))
+  unless: |
+    $path = Join-Path $env:LOCALAPPDATA 'Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json'
+    if (-not (Test-Path $path)) { exit 0 }
+    $s = Get-Content -Raw $path | ConvertFrom-Json
+    if ($s.profiles.defaults.colorScheme -eq 'Monokai') { exit 0 } else { exit 1 }

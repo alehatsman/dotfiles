@@ -5,9 +5,8 @@
 # Plan:   provision plan  ./main_pc.yml
 #
 # NOPASSWD sudo is configured on this host, so no -K flag is needed.
-# Windows-host bootstrap (run separately from an Administrator PowerShell):
-#   provision.exe apply platforms\windows\bootstrap.yml \
-#                      -v shared/variables.yml -v machines/main_pc/vars.yml
+# Windows host side: ./main_pc.host.yml, applied with provision.exe from an
+# Administrator PowerShell.
 
 - vars_file: ./shared/variables.yml
 - vars_file: ./machines/main_pc/vars.yml

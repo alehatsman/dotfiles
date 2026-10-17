@@ -1,0 +1,16 @@
+# Windows host gitconfig — rendered by platforms/windows/host/home.yml.
+# Edits go there, not here: the next apply overwrites this file.
+[user]
+	name = {{ FULLNAME }}
+	email = {{ EMAIL }}
+[core]
+	# Git for Windows sets autocrlf=true system-wide, which checks out CRLF
+	# and breaks every shell script in a repo that has no .gitattributes.
+	# Check out what is stored.
+	autocrlf = false
+[init]
+	defaultBranch = main
+[credential "https://github.com"]
+	# gh as the credential helper, so HTTPS pushes use `gh auth login`'s token.
+	helper =
+	helper = !gh auth git-credential

@@ -1,0 +1,52 @@
+---
+# Windows HOST state — everything on a Windows box outside the WSL guest.
+# The guest is platforms/windows/index.yml, reached through ./<m>.yml.
+#
+# Entry: ./<m>.host.yml, which loads the machine's vars and imports this.
+#
+#   provision plan  .\mini_pc.host.yml      # probes the host, changes nothing
+#   provision apply .\mini_pc.host.yml      # from an Administrator PowerShell
+#
+# Elevation is process-wide on Windows (UAC), not per-step: provision refuses
+# `sudo:` on Windows, so the shell that runs apply must already be elevated.
+#
+# What is NOT here: provision.exe itself and the Rust toolchain that builds
+# it. An apply must not swap out the binary running it
+# (components/provision), so scripts/bootstrap.ps1 owns that, as
+# scripts/bootstrap.sh does on Linux and macOS.
+#
+# Idempotency, two shapes:
+#   - `unless:` — a PowerShell probe that exits 0 when the state already
+#     holds. Preferred: `plan` runs the probe, so a live plan reports `skip`
+#     or `would run` per step, which is real drift detection.
+#   - exit 3 — the script checks, exits 3 when there is nothing to do, and
+#     `changed_when`/`failed_when` read the code. Honest under `apply`, but
+#     `plan` can only say `would run`. network.yml and tasks.yml still use it.
+#
+# Order: guard first; packages before anything that calls what they install.
+
+- import: ./guard.yml
+
+- import: ./packages.yml
+  tags: [windows, packages]
+
+- import: ./home.yml
+  tags: [windows, home]
+
+- import: ./wsl.yml
+  tags: [windows, wsl]
+
+- import: ./terminal.yml
+  tags: [windows, terminal]
+
+- import: ./power.yml
+  tags: [windows, power]
+
+- import: ./network.yml
+  tags: [windows, network]
+
+- import: ./tasks.yml
+  tags: [windows, tasks]
+
+- import: ./verify.yml
+  tags: [windows, verify]

@@ -2,6 +2,10 @@
 # main_pc-specific variables (Windows + WSL Ubuntu).
 is_wsl: true
 computer_name: mainpc
+# The Windows host's own name (platforms/windows/host/home.yml). Kept equal
+# to computer_name, which is what the host plan converged on before the two
+# were split; mini_pc is the box where they differ.
+windows_computer_name: mainpc
 wsl_distro: "Ubuntu-24.04"
 wsl_ssh_port: "2222"
 
@@ -14,7 +18,7 @@ use_win32yank: "true"
 # Always-on server box: it hosts codefort and builds every CI image, so the
 # host must never sleep or hibernate and the WSL VM must never be torn down
 # with it. Turns on the AC power steps and the WSL-Session-Keepalive task in
-# platforms/windows/bootstrap.yml, and turns off "Restore AC sleep timeout".
+# platforms/windows/host/, and turns off "Restore AC sleep timeout".
 # mini_pc sets this the same way; the shared default is false, for laptops.
 windows_prevent_sleep: true
 

@@ -1,0 +1,40 @@
+---
+# Windows host packages, via winget. Not to be confused with
+# platforms/windows/packages.yml, which is the apt side inside the WSL guest.
+#
+# Two lists: windows_winget_packages (shared/variables.yml) is what every
+# Windows box gets; windows_winget_packages_extra (machines/<m>/vars.yml) is
+# what one box adds. Ids, not names: winget matches the query by id, and an
+# id is the only unambiguous handle.
+#
+# Two steps, not one `names: "{{ a + b }}"`: validate rejects that as "not a
+# list" although provision spec §3.4 says a sole expression keeps its type —
+# only a bare variable passes today (provision 9c046ef).
+#
+# `manager: winget` is explicit for the same reason it is explicit on every
+# apt step: validating this file from a Linux or mac host must not resolve
+# the reading host's manager.
+#
+# No `latest`: an upgrade is a choice, not declared state — same posture as
+# the apt side.
+
+- name: Install Windows host packages (winget)
+  pkg:
+    manager: winget
+    state: present
+    names: "{{ windows_winget_packages }}"
+  timeout: 30m
+  retry:
+    attempts: 2
+    delay: 10s
+
+- name: Install this machine's extra host packages (winget)
+  pkg:
+    manager: winget
+    state: present
+    names: "{{ windows_winget_packages_extra }}"
+  when: windows_winget_packages_extra | length > 0
+  timeout: 30m
+  retry:
+    attempts: 2
+    delay: 10s
