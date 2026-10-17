@@ -80,6 +80,20 @@ windows_prevent_sleep: false
 # AC sleep timeout in minutes for non-server boxes (windows_prevent_sleep: false).
 windows_sleep_timeout_ac: 30
 
+# Windows host packages, by winget id (platforms/windows/host/packages.yml).
+# Per-box additions go in machines/<m>/vars.yml as
+# windows_winget_packages_extra.
+#   Git.Git      scripts/bootstrap.ps1 installs it before any plan can run;
+#                declaring it hands ownership to the plan from then on.
+#   GitHub.cli   gh, also the HTTPS credential helper in the host gitconfig.
+#   WinLibs      MinGW-w64: dlltool for building provision.exe on the
+#                windows-gnu toolchain. Same hand-off as Git.
+# Rustup is NOT here: rustup-init registers nothing winget can see, so a
+# winget id would reinstall it on every box. bootstrap.ps1 owns it, as
+# bootstrap.sh does on unix.
+windows_winget_packages: [Git.Git, GitHub.cli, BrechtSanders.WinLibs.POSIX.UCRT]
+windows_winget_packages_extra: []
+
 # ─── claude — global system prompt (~/.claude/CLAUDE.md) ──────────────────
 # Source file the claude component deploys as the user-global system prompt.
 # Path is resolved relative to components/claude/. Default is the shared

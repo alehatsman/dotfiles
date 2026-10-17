@@ -1,0 +1,13 @@
+---
+# What must resolve on the host once the plan has run. PATH is read from the
+# registry, not this process: a winget install in this same apply updates the
+# registry, and provision's own environment predates it.
+
+- name: Host tools resolve (provision, git, gh)
+  assert:
+    command: |
+      $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
+                  [Environment]::GetEnvironmentVariable('Path', 'User')
+      $missing = @('provision', 'git', 'gh') | Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) }
+      if ($missing) { [Console]::Error.WriteLine("missing: $($missing -join ' ')"); exit 1 }
+      exit 0

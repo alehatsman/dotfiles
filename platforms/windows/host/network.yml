@@ -1,0 +1,89 @@
+---
+# Inbound access to the WSL guest, and the host's own SSH shell.
+#
+# With networkingMode=mirrored + firewall=true in .wslconfig, the WSL VM sits
+# behind the Hyper-V Firewall — a separate stack from the regular Windows
+# Firewall. Every guest port therefore needs two rules: the Windows Firewall
+# rule opens the host's NICs, the Hyper-V rule opens the VM boundary.
+#
+# The Hyper-V rules find WSL's VM creator GUID at apply time, falling back to
+# the well-known constant on a box that has never booted a WSL VM.
+# New-NetFirewallHyperVRule takes no -Description, so the rule's purpose
+# lives in these comments.
+
+# Default OpenSSH server shell on Windows is cmd.exe, which makes any
+# remote PowerShell call go through a layer of cmd quoting hell. Set it
+# to powershell.exe so SSH lands directly in PowerShell — friendlier for
+# both interactive recovery and automation over the :22 channel when
+# WSL is down.
+#
+# Skipped while the OpenSSH key is absent: the server is installed by hand
+# (docs/windows-ssh-setup.md), and a DefaultShell for a server that is not
+# there would only confuse the one installed later.
+- name: Set Windows OpenSSH default shell to PowerShell
+  shell:
+    interpreter: powershell
+    script: |
+      New-ItemProperty -Path 'HKLM:\SOFTWARE\OpenSSH' -Name DefaultShell `
+        -Value 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' -PropertyType String -Force | Out-Null
+  unless: |
+    $key = 'HKLM:\SOFTWARE\OpenSSH'
+    if (-not (Test-Path $key)) { exit 0 }
+    $cur = (Get-ItemProperty -Path $key -Name DefaultShell -ErrorAction SilentlyContinue).DefaultShell
+    if ($cur -eq 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe') { exit 0 } else { exit 1 }
+  tags: [ssh]
+
+# WSL guest SSH (mirrored networking exposes the port on the host NIC).
+- name: Add firewall rule for SSH
+  shell:
+    interpreter: powershell
+    script: |
+      New-NetFirewallRule -DisplayName "WSL2 SSH" `
+        -Description "WSL guest SSH (mirrored networking exposes the port on the host NIC)" `
+        -Direction Inbound -Protocol TCP -LocalPort {{ wsl_ssh_port }} `
+        -Action Allow -Profile Domain,Private | Out-Null
+  unless: if (Get-NetFirewallRule -DisplayName "WSL2 SSH" -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }
+  tags: [ssh, firewall]
+
+- name: Add Hyper-V firewall rule for SSH
+  shell:
+    interpreter: powershell
+    script: |
+      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match 'WSL' } | Select-Object -First 1 -ExpandProperty VMCreatorID)
+      if (-not $wslId) { $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' }
+      New-NetFirewallHyperVRule -DisplayName "WSL2 SSH" -VMCreatorID $wslId `
+        -Direction Inbound -Protocol TCP -LocalPorts {{ wsl_ssh_port }} -Action Allow | Out-Null
+  unless: |
+    if (Get-NetFirewallHyperVRule -ErrorAction SilentlyContinue |
+          Where-Object { $_.DisplayName -eq "WSL2 SSH" }) { exit 0 } else { exit 1 }
+  tags: [ssh, firewall]
+
+# codefort server: codefortd binds *:8080 inside WSL; mirrored networking
+# exposes it on the host NIC, so other boxes on the LAN can hit
+# http://<this-pc-ip>:8080 directly — no `ssh -L` tunnel (which coalesces
+# the SSE transcript stream). `--tags codefort` targets just these two.
+- name: Add firewall rule for codefort
+  shell:
+    interpreter: powershell
+    script: |
+      New-NetFirewallRule -DisplayName "WSL2 codefort" `
+        -Description "WSL codefort server (port exposed via mirrored networking)" `
+        -Direction Inbound -Protocol TCP -LocalPort {{ wsl_codefort_port }} `
+        -Action Allow -Profile Domain,Private | Out-Null
+  unless: if (Get-NetFirewallRule -DisplayName "WSL2 codefort" -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }
+  tags: [codefort, firewall]
+
+- name: Add Hyper-V firewall rule for codefort
+  shell:
+    interpreter: powershell
+    script: |
+      $wslId = (Get-NetFirewallHyperVVMCreator -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match 'WSL' } | Select-Object -First 1 -ExpandProperty VMCreatorID)
+      if (-not $wslId) { $wslId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' }
+      New-NetFirewallHyperVRule -DisplayName "WSL2 codefort" -VMCreatorID $wslId `
+        -Direction Inbound -Protocol TCP -LocalPorts {{ wsl_codefort_port }} -Action Allow | Out-Null
+  unless: |
+    if (Get-NetFirewallHyperVRule -ErrorAction SilentlyContinue |
+          Where-Object { $_.DisplayName -eq "WSL2 codefort" }) { exit 0 } else { exit 1 }
+  tags: [codefort, firewall]
