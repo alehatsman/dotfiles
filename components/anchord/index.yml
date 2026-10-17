@@ -157,6 +157,49 @@ steps:
     when: os == 'darwin' and props.anchor_enabled
     tags: [anchord]
 
+  # A failed probe does not prove the daemon is gone. A SIGSTOPped anchord is
+  # alive, still holds its PTYs, still owns the socket — and answers nothing,
+  # so the probe above fails exactly as it would for a dead one. launchd cannot
+  # tell the difference either: KeepAlive fires on *exit*, and a stopped
+  # process has not exited. Observed on work_mac 2026-10-17 — `runs = 1`,
+  # `last exit code = (never exited)`, while every client got `Connection
+  # refused (os error 61)`.
+  #
+  # Routing that case straight to the bootout+bootstrap below would kill a
+  # healthy process holding live sessions and mark every one of them `lost`,
+  # to repair a daemon that a single SIGCONT restores intact. So: try the cheap
+  # remedy first, and fall through to the restart only when it does not take.
+  #
+  # Narrow by construction. This resumes STOPPED processes and nothing else —
+  # a deadlocked or wedged anchord is not stopped, matches no pid here, and
+  # still gets the restart it actually needs.
+  - name: "Resume anchord if it is only suspended"
+    shell: |
+      set -uo pipefail
+      bin="{{ anchor_bin_dir | expanduser }}"
+      resumed=0
+      for pid in $(pgrep -x anchord || true); do
+        # `T` is ps's stopped state; what follows are unrelated flags
+        # (`s`, `+`, ...), so match the first character and not the whole word.
+        case "$(ps -o stat= -p "$pid" 2>/dev/null || true)" in
+          T*) kill -CONT "$pid" 2>/dev/null && resumed=1 ;;
+        esac
+      done
+      [ "$resumed" = 1 ] || exit 1
+      # Resumed is not the same as answering. Bounded wait, retried rather than
+      # slept through, for the reason the bootstrap below gives: the settle
+      # time is the process's business and not a constant anyone here can name.
+      for _ in $(seq 1 20); do
+        "$bin/anchor" ls >/dev/null 2>&1 && exit 0
+        sleep 0.25
+      done
+      exit 1
+    register: anchord_resumed
+    changed_when: anchord_resumed.rc == 0
+    failed_when: false
+    when: os == 'darwin' and props.anchor_enabled and anchord_live.rc != 0
+    tags: [anchord]
+
   # `|| true` on bootout: a first-ever install has nothing loaded.
   #
   # There is no *port* to wait on, unlike teleportd — anchord binds a unix
@@ -193,7 +236,8 @@ steps:
       launchctl bootstrap "gui/$uid" "$plist"
     when: >-
       os == 'darwin' and props.anchor_enabled and
-      (anchord_plist.changed or anchord_install.changed or anchord_live.rc != 0)
+      (anchord_plist.changed or anchord_install.changed or
+       (anchord_live.rc != 0 and (anchord_resumed.rc | default(1)) != 0))
     changed_when: true
     tags: [anchord]
 
