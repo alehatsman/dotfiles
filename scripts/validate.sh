@@ -17,6 +17,14 @@
 # written down is a list that drifts: pixel was missing from codefort.yml's
 # CI for exactly that reason. Adding machines/<m>/ is all it takes to be
 # covered here.
+#
+# provision.yml is checked too, and separately. It is the root dispatcher --
+# the entrypoint a real `provision apply provision.yml` uses -- and it was
+# the one file nothing validated: an ungated shell step in
+# components/nvim/copilot.yml failed `provision validate ./provision.yml`
+# while all six machine plans rendered clean, so the hook passed a tree the
+# dispatcher could not parse. Validating the machines is not the same claim
+# as validating the thing that routes to them.
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -46,6 +54,16 @@ if [ ${#machines[@]} -eq 0 ]; then
 fi
 
 failed=()
+
+# The dispatcher first: a break here means no machine is reachable at all,
+# which is worth reporting before six per-machine results scroll past it.
+printf '== %-10s validate ' 'dispatcher'
+if out="$(provision validate ./provision.yml 2>&1)"; then
+  echo 'ok'
+else
+  printf 'FAILED\n%s\n' "$out" >&2
+  failed+=('provision.yml')
+fi
 
 for m in "${machines[@]}"; do
   printf '== %-10s validate ' "$m"

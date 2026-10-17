@@ -1,4 +1,17 @@
+# Node for copilot.nvim, which needs a runtime of its own rather than
+# whatever `node` happens to be first on PATH.
+#
+# Disabled (`when: "false"`) and kept rather than deleted: it records which
+# runtime copilot wanted and how it was installed, which is the question
+# anyone re-enabling this has. Deleting it would leave the next person
+# guessing the version.
+#
+# `creates:` is the idempotency gate every shell step in a convergence plan
+# is held to. It is honest rather than decorative: nvm lays the runtime down
+# at this exact path, so the step is a genuine no-op once it has run — which
+# is what let the missing gate go unnoticed behind `when: "false"`.
 - name: Install nodejs for copilot
   shell: |
     nvm install 22.21.0
+  creates: ~/.nvm/versions/node/v22.21.0/bin/node
   when: "false"
