@@ -56,6 +56,17 @@ steps:
   # Gated on main's resolved HEAD recorded in a stamp file, not on `creates:`
   # — which only asks "does *a* tallyd exist" and stays true forever after the
   # first apply (dotfiles#10). Same shape as components/anchord.
+  #
+  # The commit alone is not enough, and the gap is not theoretical: a binary
+  # copied in by hand leaves the stamp untouched, so provision reports a
+  # converged machine while something it never built is the thing running.
+  # That happened on 2026-10-17 — a `cp` into ~/.local/bin during an incident,
+  # and the component could not see it afterwards. So the stamp answers "is
+  # this the right SOURCE" and `.tallyd.sums` answers "are these still the
+  # binaries that source produced". Drift in either one rebuilds.
+  #
+  # Digests, not mtimes: `install` and `cp` both set mtime to now, so a
+  # timestamp would call a hand-copied binary fresher than the real one.
   # Two binaries from one crate. `tallyd` drives the device; `tally` is the
   # CLI half of spawning, which exists because a shell knows the directory a
   # session should start in and `slots.toml` cannot (tally docs/11-cli.md).
@@ -72,12 +83,19 @@ steps:
       install -m 0755 "$tmp/out/bin/tallyd" "{{ tally_bin_dir | expanduser }}/tallyd"
       install -m 0755 "$tmp/out/bin/tally" "{{ tally_bin_dir | expanduser }}/tally"
       printf '%s\n' "$commit" > "{{ tally_bin_dir | expanduser }}/.tallyd.commit"
+      # What the commit does not say: whether these are still the binaries
+      # that commit produced. Recorded relative to the bin dir so the
+      # check below can `cd` there and not care where it is mounted.
+      ( cd "{{ tally_bin_dir | expanduser }}" && shasum -a 256 tallyd tally > .tallyd.sums )
     unless: |
       set -euo pipefail
+      bin="{{ tally_bin_dir | expanduser }}"
       latest=$(git ls-remote "{{ tally_repo_url }}.git" refs/heads/main | cut -f1)
-      test -x "{{ tally_bin_dir | expanduser }}/tallyd" && \
-        test -x "{{ tally_bin_dir | expanduser }}/tally" && \
-        [ "$(cat "{{ tally_bin_dir | expanduser }}/.tallyd.commit" 2>/dev/null)" = "$latest" ]
+      test -x "$bin/tallyd" && \
+        test -x "$bin/tally" && \
+        [ "$(cat "$bin/.tallyd.commit" 2>/dev/null)" = "$latest" ] && \
+        test -f "$bin/.tallyd.sums" && \
+        ( cd "$bin" && shasum -a 256 -c .tallyd.sums --status )
     register: tallyd_install
     timeout: 20m
     tags: [tally]
