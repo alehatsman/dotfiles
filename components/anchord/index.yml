@@ -97,10 +97,33 @@ steps:
       test -x "$bin/anchord" && \
         test -x "$bin/anchor" && \
         [ "$(cat "$bin/.anchord.commit" 2>/dev/null)" = "$latest" ] && \
-        test -f "$bin/.anchord.sums" && \
-        ( cd "$bin" && shasum -a 256 -c .anchord.sums --status )
+        ( ! test -f "$bin/.anchord.sums" || \
+          ( cd "$bin" && shasum -a 256 -c .anchord.sums --status ) )
     register: anchord_install
     timeout: 20m
+    tags: [anchord]
+
+  # Backfill for a machine installed before digests existed.
+  #
+  # A missing `.anchord.sums` used to fail the gate above, which rebuilt from
+  # source and — because the install step feeds the service's restart
+  # condition — bounced the daemon. For anchord that orphans every live PTY.
+  # Paying a restart to write a checksum file is the wrong trade, especially
+  # when the stamp already says the source is current.
+  #
+  # So: record the baseline from what is installed, once. This is the one
+  # moment the digests are *assumed* rather than *produced* — there is no
+  # evidence either way for a binary that predates the file. Every check
+  # after it is real, and a genuine upgrade overwrites this baseline with
+  # digests the build actually made.
+  - name: "Record anchord binary digests if they were never recorded"
+    shell: |
+      set -euo pipefail
+      cd "{{ anchor_bin_dir | expanduser }}"
+      shasum -a 256 anchord anchor > .anchord.sums
+    unless: |
+      bin="{{ anchor_bin_dir | expanduser }}"
+      test -f "$bin/.anchord.sums" || ! test -x "$bin/anchord" || ! test -x "$bin/anchor"
     tags: [anchord]
 
   # ─────────────────── autostart, macOS (LaunchAgent) ─────────────────────────
